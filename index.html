@@ -9,6 +9,7 @@
     --ui: "Fredoka", "Trebuchet MS", system-ui, sans-serif;
     color-scheme: light;
   }
+  [hidden] { display: none !important; }          /* anything hidden stays hidden, whatever display its class sets */
   html, body { height: 100%; }
   body { margin: 0; background: #a8f0ff; color: var(--ink); font-family: var(--ui); overflow: hidden; touch-action: none; user-select: none; -webkit-user-select: none; }
   canvas#game { position: fixed; inset: 0; width: 100%; height: 100%; display: block; }
@@ -140,11 +141,19 @@
   .hotbar .slot.on { border-color: #1e88ff; background: #eaf3ff; transform: translateY(-3px); }
   .hotbar .slot.empty { opacity: .55; cursor: default; }
   .hotbar .slot:focus-visible { outline: 2px solid #1e88ff; outline-offset: 2px; }
+  /* narrow screens: the slots stack up the right edge above shove/fire; the action button clears the fire button */
+  @media (max-width: 640px) {
+    .hotbar { left: auto; transform: none; right: calc(max(16px, env(safe-area-inset-right, 0px)) + 30px); bottom: calc(env(safe-area-inset-bottom, 0px) + 256px); flex-direction: column-reverse; }
+    .hotbar .slot { width: 46px; height: 46px; }
+    .hotbar .slot.on { transform: translateX(-3px); }
+    body .act { left: max(16px, env(safe-area-inset-left, 0px)); transform: none; bottom: calc(env(safe-area-inset-bottom, 0px) + 40px); max-width: calc(100vw - 160px); }   /* under the stick, left of fire */
+  }
   .act, .fire { position: fixed; z-index: 4; border: 0; cursor: pointer; font: 700 1rem var(--ui); color: var(--ink); display: flex; align-items: center; gap: 8px; }
-  .act { left: 50%; transform: translateX(-50%); bottom: calc(env(safe-area-inset-bottom, 0px) + 26px); background: #fff; border-radius: 999px; padding: 12px 20px; box-shadow: 0 4px 0 rgba(11,42,74,.25); }
+  .act { left: 50%; transform: translateX(-50%); bottom: calc(env(safe-area-inset-bottom, 0px) + 80px); background: #fff; border-radius: 999px; padding: 12px 20px; box-shadow: 0 4px 0 rgba(11,42,74,.25); }
   .fire { right: calc(max(16px, env(safe-area-inset-right, 0px)) + 8px); bottom: calc(env(safe-area-inset-bottom, 0px) + 30px); width: 104px; height: 104px; border-radius: 50%; justify-content: center; flex-direction: column; gap: 2px;
     background: radial-gradient(closest-side, var(--coral) 82%, transparent 84%), conic-gradient(#fff calc(var(--ready, 1) * 360deg), rgba(255,255,255,.3) 0); color: #fff; box-shadow: 0 5px 0 rgba(11,42,74,.25); }
-  .fire.shove { background: radial-gradient(closest-side, var(--ink) 82%, transparent 84%), conic-gradient(#fff calc(var(--ready, 1) * 360deg), rgba(255,255,255,.3) 0); width: 92px; height: 92px; }
+  .fire.shove { background: radial-gradient(closest-side, var(--ink) 82%, transparent 84%), conic-gradient(#fff calc(var(--ready, 1) * 360deg), rgba(255,255,255,.3) 0); width: 92px; height: 92px;
+    right: calc(max(16px, env(safe-area-inset-right, 0px)) + 14px); bottom: calc(env(safe-area-inset-bottom, 0px) + 148px); }   /* stacked above the fire button, never on it */
   .minimap { position: fixed; z-index: 3; right: max(16px, env(safe-area-inset-right, 0px)); top: calc(env(safe-area-inset-top, 0px) + 150px);
     width: 150px; height: 150px; border-radius: 50%; box-shadow: 0 4px 0 rgba(11,42,74,.25); pointer-events: none; }
   @media (max-width: 560px) { .minimap { width: 112px; height: 112px; top: calc(env(safe-area-inset-top, 0px) + 170px); } }
@@ -181,11 +190,63 @@
   @media (prefers-reduced-motion: reduce) { .switch i, .switch span { transition: none; } }
   .err { position: fixed; inset: 0; display: grid; place-items: center; padding: 24px; text-align: center; background: #a8f0ff; }
   @media (prefers-reduced-motion: reduce) { .flash, .knob.release { transition: none; } }
+
+  /* ---- main menu: the stormy sea behind, the title across the top ---- */
+  body.in-menu > :not(canvas):not(#menu):not(script) { display: none !important; }
+  .menu { position: fixed; inset: 0; z-index: 20; display: none; flex-direction: column; align-items: center; overflow-y: auto;
+    padding: calc(env(safe-area-inset-top, 0px) + 18px) max(16px, env(safe-area-inset-right, 0px)) calc(env(safe-area-inset-bottom, 0px) + 18px) max(16px, env(safe-area-inset-left, 0px));
+    background: linear-gradient(180deg, rgba(11,42,74,.35), rgba(11,42,74,0) 38%, rgba(11,42,74,0) 70%, rgba(11,42,74,.3)); }
+  body.in-menu .menu { display: flex; }
+  .logo { margin: 4px 0 14px; display: flex; flex-direction: column; align-items: center; line-height: .86; font-weight: 700; letter-spacing: .02em; position: relative; pointer-events: none; }
+  .logo .lrow { display: flex; gap: .02em; font-size: clamp(56px, 13vw, 128px); }
+  .logo .lrow.goat { font-size: clamp(64px, 15vw, 150px); margin-top: -.06em; }
+  .logo .lrow span { display: inline-block; color: var(--sun);
+    text-shadow: 0 -4px 0 #fff3b0, 4px 0 0 var(--ink), -4px 0 0 var(--ink), 0 4px 0 var(--ink), 0 -4px 0 var(--ink), 3px 3px 0 var(--ink), -3px 3px 0 var(--ink), 3px -3px 0 var(--ink), -3px -3px 0 var(--ink), 0 10px 0 var(--ink), 0 14px 12px rgba(0,0,0,.25);
+    animation: lbob 2.8s ease-in-out infinite; animation-delay: calc(var(--i) * -.31s); transform-origin: 50% 80%; }
+  .logo .lrow.goat span { color: #fff; text-shadow: 0 -4px 0 #ffffff, 4px 0 0 var(--ink), -4px 0 0 var(--ink), 0 4px 0 var(--ink), 0 -4px 0 var(--ink), 3px 3px 0 var(--ink), -3px 3px 0 var(--ink), 3px -3px 0 var(--ink), -3px -3px 0 var(--ink), 0 10px 0 var(--ink), 0 14px 12px rgba(0,0,0,.25); }
+  .logo .lrow.goat span:nth-child(2n) { color: var(--coral); }
+  @keyframes lbob { 0%, 100% { transform: translateY(0) rotate(-3deg); } 50% { transform: translateY(-9px) rotate(3deg); } }
+  .logo .lwave { width: min(520px, 86vw); height: 26px; margin-top: -6px; }
+  @media (prefers-reduced-motion: reduce) { .logo .lrow span { animation: none; } }
+  .mpanel { width: min(380px, 100%); background: var(--panel); border-radius: 22px; padding: 18px; box-shadow: 0 6px 0 rgba(11,42,74,.25); display: flex; flex-direction: column; gap: 10px; box-sizing: border-box; }
+  .mpanel.wide { width: min(860px, 100%); }
+  .mpanel h2 { margin: 0 0 4px; font-size: 1.25rem; }
+  .mname { display: flex; flex-direction: column; gap: 4px; font-weight: 600; font-size: .9rem; }
+  .mname input { font: 600 1.05rem var(--ui); color: var(--ink); padding: 10px 12px; border-radius: 12px; border: 2px solid rgba(11,42,74,.18); background: #fff; }
+  .mbtn { font: 700 1rem var(--ui); border: 0; border-radius: 14px; padding: 12px 16px; background: #eaf3ff; cursor: pointer; box-shadow: 0 4px 0 rgba(11,42,74,.18); }
+  .mbtn.big { background: var(--sun); font-size: 1.15rem; padding: 14px 16px; }
+  .mbtn.go { background: var(--good); color: #fff; }
+  .mbtn:disabled { opacity: .45; cursor: default; }
+  .mbtn:active:not(:disabled) { transform: translateY(2px); box-shadow: 0 2px 0 rgba(11,42,74,.18); }
+  .mnote { margin: 0; font-size: .88rem; color: rgba(11,42,74,.75); min-height: 1.2em; }
+  .mver { margin-top: auto; padding-top: 12px; color: #fff; font-weight: 600; font-size: .8rem; text-shadow: 0 1px 0 rgba(11,42,74,.5); }
+  .llist { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 8px; max-height: 46vh; overflow-y: auto; }
+  .llist button { width: 100%; text-align: left; display: flex; justify-content: space-between; align-items: center; gap: 8px; }
+  .llist .cnt { font-variant-numeric: tabular-nums; color: rgba(11,42,74,.7); font-weight: 600; }
+  .rbtns { display: flex; gap: 10px; justify-content: flex-end; flex-wrap: wrap; }
+  .teams { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 10px; }
+  @media (max-width: 640px) { .teams { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+  .team { border-radius: 16px; padding: 10px; background: #fff; border: 3px solid var(--tc); display: flex; flex-direction: column; gap: 6px; min-height: 150px; }
+  .team h3 { margin: 0; font-size: 1rem; display: flex; align-items: center; gap: 6px; }
+  .team h3 i { width: 14px; height: 14px; border-radius: 50%; background: var(--tc); display: inline-block; }
+  .team ul { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 4px; flex: 1; }
+  .team li { background: color-mix(in srgb, var(--tc) 16%, #fff); border-radius: 10px; padding: 6px 8px; font-weight: 600; font-size: .92rem; display: flex; justify-content: space-between; align-items: center; gap: 6px; min-width: 0; }
+  .team li span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .team li.me { outline: 2px solid var(--ink); }
+  .team li .tag { font-size: .72rem; opacity: .7; flex: none; }
+  .team li button { border: 0; background: transparent; cursor: pointer; font: 700 .9rem var(--ui); padding: 0 2px; }
+  .team .tb { display: flex; gap: 6px; flex-wrap: wrap; }
+  .team .tb button { flex: 1; font: 700 .82rem var(--ui); border: 0; border-radius: 10px; padding: 7px 8px; background: color-mix(in srgb, var(--tc) 22%, #fff); cursor: pointer; }
+  .team .tb button:disabled { opacity: .4; cursor: default; }
+  .rset { display: flex; gap: 12px; flex-wrap: wrap; font-weight: 600; font-size: .9rem; }
+  .rset label { display: flex; gap: 6px; align-items: center; }
+  .rset select { font: 600 .9rem var(--ui); border-radius: 8px; padding: 4px 6px; }
+  .rset.locked select { pointer-events: none; opacity: .7; }
 </style>
 
 <canvas id="game" aria-label="3D raft building view on the water"></canvas>
 <div class="top">
-  <div class="brand"><h1>FLOAT GOAT</h1><span>v0.73</span></div>
+  <div class="brand"><h1>FLOAT GOAT</h1><span>v0.77</span></div>
   <div class="pill phasep" title="Phase and time left"><span id="phase">Build</span><span id="timer">3:00</span></div>
   <div class="pill" id="round">Round 1/3</div>
   <div class="pill" title="Treasure points: you – dummy">★ <span id="score">0 – 0</span></div>
@@ -220,6 +281,7 @@
     <button class="switch" id="units" role="switch" aria-checked="false" aria-label="Metric units"><span class="opt-l">Imperial</span><span class="opt-r">Metric</span><i></i></button>
   </div>
   <button class="btn" id="restart">Restart match</button>
+  <button class="btn" id="toMenu">Main menu</button>
 </div>
 <div class="readout">
   <div id="readout"></div>
@@ -259,6 +321,42 @@
   <p class="trayhint" id="trayHint"></p>
   <button class="btn tray-toggle" id="trayToggle" aria-expanded="true" aria-controls="tray">Hide parts</button>
   <div class="tray" id="tray" role="group" aria-label="Parts"></div>
+</div>
+
+<div class="menu" id="menu">
+  <h1 class="logo" aria-label="Float Goat">
+    <span class="lrow">
+      <span style="--i:0">F</span><span style="--i:1">L</span><span style="--i:2">O</span><span style="--i:3">A</span><span style="--i:4">T</span>
+    </span>
+    <span class="lrow goat">
+      <span style="--i:5">G</span><span style="--i:6">O</span><span style="--i:7">A</span><span style="--i:8">T</span>
+    </span>
+    <svg class="lwave" viewBox="0 0 400 34" aria-hidden="true" preserveAspectRatio="none"><path d="M0 18 Q 25 4 50 18 T 100 18 T 150 18 T 200 18 T 250 18 T 300 18 T 350 18 T 400 18 V34 H0z" fill="#fff" opacity=".9"/><path d="M0 18 Q 25 4 50 18 T 100 18 T 150 18 T 200 18 T 250 18 T 300 18 T 350 18 T 400 18" fill="none" stroke="#0b2a4a" stroke-width="5" stroke-linecap="round"/></svg>
+  </h1>
+  <section class="mpanel" id="mMain">
+    <label class="mname" for="pName">Your name<input id="pName" maxlength="14" autocomplete="off" spellcheck="false"></label>
+    <button class="mbtn big" id="mHost">Host a game</button>
+    <button class="mbtn big" id="mFind">Find a game</button>
+    <button class="mbtn" id="mSolo">Practice vs bot</button>
+  </section>
+  <section class="mpanel" id="mFindP" hidden>
+    <h2>Open games</h2>
+    <ul class="llist" id="lobbyList"></ul>
+    <p class="mnote" id="findNote">Looking for games…</p>
+    <div class="rbtns"><button class="mbtn" id="mBack">Back</button></div>
+  </section>
+  <section class="mpanel wide" id="mRoom" hidden>
+    <h2 id="roomTitle">Lobby</h2>
+    <div class="teams" id="teams"></div>
+    <div class="rset" id="roomSet">
+      <label for="rBuild">Build <select id="rBuild"><option value="60">1 min</option><option value="120">2 min</option><option value="180" selected>3 min</option><option value="300">5 min</option></select></label>
+      <label for="rBattle">Battle <select id="rBattle"><option value="60">60 s</option><option value="90">90 s</option><option value="120" selected>2 min</option><option value="180">3 min</option></select></label>
+      <label for="rRounds">Rounds <select id="rRounds"><option value="1">1</option><option value="3" selected>3</option><option value="5">5</option><option value="7">7</option></select></label>
+    </div>
+    <p class="mnote" id="roomNote"></p>
+    <div class="rbtns"><button class="mbtn" id="mLeave">Leave</button><button class="mbtn go" id="mStart">Start</button></div>
+  </section>
+  <p class="mver" id="mVer"></p>
 </div>
 
 <script type="module">
@@ -1272,7 +1370,7 @@ function snapOnFace(f, p) {
 // ---- walking columns: a quarter-metre height map of the deck, as the sailors and gun crews see it ----
 const isWall = p => { const a = p.aabb || boxAabb(p.box); return a.max.y - a.min.y >= 0.3 && Math.min(a.max.x - a.min.x, a.max.z - a.min.z) <= 0.3; };
 function columnsOf(parts) {
-  const cols = new Map(), blocked = new Set(), owner = new Map(), deck = new Map();
+  const cols = new Map(), blocked = new Set(), owner = new Map(), deck = new Map(), obst = new Map();   // obst: how high whatever blocks a column stands
   for (const p of parts) {
     if (p.alive === false || PARTS[p.type].side) continue;
     const a = p.aabb || boxAabb(p.box), [i0, j0] = colOf(a.min.x + 0.02, a.min.z + 0.02), [i1, j1] = colOf(a.max.x - 0.02, a.max.z - 0.02);
@@ -1280,12 +1378,12 @@ function columnsOf(parts) {
       const [x, z] = colCenter(i, j), hit = boxTopAt(p.box, x, z);
       if (!hit) continue;
       const k = colKey(i, j);
-      if (PARTS[p.type].station) { blocked.add(k); continue; }
+      if (PARTS[p.type].station) { blocked.add(k); obst.set(k, Math.max(obst.get(k) ?? -Infinity, a.max.y)); continue; }
       if (!cols.has(k) || cols.get(k) < hit.y) { cols.set(k, hit.y); owner.set(k, hit.ny); }
       if (!isWall(p) && (!deck.has(k) || deck.get(k) < hit.y)) deck.set(k, hit.y);
     }
   }
-  for (const [k, ny] of owner) if (ny < 0.6) blocked.add(k);        // too steep to stand on
+  for (const [k, ny] of owner) if (ny < 0.6) { blocked.add(k); obst.set(k, Math.max(obst.get(k) ?? -Infinity, cols.get(k))); }        // too steep to stand on
   // walls (an upright plank or half plank: tall and thin): block every column the wall passes through, even one
   // whose centre it misses, wherever it stands above the deck there, so nobody steps onto or through it
   const cp = new THREE.Vector3();
@@ -1298,10 +1396,10 @@ function columnsOf(parts) {
       const k = colKey(i, j), floor = deck.has(k) ? deck.get(k) : -Infinity;
       if (a.max.y < floor + 0.1) continue;                       // it's below the deck here (a keel), not a wall
       const [x, z] = colCenter(i, j);
-      if (boxDist(p.box, cp.set(x, p.box.center.y, z)) < 0.11) blocked.add(k);
+      if (boxDist(p.box, cp.set(x, p.box.center.y, z)) < 0.11) { blocked.add(k); obst.set(k, Math.max(obst.get(k) ?? -Infinity, a.max.y)); }
     }
   }
-  return { cols, blocked };
+  return { cols, blocked, obst };
 }
 const columnTop = (sh, x, z) => { const [i, j] = colOf(x, z), k = colKey(i, j); return sh.cols.has(k) && !sh.blocked.has(k) ? sh.cols.get(k) : null; };
 
@@ -2415,7 +2513,7 @@ function nextPhase() {
 function newRound() {
   // the raft carries over. The first round starts with the full budget; each round after that adds ROUND_GOLD
   // to whatever you have left
-  if (match.round <= 1) raft.gold = BUDGET - layoutCost();
+  if (match.round <= 1) raft.gold = START_GOLD - layoutCost();
   else raft.gold += ROUND_GOLD;
   setPhase('build');
   bigFlash(`Round ${match.round} of ${match.rounds}`, match.round > 1 ? `+${ROUND_GOLD}g · Build your raft` : 'Build your raft');
@@ -2572,7 +2670,7 @@ function setUnits(u) {
 }
 $('units').addEventListener('click', () => setUnits(imp() ? 'metric' : 'imperial'));
 setUnits(units);
-$('ready').addEventListener('click', nextPhase);
+$('ready').addEventListener('click', () => { if (!raft.parts.length) { flash('Build something first'); return; } nextPhase(); });
 $('musicVol').value = audio.musicVol; $('sfxVol').value = audio.sfxVol;
 $('musicVol').addEventListener('input', e => { audioStart(); setMusicVol(parseFloat(e.target.value)); });
 $('sfxVol').addEventListener('input', e => { audioStart(); setSfxVol(parseFloat(e.target.value)); });
@@ -2597,15 +2695,19 @@ setSnap(snapCfg.on, snapCfg.size);
 $('pmGizmo').addEventListener('click', gizmoToggle);
 $('pmRemove').addEventListener('click', () => { if (!sel || locked()) return; const p = sel; closeMenu(); removeWithDependents(p); changed(); });
 
-// a starter raft so the first frame shows what the game is
-{
+// there's no starter raft any more: you start from nothing, with what's left of the budget after what the old
+// starter cost, plus 30% of its value in gold
+function starterLayout() {
   const L = [];
   for (let i = 2; i <= 6; i++) for (const j of [2, 6]) L.push({ type: 'barrel', cell: [i, 0, j] });
   for (let i = 2; i <= 6; i++) for (let j = 2; j <= 6; j++) L.push({ type: 'plank', cell: [i, 1, j] });
   L.push({ type: 'engine', cell: [1, 0, 4] }, { type: 'cannon', cell: [5, 2, 4] });
-  for (const e of legacyLayout(L)) addPartFrom(e, false);
+  return legacyLayout(L);
 }
-for (const p of raft.parts) raft.gold -= PARTS[p.type].cost;
+const STARTER_COST = starterLayout().reduce((g, e) => g + PARTS[e.type].cost, 0);
+const START_GOLD = BUDGET - STARTER_COST + Math.round(STARTER_COST * 0.3);
+function addStarterRaft() { for (const e of starterLayout()) addPartFrom(e, false); raft.gold -= STARTER_COST; changed(); }     // (tests)
+raft.gold = START_GOLD;
 changed(); pose.pos.copy(pose.tPos); pose.q.copy(pose.tQ);
 
 // ---------- input: orbit camera, tap to build ----------
@@ -2740,6 +2842,7 @@ function frame(now) {
   if (Math.abs(viewLift) > 0.002) camera.setViewOffset(innerWidth, innerHeight, 0, viewLift * innerHeight, innerWidth, innerHeight);
   else if (camera.view && camera.view.enabled) camera.clearViewOffset();
   if (raft.mode === 'battle') { battleFrame(dt); requestAnimationFrame(frame); return; }
+  if (raft.mode === 'menu') { menuFrame(dt); requestAnimationFrame(frame); return; }
   if (raft.mode === 'build') drawThumbs(dt);
   // the sea eases between calm (building) and the test swell
   SWELL.amp += (SWELL.target - SWELL.amp) * (1 - Math.exp(-1.5 * dt));
@@ -2853,7 +2956,6 @@ function renderWorld(dt) {
   renderer.render(scene, camera);
 }
 updateUI();
-bigFlash(`Round 1 of ${match.rounds}`, 'Build your raft');
 requestAnimationFrame(frame);
 
 // =====================================================================================
@@ -2862,6 +2964,7 @@ requestAnimationFrame(frame);
 // =====================================================================================
 const ARENA_A = new THREE.Vector3(-17, 0, 80), ARENA_B = new THREE.Vector3(17, 0, 80);
 const BATTLE_SWELL = 0.55, OVERBOARD_TIME = 5, WALK_SPEED = 2.6, SWIM_SPEED = 1.9, STEP_UP = 0.55;
+const JUMP_V = 3.9;                  // clears about 0.75 m: a half wall or a gun, not a full wall
 const FLOOD_RATE = 0.09;
 const WEAPONS = {
   cannon: { speed: 30, reload: 2.2, pitch: [-0.12, 0.62], yawRate: 1.5, pitchRate: 0.9, dmg: 40, splashR: 1.4, splashDmg: 18, push: 0.9, recoil: 0.45 },
@@ -2942,7 +3045,7 @@ function partCollider(part, body) {
 }
 function recolumn(ship) {
   const c = columnsOf(ship.parts.filter(p => p.alive));
-  ship.cols = c.cols; ship.blocked = c.blocked;
+  ship.cols = c.cols; ship.blocked = c.blocked; ship.obst = c.obst;
 }
 // ---------- gun crews: the gunner stands on a circle behind the breech, opposite the muzzle ----------
 // st.arc[i] says whether there's free deck for him when the gun points at angle i*ARC_STEP.
@@ -3306,6 +3409,7 @@ function poseFor(state, ph, extra) {
   else if (state === 'paddle') set([0.4, 0.4, 0.2, -0.2, 0.6, 0.6, 1.0, 0.45, 0.24, -0.24, -1.4, -0.95, 0.25, -0.32, 0]);   // crouched at the edge (the arms are on the paddle)
   else if (state === 'heave') set([1.0, 1.0, 0.2, -0.2, 0.3, 0.3, 1.3, 1.15, 0.22, -0.22, -1.9, -1.75, 0.35, -0.36, 0]);   // squatting, braced to pull
   else if (state === 'drag') set([1.0, 1.0, 0.2, -0.2, 0.3, 0.3, 0, 0, 0, 0, 0, 0, 0.7, -0.38, 0]);   // bent over it, gripping the top edge (legs come from walking)   // leaning back on it (legs come from walking)
+  else if (state === 'jump') set([0.7, 0.7, 0.35, -0.35, 0.6, 0.6, 0.9, 0.5, 0.15, -0.15, -1.3, -0.9, 0.18, 0, 0]);   // knees tucked, arms up for balance
   else if (state === 'carry') set([0.95, 0.95, 0.28, -0.28, 1.15, 1.15, 0, 0, 0, 0, 0, 0, -0.06, -0.02, 0]);
   else if (state === 'shove') set([1.5, 1.5, 0.12, -0.12, 0.08, 0.08, 0.5, -0.35, 0.06, -0.06, -0.3, -0.1, 0.38, -0.08, 0]);
   else if (state === 'drowned') set([2.8, 2.8, 0.5, -0.5, 0.2, 0.2, 0.1, -0.1, 0.1, -0.1, -0.3, -0.3, 0, 0, 0]);
@@ -3478,7 +3582,7 @@ function gunPose(s) {
   if (kick > 0) { const k = Math.sin(kick * Math.PI * 0.5) * (W.recoil + 0.2); P[12] -= 0.9 * k; P[0] -= 0.6 * k; P[1] -= 0.6 * k; P[13] -= 0.1 * k; }
   return P;
 }
-const POSE_STATES = ['idle', 'walk', 'gun', 'drive', 'air', 'swim', 'climb', 'drowned', 'haul', 'paddle', 'heave'];
+const POSE_STATES = ['idle', 'walk', 'gun', 'drive', 'air', 'swim', 'climb', 'drowned', 'haul', 'paddle', 'heave', 'jump'];
 function makeCrew(ship, colors, isPlayer) {
   const s = { model: makeSailor(colors), ship, isPlayer, state: 'aboard', local: new THREE.Vector3(), slide: new THREE.Vector3(), yaw: 0,
     pos: new THREE.Vector3(), vel: new THREE.Vector3(), tumble: new THREE.Quaternion(), spin: new THREE.Vector3(), overT: OVERBOARD_TIME,
@@ -3603,11 +3707,12 @@ document.addEventListener('mousemove', e => {
   }
 });
 document.addEventListener('pointerlockchange', () => { if (!aimLocked() && battle.on) updateBattleHud(true); });
-// what E would act on: of the stations and loot in reach, the one most in front of where you're looking
+// what E would act on: of the stations and loot in reach, the one closest to straight in front of him
+// (where he's facing, not where the camera looks)
 function interactTarget(s) {
   if (s.state !== 'aboard' || s.carry) return null;
   const me = toWorld(s.ship, s.local, new THREE.Vector3());
-  const fx = -Math.sin(view.yaw), fz = -Math.cos(view.yaw);
+  const wy = worldYawOf(s), fx = Math.cos(wy), fz = -Math.sin(wy);
   const score = (x, z) => { const dx = x - me.x, dz = z - me.z, d = Math.hypot(dx, dz); const ang = d < 0.25 ? 0 : Math.acos(clamp((dx * fx + dz * fz) / d, -1, 1)); return ang + 0.25 * d; };
   let best = null, bs = 1e9;
   for (const st of s.ship.stations) {
@@ -3714,8 +3819,11 @@ function sailorStep(s, t, inp) {
     const vx = s.move.x + s.slide.x, vz = s.move.z + s.slide.z;
     const nx = s.local.x + vx * DT, nz = s.local.z + vz * DT;
     // on the way to a station you may brush the corner of the gun's cell; that's fine, it has deck under it
-    const okCol = (i, j) => s.state === 'station' ? ship.cols.has(colKey(i, j)) : walkable(ship, i, j);
-    const tryCol = (x, z) => { const [i, j] = colOf(x, z); return okCol(i, j) && ship.cols.get(colKey(i, j)) <= s.local.y + STEP_UP ? [i, j] : null; };
+    // what he'd stand on in a column: the deck, or the top of whatever blocks it (a half wall, a gun) - only reachable
+    // by jumping, never by stepping up onto it
+    const surf = (i, j) => { const k = colKey(i, j); if (!ship.cols.has(k)) return null; return s.state !== 'station' && ship.blocked.has(k) ? (ship.obst && ship.obst.has(k) ? ship.obst.get(k) : Infinity) : ship.cols.get(k); };
+    const okCol = (i, j) => { if (s.state === 'station') return ship.cols.has(colKey(i, j)); const k = colKey(i, j); if (!ship.cols.has(k)) return false; return !ship.blocked.has(k) || surf(i, j) <= s.local.y + 0.06; };
+    const tryCol = (x, z) => { const [i, j] = colOf(x, z), k = colKey(i, j), top = surf(i, j); if (top === null || !okCol(i, j)) return null; return top <= s.local.y + (s.state !== 'station' && ship.blocked.has(k) ? 0.06 : STEP_UP) ? [i, j] : null; };
     const sliding = s.slide.length() > 1.0;
     if (!dragAllows(s, nx, nz)) { /* held back by the weight */ }
     else if (tryCol(nx, nz)) { s.local.x = nx; s.local.z = nz; }
@@ -3728,8 +3836,22 @@ function sailorStep(s, t, inp) {
     }
     const [ci, cj] = colOf(s.local.x, s.local.z);
     if (!okCol(ci, cj)) { throwOff(s, _bv.set(0, 0.3, 0)); return; }     // the deck under him is gone
-    const top = ship.cols.get(colKey(ci, cj));
-    s.local.y += (top - s.local.y) * (1 - Math.exp(-(top > s.local.y ? 14 : 22) * DT));
+    const top = surf(ci, cj);
+    // jumping / falling: off the ground he flies; otherwise feet follow the deck (and step down off anything over 0.2 m)
+    if (s.state === 'aboard' && s.jumpReq && !s.air && !(s.carry && s.carry.drag) && s.stagger <= 0) { s.air = true; s.jv = JUMP_V; }
+    s.jumpReq = false;
+    if (!s.air && top < s.local.y - 0.2) { s.air = true; s.jv = 0; }
+    if (s.air) {
+      s.jv -= G * DT; s.local.y += s.jv * DT;
+      if (s.local.y <= top) { s.local.y = top; s.air = false; s.jv = 0; s.landT = 0; }
+    } else s.local.y += (top - s.local.y) * (1 - Math.exp(-(top > s.local.y ? 14 : 22) * DT));
+    s.landT = (s.landT ?? 9) + DT;
+    // landed on top of a wall or a gun: he hops down off it rather than standing there
+    if (!s.air && s.state === 'aboard' && ship.blocked.has(colKey(ci, cj))) {
+      let best = null, bd = 9;
+      for (let di = -2; di <= 2; di++) for (let dj = -2; dj <= 2; dj++) { const k = colKey(ci + di, cj + dj); if (!ship.cols.has(k) || ship.blocked.has(k)) continue; const d = Math.hypot(di, dj); if (d < bd) { bd = d; best = colCenter(ci + di, cj + dj); } }
+      if (best) { s.slide.x += (best[0] - s.local.x) * 6 * DT; s.slide.z += (best[1] - s.local.z) * 6 * DT; }
+    }
     s.speed = Math.hypot(s.move.x, s.move.z);
     if (s.shoveT < 0.4) s.yaw = lerpAngle(s.yaw, s.shoveYaw, 1 - Math.exp(-22 * DT));
     else if (s.pad && s.pad.active) s.yaw = lerpAngle(s.yaw, s.pad.dir, 1 - Math.exp(-5 * DT));     // turns to face the way he paddles
@@ -3808,7 +3930,7 @@ function drawSailor(s, dt, camPosW) {
   const M = s.model;
   // pose weights crossfade toward the current state
   let want = 'idle';
-  if (s.state === 'aboard') want = s.pad && s.pad.active ? 'paddle' : s.speed > 0.25 ? 'walk' : 'idle';
+  if (s.state === 'aboard') want = s.air ? 'jump' : s.pad && s.pad.active ? 'paddle' : s.speed > 0.25 ? 'walk' : 'idle';
   else if (s.state === 'station') want = s.route && s.route.length ? (s.speed > 0.25 ? 'walk' : 'idle') : s.station && s.station.kind === 'drive' ? 'drive' : 'gun';
   else want = s.state === 'haul' && s.haulT && s.haulT.haul && s.haulT.haul.heavy ? 'heave' : s.state;
   let tot = 0;
@@ -3829,7 +3951,8 @@ function drawSailor(s, dt, camPosW) {
     if (s.carryW > 0.001) { const P = poseFor('carry', s.ph), cw = s.carryW * (1 - e); for (const i of [0, 1, 2, 3, 4, 5, 12]) J[i] = J[i] * (1 - cw) + P[i] * cw; }
     // dragging: crouched and leaning back against the weight; the legs keep walking
     s.dragW = (s.dragW || 0) + ((s.carry && s.carry.drag ? 1 : 0) - (s.dragW || 0)) * (1 - Math.exp(-8 * dt));
-    if (s.dragW > 0.001) { const P = poseFor('drag', s.ph), cw = s.dragW * (1 - e); for (const i of [0, 1, 2, 3, 4, 5, 12, 13]) J[i] = J[i] * (1 - cw) + P[i] * cw; J[6] += 0.8 * cw; J[7] += 0.8 * cw; J[10] -= 1.3 * cw; J[11] -= 1.3 * cw; }   // knees bent under the crouch
+    if (s.dragW > 0.001) { const P = poseFor('drag', s.ph), cw = s.dragW * (1 - e); if (s.carry && s.carry.drag) s.dragLow = clamp((0.7 - s.carry.L.size[1]) * 2, 0, 0.5); P[12] += s.dragLow || 0;   // bends lower for a lower piece
+      for (const i of [0, 1, 2, 3, 4, 5, 12, 13]) J[i] = J[i] * (1 - cw) + P[i] * cw; J[6] += 0.8 * cw; J[7] += 0.8 * cw; J[10] -= 1.3 * cw; J[11] -= 1.3 * cw; }   // knees bent under the crouch
   }
   for (let i = 0; i < 2; i++) {
     M.sh[i].rotation.set(J[2 + i], 0, J[i]);
@@ -4146,7 +4269,9 @@ function tetherStep(tt) {
   const d = A.distanceTo(B), u = B.clone().sub(A).divideScalar(d || 1);
   const user = tt.st.user, W = WEAPONS.harpoon;
   tt.reeling = W.autoReel || (user && (user.isPlayer ? battle.reelHeld : true));
-  if (tt.reeling) tt.L = Math.max(2.5, tt.L - W.reel * DT);
+  // reeling in treasure: the heavier it is, the slower it comes (pouch ~1.8 m/s, chest ~1.3, strongbox ~0.7, idol ~0.55)
+  const reel = tt.loot ? W.reel / (1 + tt.loot.L.mass * 6) : W.reel;
+  if (tt.reeling) tt.L = Math.max(2.5, tt.L - reel * DT);
   const stretch = d - tt.L;
   if (stretch > 6) { tt.life = 0; return; }        // snaps
   if (stretch <= 0) return;
@@ -4543,6 +4668,7 @@ function playerFire() { const s = battle.player; if (s && s.station && s.station
 addEventListener('keydown', e => {
   if (raft.mode !== 'battle') return;
   if (e.code === 'KeyE') { e.preventDefault(); interact(); }
+  if (e.code === 'Space' && battle.player && battle.player.state === 'aboard' && !battle.over) { e.preventDefault(); if (!e.repeat) battle.player.jumpReq = true; return; }   // on deck, Space jumps
   if (e.code === 'Space' || e.code === 'KeyF') { e.preventDefault(); if (!e.repeat) { battle.reelHeld = true; playerFire(); } }
   if (e.code === 'KeyQ') { e.preventDefault(); playerShove(); }
 });
@@ -5228,7 +5354,7 @@ function startHaul(s, t) {
   s.yaw = Math.atan2(-(lc.z - s.local.z), lc.x - s.local.x);
   const heavy = isHeavy(t), onDeck = lootOn(t) === ship, belt = t.type === 'pouch' && (s.belt || []).length < BELT_MAX;
   // heavy pieces are hauled in hand over hand, slowly (a few heaves), then dragged; the rest swing up into his arms
-  t.haul = { s, ship, t: 0, dur: heavy ? (onDeck ? 0.8 : 2.4 + t.L.mass * 3.5) : 0.35 + t.L.mass * 2, pulls: heavy && !onDeck ? 4 : 1,
+  t.haul = { s, ship, t: 0, dur: heavy ? (onDeck ? 0.8 : 2.4 + t.L.mass * 3.5) : 0.35 + t.L.mass * 2, pulls: heavy && !onDeck ? (t.L.mass > 0.3 ? 4 : 3) : 1,
     from: lc, q0: new THREE.Quaternion().copy(t.body.rotation()), heavy, belt };
   t.collider.setSensor(true); t.body.setGravityScale(0, true);
   s.state = 'haul'; s.haulT = t;
@@ -5301,7 +5427,7 @@ function dropLoot(s, throwIt) {
   releaseLoot(t, v);
 }
 // carrying slows you down: about 4% for a pouch, 40% for the idol
-// dragging something heavy is slow: about a third of walking pace for a strongbox, a quarter for the idol
+// dragging is slower the heavier it is: half walking pace for a chest, about a quarter for a strongbox, a fifth for the idol
 const carrySpeed = s => !s.carry ? 1 : s.carry.drag ? 1 / (1 + s.carry.L.mass * 8) : 1 / (1 + s.carry.L.mass * 1.5);
 
 // ---------- spawning ----------
@@ -5385,7 +5511,7 @@ function drawLoot(dt, a) {
 // =====================================================================================
 // HEAVY TREASURE: hauled in hand over hand, then dragged across the deck
 // =====================================================================================
-const isHeavy = t => t.L.mass > 0.3;               // the strongbox and the idol
+const isHeavy = t => t.L.mass > 0.1;               // the chest, the strongbox and the idol: dragged, not picked up
 const DRAG_GAP = 0.08;                             // between his toes and the near face of what he's dragging
 const dragDist = t => DRAG_GAP + 0.2 + Math.max(t.L.size[0], t.L.size[2]) / 2;
 const _hvyV = new THREE.Vector3(), _hvyQ = new THREE.Quaternion(), _hvyQ2 = new THREE.Quaternion();
@@ -5555,5 +5681,282 @@ function heavePose(s) {
   P[12] -= 0.3 * pull; P[13] -= 0.06 * pull; P[6] += 0.15 * pull; P[7] += 0.15 * pull;
   return P;
 }
+
+// =====================================================================================
+// NETWORK: Supabase Realtime channels (presence + broadcast). No database tables: lobbies are presence on a
+// shared directory channel, and each game room is its own channel. A tiny in-memory bus stands in for the
+// tests (several game instances in one process).
+// =====================================================================================
+const NET = {
+  url: 'https://ucdwqexhkglvhilurqti.supabase.co',
+  key: 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InVjZHdxZXhoa2dsdmhpbHVycXRpIiwicm9sZSI6ImFub24iLCJpYXQiOjE3OTE3MzI5NTcsImV4cCI6MjEwNzMwODk1N30.U1uK7IGF6Oc9-0ETMEq-qn-fer3GI1W_DeQkN2htpLM',
+  lib: 'https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/+esm',
+  client: null,
+  id: (() => { try { const k = 'floatgoat.id'; let v = sessionStorage.getItem(k); if (!v) { v = Math.random().toString(36).slice(2, 10); sessionStorage.setItem(k, v); } return v; } catch (_) { return Math.random().toString(36).slice(2, 10); } })(),
+};
+async function netClient() {
+  if (NET.client) return NET.client;
+  if (globalThis.__FG_BUS) { NET.client = globalThis.__FG_BUS; return NET.client; }
+  const m = await import(NET.lib);
+  const sb = m.createClient(NET.url, NET.key, { auth: { persistSession: false }, realtime: { params: { eventsPerSecond: 40 } } });
+  // the same small surface the test bus offers
+  NET.client = {
+    channel(name, key) {
+      const ch = sb.channel(name, { config: { presence: { key }, broadcast: { self: false, ack: false } } });
+      const api = {
+        onBroadcast(ev, cb) { ch.on('broadcast', { event: ev }, ({ payload }) => cb(payload)); return api; },
+        onPresence(cb) { ch.on('presence', { event: 'sync' }, () => cb(api.members())); return api; },
+        members() { const st = ch.presenceState(), out = []; for (const k in st) { const m = st[k][0]; if (m) out.push({ key: k, ...m }); } return out; },
+        subscribe() { return new Promise((res, rej) => { let done = false; ch.subscribe(s => { if (done) return; if (s === 'SUBSCRIBED') { done = true; res(api); } else if (s === 'CHANNEL_ERROR' || s === 'TIMED_OUT') { done = true; rej(new Error(s)); } }); }); },
+        track(state) { return ch.track(state); },
+        send(ev, payload) { return ch.send({ type: 'broadcast', event: ev, payload }); },
+        leave() { try { ch.untrack(); } catch (_) {} return sb.removeChannel(ch); },
+      };
+      return api;
+    },
+  };
+  return NET.client;
+}
+
+// =====================================================================================
+// MAIN MENU + LOBBIES. The menu floats over an aerial view of the arena with the sea at full storm.
+// Lobbies: Host / Find / a list of open games (no codes). Up to 8 players on up to 4 colour teams; the host
+// can fill teams with bots and sets the timings. One raft per team.
+// =====================================================================================
+const TEAMS = [
+  { name: 'Red', color: '#ff4f6d' }, { name: 'Blue', color: '#1e88ff' },
+  { name: 'Green', color: '#1fa463' }, { name: 'Gold', color: '#f2b705' },
+];
+const MAX_PLAYERS = 8;
+const MENU_SWELL = TEST_SWELL * 1.6;           // the test swell slider all the way up
+const lobby = { dir: null, room: null, roomId: null, host: false, hostId: null, roster: [], settings: { build: 180, battle: 120, rounds: 3 }, joinedAt: 0, game: null };
+const menuCam = { yaw: 0.6 };
+
+function playerName() {
+  const v = ($('pName').value || '').trim();
+  return v || 'Sailor';
+}
+try { $('pName').value = localStorage.getItem('floatgoat.name') || ''; } catch (_) {}
+$('pName').addEventListener('change', () => { try { localStorage.setItem('floatgoat.name', $('pName').value.trim()); } catch (_) {} });
+$('mVer').textContent = document.querySelector('.brand span') ? document.querySelector('.brand span').textContent : '';
+
+function menuPanel(id) {
+  for (const p of ['mMain', 'mFindP', 'mRoom']) $(p).hidden = p !== id;
+}
+// back to the menu from anywhere: out of battle or the water test, raft put away
+function enterMenu(panel = 'mMain') {
+  if (raft.mode === 'battle') exitBattle();
+  if (raft.mode === 'test') endTest();
+  if (sel) closeMenu();
+  $('settings').hidden = true;
+  raft.mode = 'menu'; match.phase = 'menu';
+  raftGroup.visible = false; if (ghost) ghost.visible = false;
+  document.body.classList.add('in-menu');
+  menuPanel(panel);
+}
+function leaveMenu() {
+  document.body.classList.remove('in-menu');
+  raft.mode = 'build'; raftGroup.visible = true;
+  SWELL.target = 0;
+  view.free = false; view.dist = 14; view.pitch = 0.55; view.target.copy(HARBOR);
+}
+// a fresh match from an empty raft
+function freshMatch(settings) {
+  for (const p of [...raft.parts]) removePart(p, false);
+  raft.history = [];
+  if (settings) { $('buildTime').value = String(settings.build); $('battleTime').value = String(settings.battle); $('rounds').value = String(settings.rounds); }
+  leaveMenu();
+  restartMatch();
+  changed();
+}
+// the menu's world: the arena from high up, the sea rolling at full swell, the camera slowly circling
+function menuFrame(dt) {
+  SWELL.target = MENU_SWELL;
+  SWELL.amp += (SWELL.target - SWELL.amp) * (1 - Math.exp(-1.2 * dt));
+  SWELL_UNIFORM.value = SWELL.amp;
+  acc += dt;
+  while (acc >= DT) { followSim(ARENA_C.x, ARENA_C.z); dNow.fill(0); simStep(); simTime += DT; acc -= DT; }
+  menuCam.yaw += dt * 0.035;
+  view.target.copy(ARENA_C);
+  const dist = 64, pitch = 0.95;
+  camPos.set(ARENA_C.x + Math.sin(menuCam.yaw) * Math.cos(pitch) * dist, Math.sin(pitch) * dist, ARENA_C.z + Math.cos(menuCam.yaw) * Math.cos(pitch) * dist);
+  camera.position.lerp(camPos, 1 - Math.exp(-3 * dt)); camera.lookAt(view.target);
+  if (camera.view && camera.view.enabled) camera.clearViewOffset();
+  renderWorld(dt);
+}
+
+// ---------- lobby directory: every open game is a presence entry on one shared channel ----------
+async function openDirectory() {
+  if (lobby.dir) return lobby.dir;
+  const c = await netClient();
+  const dir = c.channel('fg-lobbies', NET.id);
+  dir.onPresence(list => { if (!$('mFindP').hidden) drawLobbyList(list); });
+  await dir.subscribe();
+  lobby.dir = dir;
+  return dir;
+}
+function drawLobbyList(list) {
+  const ul = $('lobbyList'); ul.textContent = '';
+  const open = list.filter(g => g.room && g.open && g.n < MAX_PLAYERS);
+  $('findNote').textContent = open.length ? '' : 'No open games yet. Host one, or wait here.';
+  for (const g of open) {
+    const li = document.createElement('li'), b = document.createElement('button');
+    b.className = 'mbtn';
+    const n = document.createElement('span'); n.textContent = g.title || 'Game';
+    const c = document.createElement('span'); c.className = 'cnt'; c.textContent = `${g.n}/${MAX_PLAYERS}`;
+    b.append(n, c); b.addEventListener('click', () => joinRoom(g.room));
+    li.appendChild(b); ul.appendChild(li);
+  }
+}
+async function findGames() {
+  menuPanel('mFindP'); $('lobbyList').textContent = ''; $('findNote').textContent = 'Looking for games…';
+  try { const dir = await openDirectory(); drawLobbyList(dir.members()); }
+  catch (e) { $('findNote').textContent = 'Couldn’t reach the game server. Check your connection and try again.'; }
+}
+function advertise() {
+  if (!lobby.dir || !lobby.host) return;
+  lobby.dir.track({ room: lobby.roomId, title: `${playerName()}'s game`, n: lobby.roster.length, open: !lobby.game, at: lobby.joinedAt });
+}
+
+// ---------- a room ----------
+async function hostGame() {
+  $('mHost').disabled = true;
+  try {
+    lobby.host = true; lobby.hostId = NET.id; lobby.roomId = Math.random().toString(36).slice(2, 8); lobby.joinedAt = Date.now(); lobby.game = null;
+    lobby.roster = [{ id: NET.id, name: playerName(), team: 0 }];
+    lobby.settings = { build: Number($('rBuild').value), battle: Number($('rBattle').value), rounds: Number($('rRounds').value) };
+    await openRoom(lobby.roomId);
+    await openDirectory(); advertise();
+    menuPanel('mRoom'); drawRoom();
+  } catch (e) { lobby.host = false; $('roomNote').textContent = ''; menuPanel('mMain'); flashMenu('Couldn’t reach the game server. Check your connection and try again.'); }
+  $('mHost').disabled = false;
+}
+async function joinRoom(id) {
+  try {
+    lobby.host = false; lobby.hostId = null; lobby.roomId = id; lobby.roster = []; lobby.joinedAt = Date.now(); lobby.game = null;
+    await openRoom(id);
+    menuPanel('mRoom'); drawRoom();
+    $('roomNote').textContent = 'Joining…';
+  } catch (e) { flashMenu('Couldn’t join that game.'); menuPanel('mFindP'); }
+}
+async function openRoom(id) {
+  const c = await netClient();
+  const room = c.channel('fg-room-' + id, NET.id);
+  room.onPresence(members => roomPresence(members));
+  room.onBroadcast('roster', p => { if (lobby.host) return; lobby.hostId = p.host; lobby.roster = p.roster; lobby.settings = p.settings; drawRoom(); });
+  room.onBroadcast('team', p => { if (!lobby.host) return; const r = lobby.roster.find(x => x.id === p.id); if (r && p.team >= 0 && p.team < TEAMS.length) { r.team = p.team; pushRoster(); } });
+  room.onBroadcast('start', p => { if (lobby.host) return; startGame(p); });
+  room.onBroadcast('hello', () => { if (lobby.host) pushRoster(); });
+  await room.subscribe();
+  lobby.room = room;
+  await room.track({ name: playerName(), host: lobby.host });
+  if (!lobby.host) room.send('hello', {});
+}
+// the host keeps the roster: newcomers go to the smallest team, people who leave are dropped
+function roomPresence(members) {
+  const here = new Set(members.map(m => m.key));
+  if (lobby.host) {
+    let changedR = false;
+    for (const m of members) {
+      if (m.key === NET.id || lobby.roster.some(r => r.id === m.key)) continue;
+      if (lobby.roster.length >= MAX_PLAYERS || lobby.game) continue;                 // full (or already playing)
+      const counts = TEAMS.map((_, t) => lobby.roster.filter(r => r.team === t).length);
+      const team = counts.indexOf(Math.min(...counts));
+      lobby.roster.push({ id: m.key, name: String(m.name || 'Sailor').slice(0, 14), team }); changedR = true;
+    }
+    const before = lobby.roster.length;
+    lobby.roster = lobby.roster.filter(r => r.bot || r.id === NET.id || here.has(r.id));
+    if (changedR || lobby.roster.length !== before) pushRoster();
+  } else if (lobby.hostId && !here.has(lobby.hostId)) {
+    // the host is gone: the game is over
+    leaveRoom(); flashMenu('The host left the game.'); if (!lobby.game) menuPanel('mMain');
+  }
+}
+function pushRoster() {
+  if (!lobby.host || !lobby.room) return;
+  lobby.room.send('roster', { host: NET.id, roster: lobby.roster, settings: lobby.settings });
+  advertise(); drawRoom();
+}
+function leaveRoom() {
+  if (lobby.room) { lobby.room.leave(); lobby.room = null; }
+  if (lobby.host && lobby.dir) { lobby.dir.leave(); lobby.dir = null; }
+  lobby.host = false; lobby.roster = []; lobby.roomId = null;
+}
+function setTeam(t) {
+  const me = lobby.roster.find(r => r.id === NET.id);
+  if (lobby.host) { if (me) { me.team = t; pushRoster(); } }
+  else if (lobby.room) { lobby.room.send('team', { id: NET.id, team: t }); if (me) { me.team = t; drawRoom(); } }
+}
+function addBot(t) {
+  if (!lobby.host || lobby.roster.length >= MAX_PLAYERS) return;
+  const n = lobby.roster.filter(r => r.bot).length + 1;
+  lobby.roster.push({ id: 'bot-' + Math.random().toString(36).slice(2, 7), name: `Bot ${n}`, team: t, bot: true });
+  pushRoster();
+}
+function removeBot(id) { if (!lobby.host) return; lobby.roster = lobby.roster.filter(r => r.id !== id); pushRoster(); }
+const teamsInUse = () => new Set(lobby.roster.map(r => r.team)).size;
+function drawRoom() {
+  const me = lobby.roster.find(r => r.id === NET.id);
+  $('roomTitle').textContent = lobby.host ? 'Your game' : (lobby.roster.find(r => r.id === lobby.hostId)?.name || 'Host') + '’s game';
+  const box = $('teams'); box.textContent = '';
+  TEAMS.forEach((T, t) => {
+    const col = document.createElement('div'); col.className = 'team'; col.style.setProperty('--tc', T.color);
+    const h = document.createElement('h3'); const dot = document.createElement('i'); h.append(dot, document.createTextNode(T.name)); col.appendChild(h);
+    const ul = document.createElement('ul');
+    for (const r of lobby.roster.filter(x => x.team === t)) {
+      const li = document.createElement('li'); if (r.id === NET.id) li.className = 'me';
+      const nm = document.createElement('span'); nm.textContent = r.name; li.appendChild(nm);
+      const tag = document.createElement('span'); tag.className = 'tag'; tag.textContent = r.id === (lobby.host ? NET.id : lobby.hostId) ? 'host' : r.bot ? 'bot' : r.id === NET.id ? 'you' : ''; if (tag.textContent) li.appendChild(tag);
+      if (r.bot && lobby.host) { const x = document.createElement('button'); x.textContent = '×'; x.setAttribute('aria-label', `Remove ${r.name}`); x.addEventListener('click', () => removeBot(r.id)); li.appendChild(x); }
+      ul.appendChild(li);
+    }
+    col.appendChild(ul);
+    const tb = document.createElement('div'); tb.className = 'tb';
+    const join = document.createElement('button'); join.textContent = me && me.team === t ? 'Your team' : 'Join'; join.disabled = !me || me.team === t;
+    join.addEventListener('click', () => setTeam(t)); tb.appendChild(join);
+    if (lobby.host) { const bot = document.createElement('button'); bot.textContent = '+ Bot'; bot.disabled = lobby.roster.length >= MAX_PLAYERS; bot.addEventListener('click', () => addBot(t)); tb.appendChild(bot); }
+    col.appendChild(tb);
+    box.appendChild(col);
+  });
+  // settings: the host's to change; everyone sees them
+  $('roomSet').classList.toggle('locked', !lobby.host);
+  for (const [id, k] of [['rBuild', 'build'], ['rBattle', 'battle'], ['rRounds', 'rounds']]) { $(id).value = String(lobby.settings[k]); $(id).disabled = !lobby.host; }
+  const ok = teamsInUse() >= 2;
+  $('mStart').hidden = !lobby.host; $('mStart').disabled = !ok;
+  $('roomNote').textContent = !me && !lobby.host ? (lobby.roster.length >= MAX_PLAYERS ? 'This game is full.' : 'Joining…')
+    : lobby.host ? (ok ? `${lobby.roster.length} of ${MAX_PLAYERS} aboard. Start when you're ready.` : 'Put someone (or a bot) on at least two teams to start.')
+    : 'Waiting for the host to start.';
+}
+for (const [id, k] of [['rBuild', 'build'], ['rBattle', 'battle'], ['rRounds', 'rounds']]) $(id).addEventListener('change', () => { if (!lobby.host) return; lobby.settings[k] = Number($(id).value); pushRoster(); });
+
+// ---------- starting ----------
+function hostStart() {
+  if (!lobby.host || teamsInUse() < 2) return;
+  const p = { roster: lobby.roster, settings: lobby.settings, host: NET.id, seed: Math.floor(Math.random() * 1e9) };
+  lobby.room.send('start', p);
+  startGame(p);
+  advertise();
+}
+function startGame(p) {
+  const me = p.roster.find(r => r.id === NET.id);
+  lobby.game = { roster: p.roster, settings: p.settings, host: p.host, seed: p.seed, team: me ? me.team : 0 };
+  freshMatch(p.settings);
+  const T = TEAMS[lobby.game.team];
+  bigFlash(`Round 1 of ${match.rounds}`, `Team ${T.name} · build your raft`);
+}
+function flashMenu(msg) { $('roomNote').textContent = msg; $('findNote').textContent = msg; flash(msg); }
+
+$('mHost').addEventListener('click', hostGame);
+$('mFind').addEventListener('click', findGames);
+$('mBack').addEventListener('click', () => { if (lobby.dir && !lobby.host) { lobby.dir.leave(); lobby.dir = null; } menuPanel('mMain'); });
+$('mLeave').addEventListener('click', () => { leaveRoom(); menuPanel('mMain'); });
+$('mStart').addEventListener('click', hostStart);
+$('mSolo').addEventListener('click', () => { lobby.game = null; freshMatch(null); bigFlash(`Round 1 of ${match.rounds}`, 'Build your raft'); });
+$('toMenu').addEventListener('click', () => { leaveRoom(); lobby.game = null; enterMenu(); });
+addEventListener('pagehide', () => { try { leaveRoom(); } catch (_) {} });
+
+// the game opens on the menu (the tests skip straight to a practice match with the old starter raft)
+if (typeof __FG_TEST !== 'undefined' && __FG_TEST) { addStarterRaft(); raft.gold = BUDGET - STARTER_COST; changed(); bigFlash(`Round 1 of ${match.rounds}`, 'Build your raft'); }
+else enterMenu();
 
 </script>
