@@ -33,6 +33,22 @@
   .settings label { font-weight: 600; font-size: .9rem; display: flex; justify-content: space-between; gap: 10px; align-items: center; }
   .settings select { font: 600 .9rem var(--ui); border-radius: 8px; padding: 3px 6px; }
   .settings .note { font-size: .78rem; opacity: .7; margin: 0; }
+  .store-go { background: var(--sun); }
+  .store { position: fixed; z-index: 6; top: calc(env(safe-area-inset-top, 0px) + 56px); right: max(16px, env(safe-area-inset-right, 0px)); width: min(340px, calc(100vw - 32px));
+    background: #fff; border-radius: 16px; padding: 12px 14px; box-shadow: 0 8px 24px rgba(11,42,74,.25); display: flex; flex-direction: column; gap: 8px; max-height: calc(100vh - 160px); overflow-y: auto; }
+  .store h2 { margin: 0; font-size: 1.15rem; } .store h3 { margin: 4px 0 0; font-size: .9rem; }
+  .store .st-head { display: flex; align-items: center; gap: 8px; } .store .st-head h2 { margin-right: auto; }
+  .store .st-head .pill { box-shadow: none; background: #f2f5f9; }
+  .store .st-x { border: 0; background: transparent; font: 700 1.3rem var(--ui); cursor: pointer; padding: 0 4px; }
+  .store .st-items { display: flex; flex-direction: column; gap: 8px; }
+  .store .st-item { display: grid; grid-template-columns: 40px 1fr auto; gap: 10px; align-items: center; background: #f6f8fb; border-radius: 12px; padding: 8px; }
+  .store .st-item .ic, .store .st-kit .ic { width: 36px; height: 36px; display: block; } .store svg { width: 100%; height: 100%; display: block; }
+  .store .st-item b { display: block; font-size: .95rem; } .store .st-item small { display: block; font-size: .78rem; opacity: .75; }
+  .store .st-item button { border: 0; border-radius: 999px; padding: 8px 12px; font: 700 .85rem var(--ui); background: var(--good); color: #fff; cursor: pointer; white-space: nowrap; }
+  .store .st-item button:disabled { background: #c9d2dd; color: var(--ink); cursor: default; }
+  .store .st-kit { display: grid; grid-template-columns: repeat(4, 1fr); gap: 6px; }
+  .store .st-kit div { background: #f6f8fb; border-radius: 10px; padding: 6px 4px; display: flex; flex-direction: column; align-items: center; gap: 2px; font-size: .68rem; font-weight: 600; text-align: center; min-height: 58px; }
+  .store .note { font-size: .78rem; opacity: .7; margin: 0; }
   .partmenu { position: fixed; z-index: 5; top: calc(env(safe-area-inset-top, 0px) + 56px); right: max(16px, env(safe-area-inset-right, 0px));
     background: #fff; border-radius: 14px; padding: 12px 14px; box-shadow: 0 8px 24px rgba(11,42,74,.25); display: grid; gap: 8px; width: 230px; }
   .partmenu[hidden] { display: none; }
@@ -193,13 +209,14 @@
 
   /* ---- main menu: the stormy sea behind, the title across the top ---- */
   body.in-menu > :not(canvas):not(#menu):not(script) { display: none !important; }
-  .menu { position: fixed; inset: 0; z-index: 20; display: none; flex-direction: column; align-items: center; overflow-y: auto;
+  /* the panel sits in the middle of the screen; the title is centred in the space above it; the version is in the corner */
+  .menu { position: fixed; inset: 0; z-index: 20; display: none; grid-template-rows: minmax(0, 1fr) auto minmax(0, 1fr); justify-items: center; overflow-y: auto;
     padding: calc(env(safe-area-inset-top, 0px) + 18px) max(16px, env(safe-area-inset-right, 0px)) calc(env(safe-area-inset-bottom, 0px) + 18px) max(16px, env(safe-area-inset-left, 0px));
     background: linear-gradient(180deg, rgba(11,42,74,.35), rgba(11,42,74,0) 38%, rgba(11,42,74,0) 70%, rgba(11,42,74,.3)); }
-  body.in-menu .menu { display: flex; }
-  .logo { margin: 4px 0 26px; display: flex; flex-direction: column; align-items: center; line-height: .86; font-weight: 700; letter-spacing: .02em; position: relative; pointer-events: none; }
-  .logo .lrow { display: flex; gap: .02em; font-size: clamp(56px, 13vw, 128px); }
-  .logo .lrow.goat { font-size: clamp(64px, 15vw, 150px); margin-top: -.06em; }
+  body.in-menu .menu { display: grid; }
+  .logo { grid-row: 1; align-self: center; margin: 8px 0; display: flex; flex-direction: column; align-items: center; line-height: .86; font-weight: 700; letter-spacing: .02em; position: relative; pointer-events: none; }
+  .logo .lrow { display: flex; gap: .02em; font-size: clamp(34px, min(13vw, 10.5vh), 128px); }
+  .logo .lrow.goat { font-size: clamp(40px, min(15vw, 12vh), 150px); margin-top: -.06em; }
   .logo .lrow span { display: inline-block; color: #6fdcff;
     text-shadow: 0 -4px 0 #d8f7ff, 4px 0 0 var(--ink), -4px 0 0 var(--ink), 0 4px 0 var(--ink), 0 -4px 0 var(--ink), 3px 3px 0 var(--ink), -3px 3px 0 var(--ink), 3px -3px 0 var(--ink), -3px -3px 0 var(--ink), 0 10px 0 var(--ink), 0 14px 12px rgba(0,0,0,.25);
     animation: lbob 2.8s ease-in-out infinite; animation-delay: calc(var(--i) * -.31s); transform-origin: 50% 80%; }
@@ -207,7 +224,7 @@
   .logo .lrow.goat span:nth-child(2n) { color: var(--coral); }
   @keyframes lbob { 0%, 100% { transform: translateY(0) rotate(-3deg); } 50% { transform: translateY(-9px) rotate(3deg); } }
   @media (prefers-reduced-motion: reduce) { .logo .lrow span { animation: none; } }
-  .mpanel { width: min(380px, 100%); background: var(--panel); border-radius: 22px; padding: 18px; box-shadow: 0 6px 0 rgba(11,42,74,.25); display: flex; flex-direction: column; gap: 10px; box-sizing: border-box; }
+  .mpanel { grid-row: 2; width: min(380px, 100%); background: var(--panel); border-radius: 22px; padding: 18px; box-shadow: 0 6px 0 rgba(11,42,74,.25); display: flex; flex-direction: column; gap: 10px; box-sizing: border-box; }
   .mpanel.wide { width: min(860px, 100%); }
   .mpanel h2 { margin: 0 0 4px; font-size: 1.25rem; }
   .mname { display: flex; flex-direction: column; gap: 4px; font-weight: 600; font-size: .9rem; }
@@ -221,7 +238,7 @@
   .mvol label { display: grid; grid-template-columns: 6.2em 1fr; gap: 8px; align-items: center; font-weight: 600; font-size: .9rem; }
   .mvol input[type=range] { width: 100%; margin: 0; accent-color: #1f6fb2; cursor: pointer; }
   .mnote { margin: 0; font-size: .88rem; color: rgba(11,42,74,.75); min-height: 1.2em; }
-  .mver { margin-top: auto; padding-top: 12px; color: #fff; font-weight: 600; font-size: .8rem; text-shadow: 0 1px 0 rgba(11,42,74,.5); }
+  .mver { position: fixed; left: max(16px, env(safe-area-inset-left, 0px)); bottom: calc(env(safe-area-inset-bottom, 0px) + 12px); margin: 0; color: #fff; font-weight: 600; font-size: .8rem; text-shadow: 0 1px 0 rgba(11,42,74,.5); }
   .llist { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 8px; max-height: 46vh; overflow-y: auto; }
   .llist button { width: 100%; text-align: left; display: flex; justify-content: space-between; align-items: center; gap: 8px; }
   .llist .cnt { font-variant-numeric: tabular-nums; color: rgba(11,42,74,.7); font-weight: 600; }
@@ -248,7 +265,7 @@
 
 <canvas id="game" aria-label="3D raft building view on the water"></canvas>
 <div class="top">
-  <div class="brand"><h1>FLOAT GOAT</h1><span>v0.82</span></div>
+  <div class="brand"><h1>FLOAT GOAT</h1><span>v0.85</span></div>
   <div class="pill phasep" title="Phase and time left"><span id="phase">Build</span><span id="timer">3:00</span></div>
   <div class="pill" id="round">Round 1/3</div>
   <div class="pill" title="Treasure points: you – dummy">★ <span id="score">0 – 0</span></div>
@@ -259,6 +276,13 @@
   </div>
   <button class="pill" id="settingsBtn" aria-label="Host settings">⚙</button>
 </div>
+<section class="store" id="store" hidden aria-label="Item store">
+  <div class="st-head"><h2>Store</h2><span class="pill"><span class="coin"></span><span id="storeGold">0</span></span><button class="st-x" id="storeClose" aria-label="Close store">×</button></div>
+  <div class="st-items" id="storeItems"></div>
+  <h3>Your kit</h3>
+  <div class="st-kit" id="storeKit"></div>
+  <p class="note">Better gear replaces the old one of the same kind. Your kit comes into every battle this match.</p>
+</section>
 <div class="partmenu" id="partMenu" hidden>
   <div class="pm-head"><span class="sw" id="pmSw"></span><span id="pmName"></span><button id="pmClose" aria-label="Close">×</button></div>
   <div class="pm-stats" id="pmStats"></div>
@@ -317,6 +341,7 @@
     <button class="btn" id="clear">Clear</button>
     <span class="snapctl"><button class="btn" id="snapOn" aria-pressed="true" title="Grid snapping (G)">Snap</button><span class="sz" id="snapSize" role="group" aria-label="Grid size in blocks"><button data-s="0.125" title="⅛ block">⅛</button><button data-s="0.25" title="¼ block">¼</button><button data-s="0.5" title="½ block">½</button><button data-s="1" title="1 block">1</button></span></span>
     <div class="testbar"><label for="swell">Swell</label><input type="range" id="swell" min="0" max="1.6" step="0.05" value="1"><button class="btn" id="rock">Rock it</button><span class="hintk">WASD drives the motor</span></div>
+    <button class="btn store-go" id="storeBtn" aria-expanded="false" aria-controls="store">Store</button>
     <button class="btn primary" id="test">Test in water</button>
     <button class="btn battle-go" id="ready">Ready</button>
   </div>
@@ -2622,7 +2647,8 @@ const dirWord = (deg, pos, neg) => Math.abs(deg) < 1 ? 'level' : `${Math.abs(deg
 function updateUI() {
   $('gold').textContent = raft.gold;
   for (const k in PARTS) { const b = $('part-' + k); b.setAttribute('aria-pressed', String(tool === 'place' && selected === k)); b.hidden = !phaseAllows(k); b.disabled = raft.gold < PARTS[k].cost; }
-  const labels = { build: 'Build', battle: 'Battle', results: 'Round over' };
+  if (match.phase !== 'build' || raft.mode === 'battle') $('store').hidden = true; else drawStore();   // the store is only open while building
+  const labels = { build: 'Build', battle: 'Battle', results: 'Round over', collect: 'Battle', menu: '' };
   $('phase').textContent = labels[match.phase];
   $('round').textContent = `Round ${match.round}/${match.rounds}`;
   $('score').textContent = `${match.score.you} – ${match.score.dummy}`;
@@ -2717,7 +2743,7 @@ function starterLayout() {
   return legacyLayout(L);
 }
 const STARTER_COST = starterLayout().reduce((g, e) => g + PARTS[e.type].cost, 0);
-const START_GOLD = BUDGET - STARTER_COST + Math.round(STARTER_COST * 0.3);
+const START_GOLD = Math.round((BUDGET - STARTER_COST + STARTER_COST * 0.3) * 0.8);     // and 20% less than that
 function addStarterRaft() { for (const e of starterLayout()) addPartFrom(e, false); raft.gold -= STARTER_COST; changed(); }     // (tests)
 raft.gold = START_GOLD;
 changed(); pose.pos.copy(pose.tPos); pose.q.copy(pose.tQ);
@@ -3729,6 +3755,12 @@ document.addEventListener('pointerlockchange', () => { if (!aimLocked() && battl
 // what E would act on: of the stations and loot in reach, the one closest to straight in front of him
 // (where he's facing, not where the camera looks)
 function interactTarget(s) {
+  if (s.state === 'swim') {                    // in the water: only coin pouches within arm's reach, onto the belt
+    if ((s.belt || []).length >= BELT_MAX) return null;
+    let best = null, bd = SWIM_GRAB;
+    for (const t of battle.loot) { if (t.gone || t.type !== 'pouch' || t.haul || t.carried || t.belt) continue; const c = t.body.translation(), d = Math.hypot(c.x - s.pos.x, c.z - s.pos.z, (c.y - s.pos.y) * 0.5); if (d < bd) { bd = d; best = { loot: t }; } }
+    return best;
+  }
   if (s.state !== 'aboard' || s.carry) return null;
   const me = toWorld(s.ship, s.local, new THREE.Vector3());
   const wy = worldYawOf(s), fx = Math.cos(wy), fz = -Math.sin(wy);
@@ -3743,9 +3775,9 @@ function interactTarget(s) {
     if (sc < bs) { bs = sc; best = { st }; }
   }
   for (const t of battle.loot) {
-    if (t.gone || t.haul || t.carried) continue;
+    if (t.gone || t.haul || t.carried || t.belt || t.hooked) continue;
     const c = t.body.translation(), d = Math.hypot(c.x - me.x, c.z - me.z);
-    if (d >= HAUL_REACH || c.y < me.y - 2.2 || c.y > me.y + 1.6) continue;
+    if (d >= (t.type === 'pouch' ? POUCH_REACH : HAUL_REACH) || c.y < me.y - 2.2 || c.y > me.y + 1.6) continue;
     const sc = score(c.x, c.z);
     if (sc < bs) { bs = sc; best = { loot: t }; }
   }
@@ -3766,7 +3798,7 @@ function nearestStation(s) {
 function pushLoot(s) {
   const f = toWorld(s.ship, s.local, new THREE.Vector3());
   for (const t of battle.loot) {
-    if (t.gone || t.haul || t.carried) continue;
+    if (t.gone || t.haul || t.carried || t.belt || t.hooked) continue;
     const c = t.body.translation();
     if (c.y < f.y - 0.3 || c.y > f.y + 1.6) continue;
     const dx = c.x - f.x, dz = c.z - f.z, d = Math.hypot(dx, dz), need = 0.3 + Math.max(t.L.size[0], t.L.size[2]) / 2;
@@ -3844,7 +3876,16 @@ function sailorStep(s, t, inp) {
     const okCol = (i, j) => { if (s.state === 'station') return ship.cols.has(colKey(i, j)); const k = colKey(i, j); if (!ship.cols.has(k)) return false; return !ship.blocked.has(k) || surf(i, j) <= s.local.y + 0.06; };
     const tryCol = (x, z) => { const [i, j] = colOf(x, z), k = colKey(i, j), top = surf(i, j); if (top === null || !okCol(i, j)) return null; return top <= s.local.y + (s.state !== 'station' && ship.blocked.has(k) ? 0.06 : STEP_UP) ? [i, j] : null; };
     const sliding = s.slide.length() > 1.0;
+    const offDeck = !ship.cols.has(colKey(...colOf(nx, nz)));
     if (!dragAllows(s, nx, nz)) { /* held back by the weight */ }
+    else if (s.air && s.state === 'aboard' && offDeck && s.speed > 0.3) {
+      // jumped off the side: over he goes, carrying the jump and the run-up out over the water
+      s.local.x = nx; s.local.z = nz;
+      const v = _bv.set(s.move.x, 0, s.move.z).applyQuaternion(shipPose(ship).q); v.y = Math.max(0.5, s.jv);
+      const yw = Math.atan2(-v.z, v.x);
+      throwOff(s, v); s.spin.set(0, 0, 0); s.tumble.identity(); s.worldYaw = yw; s.dive = true; s.air = false;
+      return;
+    }
     else if (tryCol(nx, nz)) { s.local.x = nx; s.local.z = nz; }
     else if (sliding) {
       // slid off the edge
@@ -3895,7 +3936,7 @@ function sailorStep(s, t, inp) {
     s.vel.y -= G * DT; s.pos.addScaledVector(s.vel, DT);
     const h = surfaceH(s.pos.x, s.pos.z, t);
     if (s.pos.y < h) {
-      s.state = 'swim';
+      s.state = 'swim'; s.dive = false;
       spray(s.pos, 10 + Math.min(14, Math.floor(-s.vel.y * 3)), 2 + Math.min(4, -s.vel.y * 0.5), 1.5);
       kickWater(s.pos.x, s.pos.z, -0.03 * Math.min(8, -s.vel.y + 2), 0.4);
       s.vel.y *= 0.2;
@@ -3951,7 +3992,7 @@ function drawSailor(s, dt, camPosW) {
   let want = 'idle';
   if (s.state === 'aboard') want = s.air ? 'jump' : s.pad && s.pad.active ? 'paddle' : s.speed > 0.25 ? 'walk' : 'idle';
   else if (s.state === 'station') want = s.route && s.route.length ? (s.speed > 0.25 ? 'walk' : 'idle') : s.station && s.station.kind === 'drive' ? 'drive' : 'gun';
-  else want = s.state === 'haul' && s.haulT && s.haulT.haul && s.haulT.haul.heavy ? 'heave' : s.state;
+  else want = s.state === 'haul' && s.haulT && s.haulT.haul && s.haulT.haul.heavy ? 'heave' : s.state === 'air' && s.dive ? 'jump' : s.state;
   let tot = 0;
   for (const k of POSE_STATES) { s.w[k] += ((k === want ? 1 : 0) - s.w[k]) * (1 - Math.exp(-9 * dt)); tot += s.w[k]; }
   const stepping = (want === 'gun' || want === 'drive') && s.speed > 0.15;          // shuffling round the gun as it turns
@@ -4152,7 +4193,7 @@ function projStep(pr, t) {
     }
     // loot
     for (const t of battle.loot) {
-      if (t.gone || t.haul || t.carried) continue;
+      if (t.gone || t.haul || t.carried || t.belt || t.hooked) continue;
       const c = t.body.translation();
       if (Math.hypot(c.x - pr.p.x, c.y - pr.p.y, c.z - pr.p.z) > Math.max(...t.L.size) / 2 + 0.15) continue;
       if (pr.kind === 'charge') { detonate(pr.p, pr.owner, true); return false; }
@@ -4503,7 +4544,7 @@ function botThink(s, dt) {
   // loot first: pick the best free piece (value against distance) every so often
   bot.retarget = (bot.retarget || 0) - dt;
   const c = s.ship.body.translation();
-  const free = t => t && !t.gone && !t.haul && !t.carried && !t.holder;
+  const free = t => t && !t.gone && !t.haul && !t.carried && !t.holder && !t.belt && !t.hooked;
   if (bot.retarget <= 0 || !free(bot.target)) {
     bot.retarget = 1.5; bot.target = null; let best = 0;
     for (const t of battle.loot) {
@@ -4587,6 +4628,7 @@ function setupBattle() {
   battle.sideMax = { you: mine.maxHp, dummy: theirs.maxHp };
   splitCheck(mine, null, true); splitCheck(theirs, null, true);
   battle.player = makeCrew(mine, { shirt: 0x1e88ff, pants: 0x22325a, band: 0xffcf3a }, true);
+  giveInventory(battle.player, myKit);                 // what you bought
   battle.wreckDone = false; battle.cutShort = false; bot.target = null; bot.retarget = 0;
   spawnRoundLoot();
   battle.dummy = makeCrew(theirs, { shirt: 0xff4f6d, pants: 0x3a2a2a, band: 0x1b1f2a }, false);
@@ -4698,6 +4740,7 @@ function interact(s = battle.player) {
   if (!s || battle.over) return;
   if (s.state === 'station') { leaveStation(s); return; }
   if (s.carry) { dropLoot(s, false); return; }
+  if (s.state === 'swim') { const tgt = interactTarget(s); if (tgt && tgt.loot) { beltAttach(s, tgt.loot); playSfx('effort', s.pos, 0.5); } return; }   // grabbed from the water
   const tgt = interactTarget(s);
   if (tgt && tgt.st) useStation(s, tgt.st); else if (tgt && tgt.loot) startHaul(s, tgt.loot);
 }
@@ -4761,12 +4804,16 @@ function updateBattleHud(force) {
       if (tgt && tgt.st) label = tgt.st.kind === 'drive' ? 'Drive' : 'Use ' + WEAPON_NAMES[tgt.st.weapon];
       else if (tgt && tgt.loot) label = `${isHeavy(tgt.loot) ? 'Haul in' : 'Pick up'} ${tgt.loot.L.name.toLowerCase()}`;
     }
+    else if (s.state === 'swim') {
+      const tgt = interactTarget(s);
+      if (tgt && tgt.loot) label = 'Grab coin pouch';
+    }
   }
   $('interact').hidden = !label; if (label) setText('interactLabel', label);
   const gun = s.station && s.station.kind === 'gun' ? s.station : null;
-  const paddling = !gun && heldItem(s) === 'paddle' && s.state === 'aboard' && !battle.over;
-  $('fire').hidden = !(gun || paddling);
-  if (paddling) { $('fire').style.setProperty('--ready', '1'); setText('fireLabel', 'Paddle'); }
+  const tool = !gun && s.state === 'aboard' && !battle.over ? heldKind(s) : null;
+  $('fire').hidden = !(gun || tool);
+  if (tool) { $('fire').style.setProperty('--ready', '1'); setText('fireLabel', tool === 'rod' ? 'Cast' : 'Paddle'); }
   drawHotbar();
   $('aimHint').hidden = !(finePointer && !aimLocked() && !battle.over);
   $('shove').hidden = !(s.state === 'aboard' && !battle.over);
@@ -5018,38 +5065,92 @@ function battleDraw(dt, a) {
 
 // =====================================================================================
 // INVENTORY: numbered slots. Press a slot's number to take that item out, press it again to put it away.
-// Everyone starts with a paddle, so a raft whose motors are gone can still be moved.
+// Everyone starts with an old paddle (so a raft whose motors are gone can still be moved) and an old fishing rod
+// (cast it to hook coin pouches from a distance). Better ones are in the store during the build phase.
 // =====================================================================================
 const INV_SLOTS = 4;
+const svgPaddle = (wood, blade, chips) => `<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 3.2h4.2" stroke="${wood}" stroke-width="2.2" stroke-linecap="round"/><path d="M7.1 3.6v10.2" stroke="${wood}" stroke-width="2.2" stroke-linecap="round"/><path d="M7.1 12.6c2.3 0 3 1.6 3 4.1 0 2.6-1.3 4.3-3 4.3s-3-1.7-3-4.3c0-2.5.7-4.1 3-4.1z" fill="${blade}"/>${chips ? '<path d="M4.4 17.5l1.3.4-.9 1.1zM9.6 15l-1.2.6 1.1.8z" fill="#fff"/>' : ''}</svg>`;
+const svgRod = (rod, reel) => `<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 21L19 4" stroke="${rod}" stroke-width="2" stroke-linecap="round"/><path d="M19 4c1.5 3 1.5 8 0 12.5" stroke="#0b2a4a" stroke-width=".9" fill="none"/><circle cx="19" cy="17.3" r="1.4" fill="#ff4f6d"/><circle cx="7.2" cy="17.4" r="2.2" fill="${reel}"/></svg>`;
+// paddles: length (m), push while the blade pulls (raft force units; a weak motor is 2.0)
+// rods: how far a cast reaches (m), how fast it reels in (m/s)
 const ITEMS = {
-  paddle: { name: 'Paddle', icon: '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 3.2h4.2" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"/><path d="M7.1 3.6v10.2" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"/><path d="M7.1 12.6c2.3 0 3 1.6 3 4.1 0 2.6-1.3 4.3-3 4.3s-3-1.7-3-4.3c0-2.5.7-4.1 3-4.1z" fill="currentColor"/></svg>' },
+  paddle_old: { kind: 'paddle', name: 'Old paddle', len: 1.74, force: 2.2, icon: svgPaddle('#6e5a44', '#7d7158', true) },
+  paddle:     { kind: 'paddle', name: 'Good paddle', len: 1.8, force: 3.5, cost: 120, desc: 'Pushes the raft about 60% harder', icon: svgPaddle('#9b4f1e', '#d0914e', false) },
+  rod_old:    { kind: 'rod', name: 'Old fishing rod', len: 1.45, range: 6, reel: 1.5, icon: svgRod('#a8925a', '#4a4036') },
+  rod:        { kind: 'rod', name: 'Fine fishing rod', len: 2.0, range: 11, reel: 3.2, cost: 90, desc: 'Casts nearly twice as far, reels twice as fast', icon: svgRod('#23324a', '#b9c4d0') },
 };
-// paddle: length (m), push while the blade pulls (raft force units; a weak motor is 2.0), one stroke (s),
-// share of the stroke spent pulling, how long taking it out / putting it away takes (s)
-const PADDLE = { len: 1.8, force: 2.2, cycle: 1.15, power: 0.5, draw: 0.65, low: 0.5 };
-const _iv = new THREE.Vector3(), _iv2 = new THREE.Vector3(), _iq = new THREE.Quaternion(), _im = new THREE.Matrix4();
+const STORE_ITEMS = ['paddle', 'rod'];
+const DEFAULT_KIT = ['paddle_old', 'rod_old', null, null];
+let myKit = DEFAULT_KIT.slice();                 // what I bring into battle; kept from round to round in a match
+// stroke timing (s), share of the stroke spent pulling, take-out / put-away time (s), lower hand down the shaft (m)
+const PADDLE = { cycle: 1.15, power: 0.5, draw: 0.65, low: 0.5 };
+const _iv = new THREE.Vector3(), _iv2 = new THREE.Vector3(), _iv3 = new THREE.Vector3(), _iq = new THREE.Quaternion(), _im = new THREE.Matrix4();
 const itemSmooth = k => { k = clamp(k, 0, 1); return k * k * (3 - 2 * k); };
 const itemApproach = (v, to, step) => v < to ? Math.min(to, v + step) : Math.max(to, v - step);
+const kindOf = type => type ? ITEMS[type].kind : null;
 
-function paddleMesh() {
-  const g = new THREE.Group(), wood = toon(0x9b6a3a), blade = toon(0xc08a50);
-  const mk = (geo, mat, x, y, z) => { const m = new THREE.Mesh(geo, mat); m.position.set(x, y, z); m.castShadow = true; g.add(m); return m; };
-  // grip end at the origin, the shaft runs down -y to the blade tip at -len
-  mk(new THREE.CylinderGeometry(0.022, 0.024, PADDLE.len - 0.38, 8), wood, 0, -(PADDLE.len - 0.38) / 2, 0);
-  mk(new THREE.CylinderGeometry(0.024, 0.024, 0.15, 8), wood, 0, 0, 0).rotation.x = Math.PI / 2;     // T grip
-  const b = mk(new THREE.CylinderGeometry(0.1, 0.07, 0.42, 12, 1), blade, 0, -PADDLE.len + 0.23, 0);  // blade, flattened
-  b.scale.set(1, 1, 0.16);
-  mk(new THREE.SphereGeometry(0.1, 12, 6, 0, Math.PI * 2, Math.PI / 2, Math.PI / 2), blade, 0, -PADDLE.len + 0.02 + 0.0, 0).scale.set(1, 0.3, 0.16);
+// ---- the things themselves ----
+function mkPart(g, geo, mat, x, y, z) { const m = new THREE.Mesh(geo, mat); m.position.set(x, y, z); m.castShadow = true; g.add(m); return m; }
+// a paddle: grip end at the origin, the shaft down -y to the blade tip at -len
+function paddleMesh(type) {
+  const I = ITEMS[type], L = I.len, g = new THREE.Group(), old = type === 'paddle_old';
+  const wood = toon(old ? 0x6e5a44 : 0x9b4f1e), bladeM = toon(old ? 0x7d7158 : 0xd0914e), dark = toon(old ? 0x3b3026 : 0x1b1f2a);
+  const sw = old ? 0.019 : 0.024, bl = old ? 0.36 : 0.44, bw = old ? 0.085 : 0.105;
+  mkPart(g, new THREE.CylinderGeometry(sw, sw * 1.08, L - bl + 0.04, 8), wood, 0, -(L - bl + 0.04) / 2, 0);
+  mkPart(g, new THREE.CylinderGeometry(sw, sw, 0.14, 8), wood, 0, 0, 0).rotation.x = Math.PI / 2;            // T grip
+  // the blade: an outline (with bites out of it, on the old one) given a little thickness
+  const sh = new THREE.Shape();
+  const pts = old
+    ? [[-0.6, 0], [-0.75, -0.12], [-0.92, -0.3], [-0.78, -0.36], [-1, -0.45], [-0.98, -0.72], [-0.8, -0.9], [-0.55, -0.86], [-0.35, -1], [0.2, -1], [0.42, -0.9], [0.52, -0.96], [0.82, -0.84], [1, -0.6], [0.88, -0.48], [0.97, -0.3], [0.8, -0.12], [0.6, 0]]
+    : [[-0.6, 0], [-0.85, -0.14], [-1, -0.4], [-1, -0.75], [-0.8, -0.95], [-0.4, -1], [0.4, -1], [0.8, -0.95], [1, -0.75], [1, -0.4], [0.85, -0.14], [0.6, 0]];
+  sh.moveTo(pts[0][0] * bw, pts[0][1] * bl); for (const [x, y] of pts.slice(1)) sh.lineTo(x * bw, y * bl); sh.closePath();
+  if (old) { const h = new THREE.Path(); h.absarc(0.3 * bw, -0.62 * bl, 0.012, 0, Math.PI * 2, true); sh.holes.push(h); }          // a worm hole
+  const bg = new THREE.ExtrudeGeometry(sh, { depth: old ? 0.02 : 0.024, bevelEnabled: true, bevelThickness: 0.004, bevelSize: 0.004, bevelSegments: 1 });
+  bg.translate(0, 0, -(old ? 0.01 : 0.012));
+  mkPart(g, bg, bladeM, 0, -L + bl, 0);
+  if (old) {
+    mkPart(g, new THREE.CylinderGeometry(sw * 1.25, sw * 1.25, 0.03, 8), dark, 0, -L * 0.45, 0);                  // a crack, bound with twine
+    mkPart(g, new THREE.BoxGeometry(0.02, 0.22, 0.026), dark, -0.02, -L + bl * 0.55, 0).rotation.z = 0.15;        // a split down the blade
+  } else mkPart(g, new THREE.BoxGeometry(bw * 1.6, 0.04, 0.03), dark, 0, -L + bl - 0.02, 0);                    // a painted band
   g.visible = false;
   return g;
 }
-function giveInventory(s) {
-  s.inv = new Array(INV_SLOTS).fill(null); s.inv[0] = 'paddle';
-  s.eq = -1; s.eqK = 0;
-  s.pad = { mesh: paddleMesh(), u: 0, w: 0, side: 1, dir: 0, active: false, hintT: 0, wasPower: false };
-  scene.add(s.pad.mesh);
+// a rod: butt at the origin, up +y to the tip at len
+function rodMesh(type) {
+  const I = ITEMS[type], L = I.len, g = new THREE.Group(), old = type === 'rod_old';
+  const rodM = toon(old ? 0xa8925a : 0x23324a), grip = toon(old ? 0x6e5a44 : 0xc8a26a), reelM = toon(old ? 0x4a4036 : 0xb9c4d0);
+  mkPart(g, new THREE.CylinderGeometry(old ? 0.008 : 0.006, old ? 0.02 : 0.017, L, 8), rodM, 0, L / 2, 0);
+  mkPart(g, new THREE.CylinderGeometry(0.024, 0.026, 0.3, 10), grip, 0, 0.15, 0);                                 // handle
+  if (old) for (const y of [0.55, 0.9, 1.2]) mkPart(g, new THREE.CylinderGeometry(0.019, 0.019, 0.02, 8), toon(0x7e6a3e), 0, y, 0);   // bamboo joints
+  else for (const y of [0.7, 1.1, 1.45, 1.75]) mkPart(g, new THREE.TorusGeometry(0.018, 0.004, 4, 10), reelM, 0.02, y, 0).rotation.y = Math.PI / 2;   // line guides
+  const reel = mkPart(g, new THREE.CylinderGeometry(0.045, 0.045, 0.04, 14), reelM, 0.05, 0.36, 0); reel.rotation.z = Math.PI / 2;
+  mkPart(g, new THREE.BoxGeometry(0.012, 0.06, 0.012), reelM, 0.075, 0.36, 0.03);                                   // reel handle
+  g.visible = false;
+  return g;
 }
-const heldItem = s => s.inv && s.eq >= 0 ? s.inv[s.eq] : null;
+const LINE_MAT = new THREE.LineBasicMaterial({ color: 0xf4f6f8 });
+function fishGear() {
+  const geo = new THREE.BufferGeometry(); geo.setAttribute('position', new THREE.Float32BufferAttribute(new Float32Array(24 * 3), 3));
+  const line = new THREE.Line(geo, LINE_MAT); line.frustumCulled = false; line.visible = false; scene.add(line);
+  const bob = new THREE.Group();
+  mkPart(bob, new THREE.SphereGeometry(0.05, 10, 8, 0, Math.PI * 2, 0, Math.PI / 2), toon(0xff4f6d), 0, 0, 0);
+  mkPart(bob, new THREE.SphereGeometry(0.05, 10, 8, 0, Math.PI * 2, Math.PI / 2, Math.PI / 2), toon(0xffffff), 0, 0, 0);
+  mkPart(bob, new THREE.TorusGeometry(0.025, 0.006, 4, 10, Math.PI * 1.4), toon(0x9aa5b4), 0, -0.08, 0);          // the hook
+  bob.visible = false; scene.add(bob);
+  return { line, bob };
+}
+
+// ---- a sailor's kit ----
+function giveInventory(s, kit = DEFAULT_KIT) {
+  s.inv = kit.slice(0, INV_SLOTS); while (s.inv.length < INV_SLOTS) s.inv.push(null);
+  s.eq = -1; s.eqCur = -1; s.eqK = 0;
+  if (s.tools) for (const t of s.tools) if (t) scene.remove(t.mesh);
+  s.tools = s.inv.map(type => { if (!type) return null; const mesh = kindOf(type) === 'paddle' ? paddleMesh(type) : rodMesh(type); scene.add(mesh); return { type, mesh }; });
+  s.pad ||= { u: 0, w: 0, side: 1, dir: 0, active: false, hintT: 0, wasPower: false };
+  if (!s.fish) s.fish = { st: 'idle', t: 0, a: new THREE.Vector3(), from: new THREE.Vector3(), to: new THREE.Vector3(), loot: null, castT: 1, prevHeld: false, ...fishGear() };
+}
+const heldItem = s => s.inv && s.eqCur >= 0 && s.eqCur === s.eq ? s.inv[s.eqCur] : null;
+const heldKind = s => kindOf(heldItem(s));
 function toggleSlot(s, i) {
   if (s === battle.player && netGuest()) { netAct({ k: 'slot', i }); return; }
   if (!s || !s.inv || battle.over || i < 0 || i >= INV_SLOTS) return;
@@ -5060,8 +5161,9 @@ function toggleSlot(s, i) {
   if (s.state !== 'aboard') return;
   s.eq = i;
 }
-// who wants to stroke: the player while the trigger (click / Space) is held; a bot when it decides to
+// the trigger: the player holds click; online players' held state comes from their input; bots decide
 const paddleWanted = s => s.isPlayer ? !!battle.reelHeld : s.remote ? !!s.remote.held : !!s.botPaddle;
+const viewYawOf = s => s.isPlayer ? view.yaw : s.remote ? s.remote.vy || 0 : null;
 
 // --- the stroke, in his own frame (x forward, y up, z to his right; feet on the deck at the origin) ---
 // u runs 0..1 over one stroke: pull from the catch (forward) to the exit (by the hip), then lift and swing
@@ -5069,7 +5171,7 @@ const paddleWanted = s => s.isPlayer ? !!battle.reelHeld : s.remote ? !!s.remote
 // The top hand stays near his inboard shoulder; the blade goes for a point in the water beside him, so the
 // paddle's angle (and how deep it bites) follows the height of the deck above the water.
 let GX0 = 0.5, GX1 = 0.3;
-function strokeAt(s, u, waterY, out) {
+function strokeAt(s, u, waterY, out, len = 1.8) {
   const P = s.pad, sd = P.side, p = PADDLE.power;
   const ty = waterY - 0.32;
   const cx = 0.62, ex = -0.32, cz = sd * 0.74, ez = sd * 0.68;
@@ -5078,7 +5180,7 @@ function strokeAt(s, u, waterY, out) {
   else { const k = (u - p) / (1 - p), e = itemSmooth(k), arc = Math.sin(Math.PI * k); x = ex + (cx - ex) * e; z = ez + (cz - ez) * e; y = ty + 0.75 * arc; feather = arc; gx = GX1 + (GX0 - GX1) * e; gy = 0.92 + 0.04 * e + 0.12 * arc; }
   out.grip.set(gx, gy, sd * 0.02);
   const Y = _iv.set(x, y, z).sub(out.grip).normalize().negate();        // up the shaft: tip to grip
-  out.tip.copy(out.grip).addScaledVector(Y, -PADDLE.len);
+  out.tip.copy(out.grip).addScaledVector(Y, -len);
   // paddle frame: +y up the shaft, blade face (local z) square to the pull, edge-on when feathered
   const Z = _iv2.set(-(1 - feather), 0, sd * feather); Z.addScaledVector(Y, -Z.dot(Y)).normalize();
   const X = new THREE.Vector3().crossVectors(Y, Z);
@@ -5112,17 +5214,21 @@ function bladeWater(s, side, dir) {
   return true;
 }
 
-// per physics step: put the paddle away when his hands are needed, work out where he paddles, and push the raft
+
+// per physics step: put things away when his hands are needed, swap between items (one goes back before the next
+// comes out), paddle, fish
 function itemsStep(s) {
   const P = s.pad; if (!P) return;
   if (s.eq >= 0 && (s.carry || s.state !== 'aboard')) s.eq = -1;
-  const held = heldItem(s) === 'paddle';
-  s.eqK = itemApproach(s.eqK, held ? 1 : 0, DT / PADDLE.draw);
+  if (s.eqCur !== s.eq) { s.eqK = itemApproach(s.eqK, 0, DT / PADDLE.draw); if (s.eqK <= 0) s.eqCur = s.eq; }
+  else s.eqK = itemApproach(s.eqK, s.eqCur >= 0 ? 1 : 0, DT / PADDLE.draw);
+  const type = s.eqCur >= 0 ? s.inv[s.eqCur] : null, kind = kindOf(type), ready = s.eqCur === s.eq && s.eqK > 0.97;
+  // ---- paddling ----
   P.hintT = Math.max(0, P.hintT - DT);
-  let want = held && s.eqK > 0.97 && s.state === 'aboard' && s.stagger <= 0 && paddleWanted(s);
+  let want = kind === 'paddle' && ready && s.state === 'aboard' && s.stagger <= 0 && paddleWanted(s);
   if (want) {
-    if (s.isPlayer || s.remote) {     // a player paddles the way their camera looks
-      const vy = s.isPlayer ? view.yaw : s.remote.vy || 0;
+    const vy = viewYawOf(s);
+    if (vy !== null) {     // a player paddles the way their camera looks
       const fw = _iv.set(-Math.sin(vy), 0, -Math.cos(vy)).applyQuaternion(_iq.copy(shipPose(s.ship).q).invert());
       P.dir = Math.atan2(-fw.z, fw.x);
     }
@@ -5140,69 +5246,224 @@ function itemsStep(s) {
   // the pull: where the blade is in the water, the raft is pushed the way he faces
   const M = s.model;
   if (P.active && P.u < PADDLE.power && M.root) {
+    const I = ITEMS[type];
     const water = surfaceH(M.root.position.x, M.root.position.z, simTime);
     const wy = M.root.worldToLocal(_iv.copy(M.root.position).setY(water)).y;
-    const st = strokeAt(s, P.u, wy, _stroke);
+    const st = strokeAt(s, P.u, wy, _stroke, I.len);
     const tipW = M.root.localToWorld(_iv.copy(st.tip));
     const depth = surfaceH(tipW.x, tipW.z, simTime) - tipW.y;
     if (depth > 0) {
       const fw = _iv2.set(Math.cos(P.dir), 0, -Math.sin(P.dir)).applyQuaternion(shipPose(s.ship).q); fw.y = 0; fw.normalize();
-      const f = PADDLE.force * st.power * Math.min(1, depth / 0.15) * DT * P.w;
+      const f = I.force * st.power * Math.min(1, depth / 0.15) * DT * P.w;
       s.ship.body.applyImpulseAtPoint({ x: fw.x * f, y: 0, z: fw.z * f }, { x: tipW.x, y: tipW.y, z: tipW.z }, true);
       if (!P.wasPower) { spray(tipW, 5, 1.2, 0.5); kickWater(tipW.x, tipW.z, -0.01, 0.3); }
       if (Math.random() < 0.35) addFoam(tipW.x, tipW.z, 0.12);
       P.wasPower = true;
     }
   } else P.wasPower = false;
+  // ---- fishing ----
+  fishStep(s, kind === 'rod' ? ITEMS[type] : null, ready);
 }
 
-// per frame, after the body is posed: the paddle on his back, in his hand, or in the stroke, and his hands on it
+// ---- fishing ----
+// Click casts: he swings the rod back, then whips it forward and the bobber flies out to where he's looking (as
+// far as the rod reaches). A coin pouch near where it lands is hooked and reeled in to him, onto his belt if
+// there's room (otherwise it's dropped at his feet). Nothing there: the line comes back.
+const FISH = { wind: 0.42, whip: 0.55, fly: 0.65, grab: 0.95, back: 0.45 };
+const _fw = new THREE.Vector3();
+function rodTipWorld(s, out) {
+  const T = s.eqCur >= 0 ? s.tools[s.eqCur] : null;
+  if (T && kindOf(T.type) === 'rod' && T.mesh.visible) return T.mesh.localToWorld(out.set(0, ITEMS[T.type].len, 0));
+  return sailorWorld(s, out).add(_fw.set(0, 1.4, 0));
+}
+function fishLetGo(s) {
+  const F = s.fish; if (!F) return;
+  if (F.loot) { const t = F.loot; t.hooked = null; t.collider.setSensor(false); t.body.setGravityScale(1, true); F.loot = null; }
+  if (F.st !== 'idle') { F.st = 'back'; F.t = 0; F.from.copy(F.a); }
+}
+function fishStep(s, I, ready) {
+  const F = s.fish; if (!F) return;
+  const held = paddleWanted(s), press = held && !F.prevHeld; F.prevHeld = held;
+  if (!I) { if (F.st !== 'idle' && F.st !== 'back') fishLetGo(s); if (F.st === 'back') F.st = 'idle'; F.castT = 1; return; }
+  F.castT = Math.min(1, F.castT + DT / FISH.wind);
+  if (F.st === 'idle') {
+    if (press && ready && s.state === 'aboard') { F.st = 'wind'; F.castT = 0; F.t = 0; }
+    const hang = rodTipWorld(s, _iv); hang.y -= 0.3; F.a.lerp(hang, 1 - Math.exp(-14 * DT));      // dangles under the tip
+    return;
+  }
+  if (F.st === 'wind') {
+    if (F.castT >= FISH.whip) {
+      // the bobber leaves the rod tip toward where he's looking (or straight ahead), as far as the rod casts
+      const vy = viewYawOf(s);
+      const dir = vy !== null ? _fw.set(-Math.sin(vy), 0, -Math.cos(vy)) : _fw.set(Math.cos(s.worldYaw || worldYawOf(s)), 0, -Math.sin(s.worldYaw || worldYawOf(s)));
+      F.from.copy(F.a);
+      const me = sailorWorld(s, _iv3);
+      F.to.copy(me).addScaledVector(dir, I.range); F.to.y = surfaceH(F.to.x, F.to.z, simTime) + 0.03;
+      F.st = 'fly'; F.t = 0;
+    }
+    return;
+  }
+  if (F.st === 'fly') {
+    F.t = Math.min(1, F.t + DT / FISH.fly);
+    F.a.lerpVectors(F.from, F.to, F.t); F.a.y += Math.sin(Math.PI * F.t) * (1.2 + I.range * 0.12);
+    if (F.t >= 1) {
+      spray(F.to, 4, 0.8, 0.3);
+      let best = null, bd = FISH.grab;
+      for (const t of battle.loot) {
+        if (t.gone || t.type !== 'pouch' || t.haul || t.carried || t.belt || t.hooked) continue;
+        const c = t.body.translation(), d = Math.hypot(c.x - F.to.x, c.z - F.to.z);
+        if (d < bd && c.y > F.to.y - 1.2) { bd = d; best = t; }
+      }
+      if (best) { F.loot = best; best.hooked = s; best.collider.setSensor(true); best.body.setGravityScale(0, true); F.st = 'reel'; }
+      else { F.st = 'back'; F.t = 0; F.from.copy(F.a); }
+    }
+    return;
+  }
+  if (F.st === 'reel') {
+    const t = F.loot;
+    if (!t || t.gone || t.carried || t.belt || t.hooked !== s) { F.loot = null; F.st = 'back'; F.t = 0; F.from.copy(F.a); return; }
+    const c = t.body.translation(), me = sailorWorld(s, _iv3);
+    const dx = me.x - c.x, dz = me.z - c.z, d = Math.hypot(dx, dz);
+    if (d < 0.75 && F.a.distanceTo(_iv2.set(c.x, c.y + 0.2, c.z)) < 0.3) {
+      // in: onto the belt, or down at his feet
+      t.hooked = null; F.loot = null; F.st = 'idle';
+      if ((s.belt || []).length < BELT_MAX && s.state === 'aboard') beltAttach(s, t);
+      else { t.collider.setSensor(false); t.body.setGravityScale(1, true); }
+      return;
+    }
+    const step = Math.max(0, Math.min(d - 0.7, I.reel * DT)), nx = c.x + dx / d * step, nz = c.z + dz / d * step;
+    // over the water it skims the surface; over his raft, it comes up over the deck
+    let y = surfaceH(nx, nz, simTime) + 0.08;
+    const lp = toLocal(s.ship, _iv.set(nx, me.y, nz), new THREE.Vector3()), k = colKey(...colOf(lp.x, lp.z));
+    if (s.ship.cols.has(k)) y = Math.max(y, toWorld(s.ship, _iv2.set(lp.x, s.ship.cols.get(k) + 0.25, lp.z), new THREE.Vector3()).y);
+    const ny = c.y + (y - c.y) * (1 - Math.exp(-10 * DT));
+    t.body.setTranslation({ x: nx, y: ny, z: nz }, true);
+    t.body.setLinvel({ x: 0, y: 0, z: 0 }, true); t.body.setAngvel({ x: 0, y: 0, z: 0 }, true);
+    F.a.lerp(_iv.set(nx, ny + 0.2, nz), 1 - Math.exp(-12 * DT));                  // the bobber settles onto the catch
+    if (Math.random() < 0.25) addFoam(nx, nz, 0.08);
+    return;
+  }
+  if (F.st === 'back') {
+    F.t = Math.min(1, F.t + DT / FISH.back);
+    const tip = rodTipWorld(s, _iv3);
+    F.a.lerpVectors(F.from, tip, itemSmooth(F.t)); F.a.y += Math.sin(Math.PI * F.t) * 0.5 - 0.3 * F.t;
+    if (F.t >= 1) F.st = 'idle';
+  }
+}
+
+
+// per frame, after the body is posed: everything he owns hangs on his back; the one he's using comes over his
+// shoulder into his hands (and goes back the same way)
 const _bk = { p: new THREE.Vector3(), q: new THREE.Quaternion() }, _cr = { p: new THREE.Vector3(), q: new THREE.Quaternion() }, _hd = { p: new THREE.Vector3(), q: new THREE.Quaternion() };
 const _pw = { p: new THREE.Vector3(), q: new THREE.Quaternion() };
 function frameFrom(obj, localP, localQ, out) { out.p.copy(localP); obj.localToWorld(out.p); obj.getWorldQuaternion(out.q); out.q.multiply(localQ); return out; }
-const BACK_Q = (() => { const Y = new THREE.Vector3(0, 1, 0.62).normalize(), Z = new THREE.Vector3(-1, 0, 0), X = new THREE.Vector3().crossVectors(Y, Z); return new THREE.Quaternion().setFromRotationMatrix(new THREE.Matrix4().makeBasis(X, Y, Z)); })();
-const BACK_P = new THREE.Vector3(-0.25, 0.6, 0.2);
-const CARRY_Q = (() => { const Y = new THREE.Vector3(0.5, -0.82, -0.18).normalize(), Zw = new THREE.Vector3(0, 0, 1), Z = Zw.addScaledVector(Y, -Zw.dot(Y)).normalize(), X = new THREE.Vector3().crossVectors(Y, Z); return new THREE.Quaternion().setFromRotationMatrix(new THREE.Matrix4().makeBasis(X, Y, Z)); })();
+const basisQ = (Yv, Zw) => { const Y = Yv.clone().normalize(), Z = Zw.clone().addScaledVector(Y, -Zw.dot(Y)).normalize(), X = new THREE.Vector3().crossVectors(Y, Z); return new THREE.Quaternion().setFromRotationMatrix(new THREE.Matrix4().makeBasis(X, Y, Z)); };
+// on his back (spine frame: x forward, y up, z right): paddles hang diagonally from the right shoulder, rods from the left
+const BACK = {
+  paddle: [{ p: new THREE.Vector3(-0.25, 0.6, 0.2), q: basisQ(new THREE.Vector3(0, 1, 0.62), new THREE.Vector3(-1, 0, 0)) }, { p: new THREE.Vector3(-0.3, 0.56, 0.12), q: basisQ(new THREE.Vector3(0, 1, 0.5), new THREE.Vector3(-1, 0, 0)) }],
+  rod: [{ p: new THREE.Vector3(-0.27, -0.12, 0.2), q: basisQ(new THREE.Vector3(0, 1, -0.55), new THREE.Vector3(-1, 0, 0)) }, { p: new THREE.Vector3(-0.31, -0.1, 0.12), q: basisQ(new THREE.Vector3(0, 1, -0.45), new THREE.Vector3(-1, 0, 0)) }],
+};
+const CARRY_Q = basisQ(new THREE.Vector3(0.5, -0.82, -0.18), new THREE.Vector3(0, 0, 1));
 const CARRY_HAND = new THREE.Vector3(0.15, 1.06, 0.27), CARRY_AT = 0.5;      // the right hand, and how far down the shaft it holds
+const ROD_HOLD = 0.16;                                                      // the right hand, this far up from the butt
 function paddlePoint(f, d, out) { return out.set(0, -d, 0).applyQuaternion(f.q).add(f.p); }
+function rodPoint(f, d, out) { return out.set(0, d, 0).applyQuaternion(f.q).add(f.p); }
+// where each owned item sits on his back
+function backFrame(s, i, out) {
+  const k = kindOf(s.inv[i]), same = s.inv.slice(0, i).filter(t => kindOf(t) === k).length, B = BACK[k][Math.min(same, BACK[k].length - 1)];
+  return frameFrom(s.model.spine, B.p, B.q, out);
+}
+// the rod in his hand: held out in front, swung back and whipped forward to cast, raised while reeling in
+const _rodHand = new THREE.Vector3(), _rodDir = new THREE.Vector3();
+function rodHeld(s, out) {
+  const F = s.fish, c = F ? F.castT : 1;
+  const hold = _rodDir.set(0.72, 0.62, 0.08), hand = _rodHand.set(0.24, 1.0, 0.24);
+  if (c < 1) {
+    const back = new THREE.Vector3(-0.35, 0.94, 0.05), whip = new THREE.Vector3(0.9, 0.12, 0.05);
+    if (c < 0.4) { const e = itemSmooth(c / 0.4); hold.lerp(back, e); hand.add(_iv2.set(-0.12 * e, 0.28 * e, 0)); }
+    else if (c < 0.62) { const e = itemSmooth((c - 0.4) / 0.22); hold.copy(back).lerp(whip, e); hand.add(_iv2.set(-0.12 + 0.3 * e, 0.28 - 0.3 * e, 0)); }
+    else { const e = itemSmooth((c - 0.62) / 0.38); hold.copy(whip).lerp(_iv3.set(0.72, 0.62, 0.08), e); hand.add(_iv2.set(0.18 * (1 - e), -0.02 * (1 - e), 0)); }
+  }
+  if (F && F.st === 'reel') { hold.lerp(_iv2.set(0.5, 0.86, 0.08), 0.7); hold.y += 0.06 * Math.sin(simTime * 9); }
+  const q = basisQ(hold, new THREE.Vector3(0, 0, 1));
+  const butt = hand.clone().addScaledVector(hold.clone().normalize(), -ROD_HOLD);
+  return frameFrom(s.model.root, butt, q, out);
+}
 function itemsDraw(s, dt) {
-  const P = s.pad; if (!P) return;
-  const M = s.model, vis = M.root.visible && s.state !== 'drowned';
-  P.mesh.visible = vis;
+  if (!s.tools) return;
+  const M = s.model, vis = M.root.visible && s.state !== 'drowned', P = s.pad;
+  for (const T of s.tools) if (T) T.mesh.visible = vis;
+  fishDraw(s, vis);
   if (!vis) return;
   M.root.updateMatrixWorld(true);
-  const g = itemSmooth((s.eqK - 0.35) / 0.65), reach = itemSmooth(s.eqK / 0.35), w = itemSmooth(P.w);
-  const water = surfaceH(M.root.position.x, M.root.position.z, simTime);
-  const wy = M.root.worldToLocal(_iv.copy(M.root.position).setY(water)).y;
-  const st = strokeAt(s, P.u, wy, _stroke);
-  // the body works the stroke: bends forward, winds and unwinds, leans out over the water
-  if (w > 0.001) {
-    M.spine.rotation.z -= st.lean * w;
-    M.spine.rotation.y += st.twist * w;
-    M.spine.rotation.x += P.side * 0.22 * w;
-    M.root.updateMatrixWorld(true);
+  const cur = s.eqCur, type = cur >= 0 ? s.inv[cur] : null, kind = kindOf(type);
+  const g = itemSmooth((s.eqK - 0.35) / 0.65), reach = itemSmooth(s.eqK / 0.35), w = kind === 'paddle' ? itemSmooth(P.w) : 0;
+  let st = null;
+  if (kind === 'paddle') {
+    const water = surfaceH(M.root.position.x, M.root.position.z, simTime);
+    const wy = M.root.worldToLocal(_iv.copy(M.root.position).setY(water)).y;
+    st = strokeAt(s, P.u, wy, _stroke, ITEMS[type].len);
+    // the body works the stroke: bends forward, winds and unwinds, leans out over the water
+    if (w > 0.001) {
+      M.spine.rotation.z -= st.lean * w;
+      M.spine.rotation.y += st.twist * w;
+      M.spine.rotation.x += P.side * 0.22 * w;
+      M.root.updateMatrixWorld(true);
+    }
   }
-  // the three places the paddle can be, in the world
-  frameFrom(M.spine, BACK_P, BACK_Q, _bk);
-  const carryGrip = _iv.copy(CARRY_HAND).sub(_iv2.set(0, -CARRY_AT, 0).applyQuaternion(CARRY_Q));
-  frameFrom(M.root, carryGrip, CARRY_Q, _cr);
-  frameFrom(M.root, st.grip, st.q, _hd);
-  // in hand = carried, blending into the stroke; then from the back into the hand, over the shoulder
-  _pw.p.lerpVectors(_cr.p, _hd.p, w); _pw.q.copy(_cr.q).slerp(_hd.q, w);
+  // everything not in use on his back
+  s.tools.forEach((T, i) => { if (!T || i === cur) return; backFrame(s, i, _bk); T.mesh.position.copy(_bk.p); T.mesh.quaternion.copy(_bk.q); });
+  if (cur < 0 || !s.tools[cur]) return;
+  const T = s.tools[cur];
+  backFrame(s, cur, _bk);
+  // in hand: a paddle is carried on the shoulder and swings into the stroke; a rod is held out ready to cast
+  if (kind === 'paddle') {
+    const carryGrip = _iv.copy(CARRY_HAND).sub(_iv2.set(0, -CARRY_AT, 0).applyQuaternion(CARRY_Q));
+    frameFrom(M.root, carryGrip, CARRY_Q, _cr);
+    frameFrom(M.root, st.grip, st.q, _hd);
+    _pw.p.lerpVectors(_cr.p, _hd.p, w); _pw.q.copy(_cr.q).slerp(_hd.q, w);
+  } else { rodHeld(s, _cr); _pw.p.copy(_cr.p); _pw.q.copy(_cr.q); }
+  // from his back into his hand, over the shoulder
   const up = _iv2.set(0, 1, 0).applyQuaternion(M.root.quaternion);
-  _pw.p.lerpVectors(_bk.p, _pw.p, g).addScaledVector(up, 0.22 * Math.sin(Math.PI * g));
-  _pw.q.copy(_bk.q).slerp(_iq.copy(_cr.q).slerp(_hd.q, w), g);
-  P.mesh.position.copy(_pw.p); P.mesh.quaternion.copy(_pw.q);
-  P.mesh.updateMatrixWorld(true);
-  // hands: the right reaches back for it and holds it; in the stroke, top hand on the grip, bottom hand down the shaft
-  const sd = P.side;
-  const rightAt = (CARRY_AT + ((sd > 0 ? PADDLE.low : 0.03) - CARRY_AT) * w);
-  const dR = 0.18 + (rightAt - 0.18) * g;
-  if (reach > 0.001) armTo(M, 1, paddlePoint(_pw, dR, _iv), reach);
-  const lw = w * g;
-  if (lw > 0.001) { M.root.updateMatrixWorld(true); armTo(M, 0, paddlePoint(_pw, sd > 0 ? 0.03 : PADDLE.low, _iv), lw); }
+  const handP = _iv3.copy(_pw.p), handQ = _iq.copy(_pw.q);
+  _pw.p.lerpVectors(_bk.p, handP, g).addScaledVector(up, 0.22 * Math.sin(Math.PI * g));
+  _pw.q.copy(_bk.q).slerp(handQ, g);
+  T.mesh.position.copy(_pw.p); T.mesh.quaternion.copy(_pw.q); T.mesh.updateMatrixWorld(true);
+  // hands: the right reaches back for it and holds it
+  if (kind === 'paddle') {
+    const sd = P.side, rightAt = CARRY_AT + ((sd > 0 ? PADDLE.low : 0.03) - CARRY_AT) * w, dR = 0.18 + (rightAt - 0.18) * g;
+    if (reach > 0.001) armTo(M, 1, paddlePoint(_pw, dR, _iv), reach);
+    const lw = w * g;
+    if (lw > 0.001) { M.root.updateMatrixWorld(true); armTo(M, 0, paddlePoint(_pw, sd > 0 ? 0.03 : PADDLE.low, _iv), lw); }
+  } else {
+    const dR = ITEMS[type].len * 0.55 + (ROD_HOLD - ITEMS[type].len * 0.55) * g;   // grabs it near the middle off his back, slides to the handle
+    if (reach > 0.001) armTo(M, 1, rodPoint(_pw, dR, _iv), reach);
+    // the left hand winds the reel while a catch comes in
+    const F = s.fish; s.reelW = itemApproach(s.reelW || 0, F && F.st === 'reel' ? 1 : 0, dt / 0.25);
+    if (s.reelW > 0.001 && g > 0.99) {
+      M.root.updateMatrixWorld(true);
+      const r = rodPoint(_pw, 0.36, _iv); const a = simTime * 9;
+      r.add(_iv2.set(0, Math.sin(a) * 0.05, Math.cos(a) * 0.05).applyQuaternion(_pw.q)).add(_iv2.set(0, 0, -0.07).applyQuaternion(_pw.q));
+      armTo(M, 0, r, itemSmooth(s.reelW));
+    }
+  }
 }
-function itemsTeardown(s) { if (s.pad) scene.remove(s.pad.mesh); }
+// the fishing line from the rod tip to the bobber, slack while it flies, taut while reeling
+function fishDraw(s, vis) {
+  const F = s.fish; if (!F || !F.line) return;
+  const kind = s.eqCur >= 0 ? kindOf(s.inv[s.eqCur]) : null, show = vis && kind === 'rod' && s.eqK > 0.6;
+  F.line.visible = F.bob.visible = show;
+  if (!show) return;
+  const tip = rodTipWorld(s, _iv), b = F.a;
+  F.bob.position.copy(b);
+  const pos = F.line.geometry.attributes.position, d = tip.distanceTo(b), sag = F.st === 'reel' ? 0.02 * d : F.st === 'fly' ? 0.08 * d : 0.05;
+  for (let j = 0; j < 24; j++) { const u = j / 23; pos.setXYZ(j, tip.x + (b.x - tip.x) * u, tip.y + (b.y - tip.y) * u - Math.sin(Math.PI * u) * sag, tip.z + (b.z - tip.z) * u); }
+  pos.needsUpdate = true;
+}
+function itemsTeardown(s) {
+  if (s.tools) for (const T of s.tools) if (T) scene.remove(T.mesh);
+  if (s.fish) { fishLetGo(s); scene.remove(s.fish.line); scene.remove(s.fish.bob); }
+}
 
 // --- hotbar ---
 function drawHotbar() {
@@ -5241,15 +5502,15 @@ const _bpS = new THREE.Vector3();
 function botPaddle(s, tp) {
   const c = s.ship.body.translation(), dist = Math.hypot(tp.x - c.x, tp.z - c.z);
   s.botPaddle = false;
-  if (dist <= 5.5 || (s.state !== 'aboard' && s.state !== 'station') || s.carry) { if (heldItem(s) === 'paddle') s.eq = -1; return undefined; }
+  if (dist <= 5.5 || (s.state !== 'aboard' && s.state !== 'station') || s.carry) { if (kindOf(s.inv[s.eq] || null) === 'paddle') s.eq = -1; return undefined; }
   if (s.state === 'station') leaveStation(s);
-  if (heldItem(s) !== 'paddle') s.eq = s.inv.indexOf('paddle');
+  if (kindOf(s.inv[s.eq] || null) !== 'paddle') s.eq = s.inv.findIndex(t => kindOf(t) === 'paddle');
   if (s.eq < 0) return undefined;
   const lt = toLocal(s.ship, _iv.set(tp.x, tp.y, tp.z), new THREE.Vector3()), ang = Math.atan2(-lt.z, lt.x);
   s.pad.dir = ang;
   _bpS.copy(s.local);
   const here = bladeWater(s, s.pad.side, ang) || bladeWater(s, -s.pad.side, ang);
-  if (here && s.eqK > 0.97) { s.botPaddle = true; return null; }
+  if (here && s.eqK > 0.97 && s.eqCur === s.eq) { s.botPaddle = true; return null; }
   if (here) return null;
   let best = null, bd = 1e9;
   for (const [k, top] of s.ship.cols) {
@@ -5262,6 +5523,52 @@ function botPaddle(s, tp) {
   s.local.copy(_bpS);
   return best ? walkTo(s, best) : null;
 }
+
+// ---- the store (build phase): better gear for your kit ----
+function storeOpen(on) {
+  const ok = on && raft.mode !== 'battle' && match.phase === 'build';
+  $('store').hidden = !ok; $('storeBtn').setAttribute('aria-expanded', String(!!ok));
+  if (ok) { $('settings').hidden = true; drawStore(); }
+}
+function drawStore() {
+  if (!ITEMS_READY || $('store').hidden) return;          // (not before this file has loaded)
+  $('storeGold').textContent = raft.gold;
+  const box = $('storeItems'); box.textContent = '';
+  for (const type of STORE_ITEMS) {
+    const I = ITEMS[type], owned = myKit.includes(type);
+    const row = document.createElement('div'); row.className = 'st-item';
+    const ic = document.createElement('span'); ic.className = 'ic'; ic.innerHTML = I.icon;
+    const txt = document.createElement('div'); const b = document.createElement('b'); b.textContent = I.name; const sm = document.createElement('small'); sm.textContent = I.desc; txt.append(b, sm);
+    const btn = document.createElement('button');
+    const slot = kitSlotFor(type);
+    btn.textContent = owned ? 'Owned' : `${I.cost}g`;
+    btn.disabled = owned || raft.gold < I.cost || slot < 0;
+    btn.title = owned ? 'Already in your kit' : slot < 0 ? 'Your kit is full' : raft.gold < I.cost ? 'Not enough gold' : `Buy for ${I.cost}g`;
+    btn.addEventListener('click', () => buyItem(type));
+    row.append(ic, txt, btn); box.appendChild(row);
+  }
+  const kit = $('storeKit'); kit.textContent = '';
+  myKit.forEach((t, i) => { const d = document.createElement('div'); const ic = document.createElement('span'); ic.className = 'ic'; ic.innerHTML = t ? ITEMS[t].icon : ''; d.append(ic, document.createTextNode(t ? ITEMS[t].name : `Slot ${i + 1}`)); kit.appendChild(d); });
+}
+// a bought item takes the place of the old one of its kind, or the first empty slot
+function kitSlotFor(type) {
+  const I = ITEMS[type];
+  let i = myKit.findIndex(t => t && kindOf(t) === I.kind && !ITEMS[t].cost);
+  if (i < 0) i = myKit.indexOf(null);
+  return i;
+}
+function buyItem(type) {
+  const I = ITEMS[type], i = kitSlotFor(type);
+  if (myKit.includes(type) || i < 0 || raft.gold < I.cost || match.phase !== 'build') return;
+  myKit[i] = type; raft.gold -= I.cost;
+  teamGold(-I.cost);                       // a team's gold is shared
+  updateUI(); drawStore();
+  flash(`${I.name} added to your kit`);
+}
+$('storeBtn').addEventListener('click', () => storeOpen($('store').hidden));
+$('storeClose').addEventListener('click', () => storeOpen(false));
+
+var ITEMS_READY = true;
 
 // =====================================================================================
 // TREASURE: floating loot of different size, weight and value. Whatever is physically on
@@ -5276,7 +5583,7 @@ const LOOT = {
 };
 for (const k in LOOT) { const L = LOOT[k]; L.vol = L.size[0] * L.size[1] * L.size[2]; L.mass = L.vol * L.density; }
 const ARENA_C = new THREE.Vector3(0, 0, 80);
-const HAUL_REACH = 2.4;
+const HAUL_REACH = 2.4, POUCH_REACH = 1.2, SWIM_GRAB = 1.1;    // a coin pouch has to be right by you to pick it up
 
 function lootMesh(type) {
   const L = LOOT[type], g = new THREE.Group();
@@ -5345,6 +5652,7 @@ function lootStep(t, time) {
   const b = t.body;
   if (t.haul) { haulStep(t); return; }
   if (t.belt) { beltStep(t); return; }
+  if (t.hooked) return;                                   // on a fishing line: the rod moves it
   if (t.carried) { carryStep(t); return; }
   const c = b.translation(), r = b.rotation(), lv = b.linvel(), av = b.angvel();
   _bq.set(r.x, r.y, r.z, r.w);
@@ -5380,7 +5688,7 @@ function lootOn(t) {
 }
 function shipLootPts(ship) { let p = 0; for (const t of battle.loot) if (!t.gone && !t.haul && t.holder === ship) p += t.L.pts; return p; }
 function holderOf(t) {
-  if (t.gone || t.haul) return null;
+  if (t.gone || t.haul || t.hooked) return null;
   if (t.carried) return t.carried.state === 'aboard' && t.carried.ship.alive ? t.carried.ship : null;
   if (t.belt) { const s = t.belt; return (s.state === 'aboard' || s.state === 'station' || s.state === 'haul') && s.ship.alive ? s.ship : null; }
   return lootOn(t);
@@ -5400,7 +5708,7 @@ function haulable(s) {
   const w = toWorld(s.ship, s.local, new THREE.Vector3());
   let best = null, bd = HAUL_REACH;
   for (const t of battle.loot) {
-    if (t.gone || t.haul || t.carried) continue;
+    if (t.gone || t.haul || t.carried || t.belt || t.hooked) continue;
     const c = t.body.translation();
     const d = Math.hypot(c.x - w.x, c.z - w.z);
     if (d < bd && c.y > w.y - 2.2 && c.y < w.y + 1.6) { bd = d; best = t; }
@@ -5897,6 +6205,7 @@ function leaveMenu() {
 }
 // a fresh match from an empty raft
 function freshMatch(settings) {
+  myKit = DEFAULT_KIT.slice();                 // a new match: back to the old paddle and rod
   for (const p of [...raft.parts]) removePart(p, false);
   raft.history = [];
   if (settings) { $('buildTime').value = String(settings.build); $('battleTime').value = String(settings.battle); $('rounds').value = String(settings.rounds); }
@@ -6158,6 +6467,8 @@ function teamSync() {
   TEAMSYNC.synced = now;
   if (ops.length) lobby.room.send('build', { team: lobby.game.team, by: NET.id, ops });
 }
+// shared gold: a teammate's purchase comes off everyone's purse
+function teamGold(delta) { if (lobby.game && teamOn()) lobby.room.send('build', { team: lobby.game.team, by: NET.id, ops: [{ g: delta }] }); }
 // a teammate changed the raft
 function teamApply(p) {
   if (!p || !lobby.game || p.team !== lobby.game.team || p.by === NET.id || match.phase !== 'build') return;
@@ -6172,7 +6483,8 @@ function teamApply(p) {
           setPartBox(have, new THREE.Vector3().fromArray(s.center), new THREE.Quaternion().fromArray(s.q), s.rot || 0);
         }
         TEAMSYNC.synced.set(s.id, s);
-      } else if (op.r !== undefined) {
+      } else if (op.g !== undefined) { raft.gold += op.g; }          // a teammate bought something
+      else if (op.r !== undefined) {
         const have = byId(op.r);
         if (have) { if (sel === have) closeMenu(); raft.gold += PARTS[have.type].cost; removePart(have, true); }
         TEAMSYNC.synced.delete(op.r);
@@ -6225,13 +6537,14 @@ function netBuildOver() {
   if (raft.mode === 'test') endTest();
   dropLooseParts();
   match.phase = 'collect';
-  battle.pend = { layouts: new Map([[lobby.game.team, raft.parts.map(snap)]]), until: performance.now() + 2500 };
+  battle.pend = { layouts: new Map([[lobby.game.team, raft.parts.map(snap)]]), kits: new Map([[NET.id, myKit]]), until: performance.now() + 2500 };
   lobby.room.send('collect', {});
   netCollectTick();
 }
 function netCollectFrom(p) {
   if (!lobby.host || !battle.pend || !p) return;
   if (!battle.pend.layouts.has(p.team) || !battle.pend.layouts.get(p.team).length) battle.pend.layouts.set(p.team, p.parts || []);
+  if (p.r && Array.isArray(p.kit)) battle.pend.kits.set(p.r, p.kit.map(k => ITEMS[k] ? k : null));
   netCollectTick();
 }
 function netCollectTick() {
@@ -6246,7 +6559,7 @@ function netCollectTick() {
     const ox = ARENA_C.x + Math.cos(a) * TEAM_SPAWN_R, oz = ARENA_C.z + Math.sin(a) * TEAM_SPAWN_R;
     return { team: t, nid: i + 1, layout, origin: [ox, oz], yaw: Math.atan2(-(ARENA_C.z - oz), ARENA_C.x - ox) };
   });
-  netSetup({ teams, crew: lobby.game.roster.map(r => ({ rid: r.id, team: r.team, bot: !!r.bot, name: r.name })) }, true);
+  netSetup({ teams, crew: lobby.game.roster.map(r => ({ rid: r.id, team: r.team, bot: !!r.bot, name: r.name, kit: pend.kits.get(r.id) || DEFAULT_KIT })) }, true);
   spawnRoundLoot();
   for (const t of battle.loot) if (!t.nid) t.nid = battle.net.nextLoot++;
   lobby.room.send('bstart', { teams, crew: battle.net.crewDesc, loot: battle.loot.map(t => { const c = t.body.translation(); return [t.nid, t.type, +c.x.toFixed(3), +c.y.toFixed(3), +c.z.toFixed(3)]; }), tl: match.battleLeft, total: match.battleTotal, round: match.round });
@@ -6257,7 +6570,7 @@ function netSendLayout() {
   if (raft.mode === 'test') endTest();
   dropLooseParts();
   match.phase = 'collect';
-  lobby.room.send('layout', { team: lobby.game.team, parts: raft.parts.map(snap) });
+  lobby.room.send('layout', { team: lobby.game.team, parts: raft.parts.map(snap), r: NET.id, kit: myKit });
   flash('Waiting for the battle…');
 }
 
@@ -6289,6 +6602,7 @@ function netSetup(p, host) {
     const ship = battle.ships.find(s => s.team === c.team); if (!ship) continue;
     const s = makeCrew(ship, teamColorsFor(c.team), c.rid === NET.id);
     s.rid = c.rid; s.teamId = c.team; s.bot = c.bot; s.name = c.name;
+    giveInventory(s, c.kit || DEFAULT_KIT);
     const n = placed.get(ship) || 0; placed.set(ship, n + 1);
     if (n && s.state === 'aboard') {                             // not everyone on the same spot
       const spots = [...ship.cols].filter(([k]) => !ship.blocked.has(k)).map(([k, top]) => { const [x, z] = colCenter(Math.floor(k / 1000), k % 1000); return [x, top, z]; })
@@ -6448,7 +6762,8 @@ function netSnapSend(force) {
     if (s.route && s.route.length) o.rt = 1;
     if (s.carry) { o.ca = s.carry.nid; if (s.carry.drag) { o.dr = 1; o.dm = +(s.dragMode || 0).toFixed(2); } }
     if (s.haulT && s.haulT.haul) { const h = s.haulT.haul; o.ha = [s.haulT.nid, +h.t.toFixed(3), h.heavy ? 1 : 0, h.pulls]; }
-    if (s.eq >= 0) o.eq = s.eq; o.ek = +s.eqK.toFixed(3);
+    if (s.eq >= 0) o.eq = s.eq; if (s.eqCur >= 0) o.ec = s.eqCur; o.ek = +s.eqK.toFixed(3);
+    if (s.fish && (s.fish.st !== 'idle' || s.fish.castT < 1)) o.fi = [s.fish.st, +s.fish.a.x.toFixed(2), +s.fish.a.y.toFixed(2), +s.fish.a.z.toFixed(2), +s.fish.castT.toFixed(3)];
     if (s.pad && (s.pad.w > 0.001 || s.pad.active)) o.pd = [s.pad.active ? 1 : 0, +s.pad.u.toFixed(3), s.pad.side, +s.pad.w.toFixed(3), +s.pad.dir.toFixed(3)];
     if (s.air) o.ai = 1;
     if (s.shoveT < 1) o.so = +s.shoveT.toFixed(3);
@@ -6596,7 +6911,8 @@ function netApply(A, B, k, dt) {
     s.route = so.rt ? [s.local] : null;
     s.carry = so.ca ? N.loot.get(so.ca) || null : null; s.dragMode = so.dm || 0;
     if (so.ha) { const t = N.loot.get(so.ha[0]); if (t) { t.haul = { s, t: so.ha[1], heavy: !!so.ha[2], pulls: so.ha[3], ship: s.ship }; s.haulT = t; } } else s.haulT = null;
-    s.eq = so.eq ?? -1; s.eqK = so.ek ?? 0;
+    s.eq = so.eq ?? -1; s.eqCur = so.ec ?? -1; s.eqK = so.ek ?? 0;
+    if (so.fi) { s.fish.st = so.fi[0]; s.fish.a.set(so.fi[1], so.fi[2], so.fi[3]); s.fish.castT = so.fi[4]; } else { s.fish.st = 'idle'; s.fish.castT = 1; if (s.eqCur >= 0) rodTipWorld(s, s.fish.a).y -= 0.3; }
     if (so.pd) { s.pad.active = !!so.pd[0]; s.pad.u = so.pd[1]; s.pad.side = so.pd[2]; s.pad.w = so.pd[3]; s.pad.dir = so.pd[4]; } else { s.pad.active = false; s.pad.w = 0; }
     s.air = !!so.ai;
     if (so.so !== undefined && so.so < s.shoveT - 0.05) s.shoveT = so.so;            // a new shove starts
