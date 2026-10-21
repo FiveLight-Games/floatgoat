@@ -246,7 +246,7 @@
 
 <canvas id="game" aria-label="3D raft building view on the water"></canvas>
 <div class="top">
-  <div class="brand"><h1>FLOAT GOAT</h1><span>v0.77</span></div>
+  <div class="brand"><h1>FLOAT GOAT</h1><span>v0.78</span></div>
   <div class="pill phasep" title="Phase and time left"><span id="phase">Build</span><span id="timer">3:00</span></div>
   <div class="pill" id="round">Round 1/3</div>
   <div class="pill" title="Treasure points: you – dummy">★ <span id="score">0 – 0</span></div>
@@ -334,7 +334,7 @@
     <svg class="lwave" viewBox="0 0 400 34" aria-hidden="true" preserveAspectRatio="none"><path d="M0 18 Q 25 4 50 18 T 100 18 T 150 18 T 200 18 T 250 18 T 300 18 T 350 18 T 400 18 V34 H0z" fill="#fff" opacity=".9"/><path d="M0 18 Q 25 4 50 18 T 100 18 T 150 18 T 200 18 T 250 18 T 300 18 T 350 18 T 400 18" fill="none" stroke="#0b2a4a" stroke-width="5" stroke-linecap="round"/></svg>
   </h1>
   <section class="mpanel" id="mMain">
-    <label class="mname" for="pName">Your name<input id="pName" maxlength="14" autocomplete="off" spellcheck="false"></label>
+    <label class="mname" for="pName">Your Name<input id="pName" maxlength="14" autocomplete="off" spellcheck="false"></label>
     <button class="mbtn big" id="mHost">Host a game</button>
     <button class="mbtn big" id="mFind">Find a game</button>
     <button class="mbtn" id="mSolo">Practice vs bot</button>
@@ -2788,7 +2788,9 @@ const up = e => {
 canvas.addEventListener('pointerup', up); canvas.addEventListener('pointercancel', e => { ptrs.delete(e.pointerId); if (downAt && downAt.drag && carry) dropCarry(true); downAt = null; });
 canvas.addEventListener('wheel', e => { e.preventDefault(); if (raft.mode === 'battle' && battleWheel(e)) return; view.dist = clamp(view.dist * Math.exp(e.deltaY * 0.001), CAM.minDist, CAM.maxDist); }, { passive: false });
 const keys = new Set();
+const typingInField = e => { const t = e.target; return !!(t && t.closest && t.closest('input:not([type=checkbox]):not([type=range]), textarea, select, [contenteditable]')); };
 addEventListener('keydown', e => {
+  if (typingInField(e)) return;                     // typing a name: the keys are letters, not controls
   if (['KeyW', 'KeyA', 'KeyS', 'KeyD', 'ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight'].includes(e.code)) { e.preventDefault(); keys.add(e.code); }
   if (['Space', 'KeyC'].includes(e.code) && raft.mode === 'build') { e.preventDefault(); keys.add(e.code); }
   if (e.code === 'KeyF' && raft.mode !== 'battle') view.free = false;            // back to following the raft
@@ -4666,6 +4668,7 @@ function interact() {
 }
 function playerFire() { const s = battle.player; if (s && s.station && s.station.kind === 'gun' && !battle.over) fire(s.ship, s.station); }
 addEventListener('keydown', e => {
+  if (typingInField(e)) return;                     // typing a name: the keys are letters, not controls
   if (raft.mode !== 'battle') return;
   if (e.code === 'KeyE') { e.preventDefault(); interact(); }
   if (e.code === 'Space' && battle.player && battle.player.state === 'aboard' && !battle.over) { e.preventDefault(); if (!e.repeat) battle.player.jumpReq = true; return; }   // on deck, Space jumps
@@ -5170,6 +5173,7 @@ function drawHotbar() {
   }
 }
 addEventListener('keydown', e => {
+  if (typingInField(e)) return;                     // typing a name: the keys are letters, not controls
   if (raft.mode !== 'battle' || e.repeat) return;
   const m = /^Digit([1-9])$/.exec(e.code); if (!m) return;
   const i = +m[1] - 1; if (i >= INV_SLOTS) return;
