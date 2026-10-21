@@ -129,6 +129,8 @@
   body.testing .tray, body.testing #trayToggle, body.testing #remove, body.testing #undo, body.testing #clear { display: none; }
   body.testing .testbar { display: flex; }
   .flash { position: fixed; left: 50%; top: 40%; transform: translate(-50%, -50%) scale(.9); background: rgba(11,42,74,.8); color: #fff; padding: 8px 16px; border-radius: 999px; font-weight: 600; opacity: 0; transition: opacity .25s ease, transform .25s ease; pointer-events: none; }
+  .paintcost { position: fixed; z-index: 30; pointer-events: none; background: rgba(11,42,74,.85); color: #fff; padding: 4px 10px; border-radius: 8px; font-weight: 700; font-size: .9rem; font-variant-numeric: tabular-nums; white-space: nowrap; }
+  .paintcost.short { background: rgba(160,30,45,.9); }
   .flash.on { opacity: 1; transform: translate(-50%, -50%) scale(1); }
   .stick { position: fixed; display: none; width: 92px; height: 150px; border-radius: 46px; background: rgba(255,255,255,.28); border: 3px solid rgba(255,255,255,.8); touch-action: none;
     bottom: calc(env(safe-area-inset-bottom, 0px) + 140px); }
@@ -267,7 +269,7 @@
 
 <canvas id="game" aria-label="3D raft building view on the water"></canvas>
 <div class="top">
-  <div class="brand"><h1>FLOAT GOAT</h1><span>v0.87</span></div>
+  <div class="brand"><h1>FLOAT GOAT</h1><span>v1.12</span></div>
   <div class="pill phasep" title="Phase and time left"><span id="phase">Build</span><span id="timer">3:00</span></div>
   <div class="pill" id="round">Round 1/3</div>
   <div class="pill" title="Treasure points: you – dummy">★ <span id="score">0 – 0</span></div>
@@ -276,6 +278,9 @@
     <label for="musicVol" title="Music volume">♪</label><input type="range" id="musicVol" min="0" max="1" step="0.01" value="0.5" aria-label="Music volume">
     <label for="sfxVol" title="Sound volume">🔊</label><input type="range" id="sfxVol" min="0" max="1" step="0.01" value="0.5" aria-label="Sound volume">
   </div>
+  <div class="pill vol" title="Wave height (demo)"><label for="waveLvl">🌊</label><input type="range" id="waveLvl" min="0" max="4" step="0.05" value="0.55" aria-label="Wave height"><span id="waveVal">0.55</span></div>
+  <button class="pill" id="addGold" title="Demo: add gold">+500g</button>
+  <button class="pill" id="balBtn" aria-pressed="true" title="Demo: sailors balancing on the deck">Balance on</button>
   <button class="pill" id="settingsBtn" aria-label="Host settings">⚙</button>
 </div>
 <section class="store" id="store" hidden aria-label="Item store">
@@ -285,6 +290,7 @@
   <div class="st-kit" id="storeKit"></div>
   <p class="note">Better gear replaces the old one of the same kind. Your kit comes into every battle this match.</p>
 </section>
+<div class="paintcost" id="paintCost" hidden></div>
 <div class="partmenu" id="partMenu" hidden>
   <div class="pm-head"><span class="sw" id="pmSw"></span><span id="pmName"></span><button id="pmClose" aria-label="Close">×</button></div>
   <div class="pm-stats" id="pmStats"></div>
@@ -323,7 +329,7 @@
   <button class="pill quit" id="quit">Forfeit</button>
 </div>
 <canvas class="minimap" id="minimap" width="300" height="300" hidden aria-label="Minimap"></canvas>
-<div class="overboard" id="overboard" hidden><b id="overT">5.0</b><span>Swim back to your raft</span></div>
+<div class="overboard" id="overboard" hidden><b id="overT">5.0</b><span id="overMsg">Swim back to your raft</span></div>
 <button class="act" id="interact" hidden><span id="interactLabel">Drive</span><kbd>E</kbd></button>
 <div class="hotbar" id="hotbar" hidden></div>
 <button class="fire" id="fire" hidden aria-label="Fire"><span id="fireLabel">Fire</span><kbd>Click</kbd></button>
@@ -343,7 +349,7 @@
     <button class="btn" id="undo">Undo</button>
     <button class="btn" id="clear">Clear</button>
     <span class="snapctl"><button class="btn" id="snapOn" aria-pressed="true" title="Grid snapping (G)">Snap</button><span class="sz" id="snapSize" role="group" aria-label="Grid size in blocks"><button data-s="0.125" title="⅛ block">⅛</button><button data-s="0.25" title="¼ block">¼</button><button data-s="0.5" title="½ block">½</button><button data-s="1" title="1 block">1</button></span></span>
-    <div class="testbar"><label for="swell">Swell</label><input type="range" id="swell" min="0" max="1.6" step="0.05" value="1"><button class="btn" id="rock">Rock it</button><span class="hintk">WASD drives the motor</span></div>
+    <div class="testbar"><input type="range" id="swell" min="0" max="1.6" step="0.05" value="1" hidden><button class="btn" id="rock">Rock it</button><span class="hintk">WASD drives the motor</span></div>
     <button class="btn store-go" id="storeBtn" aria-expanded="false" aria-controls="store">Store</button>
     <button class="btn primary" id="test">Test in water</button>
     <button class="btn battle-go" id="ready">Ready</button>
@@ -724,12 +730,19 @@ function simStep() {
 
 const SWELL_UNIFORM = { value: 0 };
 const SIM_O_UNIFORM = { value: new THREE.Vector2(simOX, simOZ) };
-const SKI_INV_UNIFORM = { value: new THREE.Matrix4() }, SKI_ON_UNIFORM = { value: 0 };
+const SKI_INV_UNIFORM = { value: new THREE.Matrix4() }, SKI_ON_UNIFORM = { value: 0 }, NEARFAR_UNIFORM = { value: new THREE.Vector2(0.1, 1000) };
+// deck tops as the camera sees them: each frame the rafts' upward-facing surfaces are drawn into a depth buffer the
+// size of the screen. Where a bit of water is just a thin skin over a deck (it pokes up through the planks as the
+// raft rides low), it isn't drawn; water well over a deck (swamped by a big wave) is
+const DECK_SWAMP = 0.15;
+const deckRT = new THREE.WebGLRenderTarget(4, 4, { depthBuffer: true });
+try { deckRT.depthTexture = new THREE.DepthTexture(4, 4); } catch (e) { }
+const DECK_TEX_UNIFORM = { value: deckRT.depthTexture }, DECK_O_UNIFORM = { value: new THREE.Vector4(0, 0, 0, 0) };   // screen w, h, on, -
 function makeWaterMat(sim) {
   return new THREE.ShaderMaterial({
     transparent: true,
     defines: sim ? { SIM: '' } : {},
-    uniforms: { uTime: { value: 0 }, uAmp: SWELL_UNIFORM, uSun: { value: SUN_DIR }, uSim: { value: simTex }, uFoam: { value: foamTex }, uSimO: SIM_O_UNIFORM, uSkiInv: SKI_INV_UNIFORM, uSkiOn: SKI_ON_UNIFORM },
+    uniforms: { uTime: { value: 0 }, uAmp: SWELL_UNIFORM, uSun: { value: SUN_DIR }, uSim: { value: simTex }, uFoam: { value: foamTex }, uSimO: SIM_O_UNIFORM, uSkiInv: SKI_INV_UNIFORM, uSkiOn: SKI_ON_UNIFORM, uDeck: DECK_TEX_UNIFORM, uDeckO: DECK_O_UNIFORM, uNearFar: NEARFAR_UNIFORM },
     vertexShader: `
       uniform float uTime; uniform float uAmp; uniform sampler2D uSim; uniform sampler2D uFoam; uniform vec2 uSimO;
       varying vec3 vWorld; varying vec3 vNormal; varying float vH; varying float vDisp; varying float vFoam;
@@ -755,7 +768,8 @@ function makeWaterMat(sim) {
         gl_Position = projectionMatrix * viewMatrix * w;
       }`,
     fragmentShader: `
-      uniform float uTime; uniform vec3 uSun; uniform vec2 uSimO; uniform mat4 uSkiInv; uniform float uSkiOn;
+      uniform float uTime; uniform float uAmp; uniform vec3 uSun; uniform vec2 uSimO; uniform mat4 uSkiInv; uniform float uSkiOn;
+      uniform sampler2D uDeck; uniform vec4 uDeckO; uniform vec2 uNearFar;
       // same hull outline as the physics (half-width and deck height along the length)
       bool insideHull(vec3 wp) {
         vec3 lp = (uSkiInv * vec4(wp, 1.0)).xyz;
@@ -773,6 +787,18 @@ function makeWaterMat(sim) {
         return mix(mix(hash(i), hash(i+vec2(1,0)), f.x), mix(hash(i+vec2(0,1)), hash(i+vec2(1,1)), f.x), f.y); }
       void main(){
         if (uSkiOn > 0.5 && insideHull(vWorld)) discard;
+        if (uDeckO.z > 0.5) {
+          float d = texture2D(uDeck, gl_FragCoord.xy / uDeckO.xy).r;
+          if (d < 1.0) {
+            // the deck point behind this bit of water, along the same line of sight
+            float n = uNearFar.x, f = uNearFar.y, vz = (n * f) / ((f - n) * d - f);
+            vec3 fwd = -vec3(viewMatrix[0][2], viewMatrix[1][2], viewMatrix[2][2]);
+            vec3 V = normalize(vWorld - cameraPosition);
+            vec3 P = cameraPosition + V * (-vz / max(dot(V, fwd), 1e-3));
+            float above = vWorld.y - P.y;
+            if (above > -0.03 && above < ${DECK_SWAMP.toFixed(3)} && length(vWorld.xz - P.xz) < 0.35) discard;
+          }
+        }
         vec3 N = normalize(vNormal);
         vec3 V = normalize(cameraPosition - vWorld);
         float fres = pow(1.0 - max(dot(N, V), 0.0), 3.0);
@@ -793,15 +819,18 @@ function makeWaterMat(sim) {
         col += step(0.6, pow(max(dot(R, V), 0.0), 140.0));
 
         float n = noise(vWorld.xz * 0.55 + uTime * 0.25);
-        float crest = step(0.6, vH + (n - 0.5) * 0.35);
+        // whitecaps only on the very tops of the biggest crests: the bar rises with the sea, so a storm doesn't
+        // turn half the water white
+        float crest = step(max(0.6, 0.62 * uAmp), vH + (n - 0.5) * 0.35) * step(0.4, noise(vWorld.xz * 1.3 + uTime * 0.3));
         float wob = 0.35 * sin(ang * 9.0 + uTime * 1.6) + (n - 0.5) * 0.6;
         float shoreFoam = step(band, 0.9 + wob) * step(-0.6, band);
         float ring = step(0.92, fract(band * 0.33 - uTime * 0.22)) * step(0.0, band) * (1.0 - smoothstep(2.0, 7.0, band)) * step(0.35, n);
         col *= 1.0 + clamp(vDisp, -0.3, 0.3) * 0.5;
-        float wake = smoothstep(0.07, 0.13, vDisp + (n - 0.5) * 0.05);
+        float wk = max(0.0, uAmp - 0.55) * 0.05;     // rafts heaving in big seas stir the sim a lot more: need more to show white
+        float wake = smoothstep(0.07 + wk, 0.13 + wk * 1.5, vDisp + (n - 0.5) * 0.05);
         // churned white water: patchy, breaking up at its edges as it fades
         float n2 = noise(vWorld.xz * 2.3 - uTime * 0.4);
-        wake = max(wake, smoothstep(0.12, 0.3, vFoam * (0.55 + 0.9 * n2)));
+        wake = max(wake, smoothstep(0.12 + wk, 0.3 + wk * 1.5, vFoam * (0.55 + 0.9 * n2)));
         float foam = max(max(crest, shoreFoam), max(ring, wake));
         col = mix(col, vec3(1.0), foam);
 
@@ -1044,6 +1073,8 @@ const SFX = {
   grunt: ['sfx/grunt/grunt_01.mp3', 'sfx/grunt/grunt_01_a.mp3', 'sfx/grunt/grunt_01_b.mp3', 'sfx/grunt/grunt_01_c.mp3', 'sfx/grunt/grunt_02.mp3', 'sfx/grunt/grunt_02_a.mp3', 'sfx/grunt/grunt_02_b.mp3', 'sfx/grunt/grunt_02_c.mp3', 'sfx/grunt/grunt_03.mp3', 'sfx/grunt/grunt_03_a.mp3', 'sfx/grunt/grunt_03_b.mp3', 'sfx/grunt/grunt_03_c.mp3'],   // a sailor hit by a weapon
   effort: ['sfx/effort/effort_01.mp3', 'sfx/effort/effort_01_a.mp3', 'sfx/effort/effort_01_b.mp3', 'sfx/effort/effort_01_c.mp3', 'sfx/effort/effort_02.mp3', 'sfx/effort/effort_02_a.mp3', 'sfx/effort/effort_02_b.mp3', 'sfx/effort/effort_02_c.mp3', 'sfx/effort/effort_03.mp3', 'sfx/effort/effort_03_a.mp3', 'sfx/effort/effort_03_b.mp3', 'sfx/effort/effort_03_c.mp3'],   // lifting treasure
   punch: ['sfx/punch/punch_01.mp3', 'sfx/punch/punch_01_a.mp3', 'sfx/punch/punch_01_b.mp3', 'sfx/punch/punch_01_c.mp3', 'sfx/punch/punch_02.mp3', 'sfx/punch/punch_02_a.mp3', 'sfx/punch/punch_02_b.mp3', 'sfx/punch/punch_02_c.mp3', 'sfx/punch/punch_03.mp3', 'sfx/punch/punch_03_a.mp3', 'sfx/punch/punch_03_b.mp3', 'sfx/punch/punch_03_c.mp3', 'sfx/punch/punch_04.mp3', 'sfx/punch/punch_04_a.mp3', 'sfx/punch/punch_04_b.mp3', 'sfx/punch/punch_04_c.mp3'],   // a shove landing on someone
+  swivelFire: ['sfx/swivel_fire/swivel_01.mp3', 'sfx/swivel_fire/swivel_01_a.mp3', 'sfx/swivel_fire/swivel_01_b.mp3', 'sfx/swivel_fire/swivel_01_c.mp3'],
+  ballastFire: ['sfx/ballast_fire/ballast_01.mp3', 'sfx/ballast_fire/ballast_01_a.mp3', 'sfx/ballast_fire/ballast_01_b.mp3', 'sfx/ballast_fire/ballast_01_c.mp3'],
   drown: ['sfx/drown/drown_01.mp3', 'sfx/drown/drown_01_a.mp3', 'sfx/drown/drown_01_b.mp3', 'sfx/drown/drown_01_c.mp3', 'sfx/drown/drown_02.mp3', 'sfx/drown/drown_02_a.mp3', 'sfx/drown/drown_02_b.mp3', 'sfx/drown/drown_02_c.mp3', 'sfx/drown/drown_03.mp3', 'sfx/drown/drown_03_a.mp3', 'sfx/drown/drown_03_b.mp3', 'sfx/drown/drown_03_c.mp3'],   // a scream fading into bubbles
 };
 const MUSIC_URL = 'music/row_hard_mateys.mp3';
@@ -1162,6 +1193,7 @@ const fmtSpeed = mps => imp() ? `${(mps * 2.23694).toFixed(1)} mph` : `${mps.toF
 const fmtPower = kNt => imp() ? `${Math.round(kNt * 204)} lbf per ton` : `${kNt.toFixed(1)} kN per tonne`;
 const fmtDesc = d => d.replace(/\{(\d+)\}/g, (_, kg) => fmtMass(Number(kg)));
 const TEST_SWELL = 0.6;
+function waveLevel() { const e = document.getElementById('waveLvl'); return e ? Number(e.value) : 0.55; }
 
 // part catalogue. density is relative to water; vol is the real displacement (m^3)
 const PARTS = {
@@ -1174,11 +1206,11 @@ const PARTS = {
   engine:   { name: 'Weak motor', cost: 150, hp: 50,  density: 2,    size: [0.5, 0.7, 0.4],  vol: 0.03, color: 0xff4f4f, thrust: 2.0, scale: 1,    station: 'drive' },
   motor:    { name: 'Motor',      cost: 260, hp: 70,  density: 2.33, size: [0.6, 0.85, 0.5], vol: 0.06, color: 0x1e88ff, thrust: 4.5, scale: 1.2,  station: 'drive' },
   bigmotor: { name: 'Big motor',  cost: 400, hp: 100, density: 2.6,  size: [0.75, 1.0, 0.6], vol: 0.1,  color: 0x2b2f3a, thrust: 8.0, scale: 1.45, station: 'drive' },
-  cannon:  { name: 'Cannon',         cost: 120, hp: 90,  density: 6,    size: [0.8, 0.55, 0.8], vol: 0.03,  color: 0x2b2f3a, station: 'gun', weapon: 'cannon',  desc: '40 dmg + splash · 2.2 s' },
-  swivel:  { name: 'Swivel gun',     cost: 70,  hp: 50,  density: 5,    size: [0.5, 0.45, 0.5], vol: 0.012, color: 0xc9a227, station: 'gun', weapon: 'swivel',  desc: '12 dmg · fires every 0.7 s' },
-  mortar:  { name: 'Depth charge mortar', cost: 160, hp: 70, density: 4.7, size: [0.7, 0.5, 0.7], vol: 0.03, color: 0x2f6b4f, station: 'gun', weapon: 'mortar', desc: 'Sinks, blasts from below · 4 s' },
-  harpoon: { name: 'Harpoon',        cost: 130, hp: 70,  density: 4,    size: [0.8, 0.5, 0.6],  vol: 0.03,  color: 0x1f7a8c, station: 'gun', weapon: 'harpoon', desc: 'Ropes a raft, reels it in · 6 s' },
-  ballast: { name: 'Ballast bomb',   cost: 110, hp: 50,  density: 3.7,  size: [0.6, 0.5, 0.6],  vol: 0.03,  color: 0xff9f1c, station: 'gun', weapon: 'ballast', desc: 'Sticks on, adds {250} · 5 s' },
+  cannon:  { name: 'Cannon',         cost: 900, hp: 90,  density: 6,    size: [0.8, 0.55, 0.8], vol: 0.03,  color: 0x2b2f3a, station: 'gun', weapon: 'cannon',  desc: '40 dmg + splash · 2.2 s' },
+  swivel:  { name: 'Swivel gun',     cost: 250,  hp: 50,  density: 5,    size: [0.5, 0.45, 0.5], vol: 0.012, color: 0xc9a227, station: 'gun', weapon: 'swivel',  desc: '12 dmg · fires every 0.7 s' },
+  mortar:  { name: 'Depth charge mortar', cost: 550, hp: 70, density: 4.7, size: [0.7, 0.5, 0.7], vol: 0.03, color: 0x2f6b4f, station: 'gun', weapon: 'mortar', desc: 'Sinks, blasts from below · 4 s' },
+  harpoon: { name: 'Harpoon',        cost: 350, hp: 70,  density: 4,    size: [0.8, 0.5, 0.6],  vol: 0.03,  color: 0x1f7a8c, station: 'gun', weapon: 'harpoon', desc: 'Ropes a raft, reels it in · 6 s' },
+  ballast: { name: 'Ballast bomb',   cost: 400, hp: 50,  density: 3.7,  size: [0.6, 0.5, 0.6],  vol: 0.03,  color: 0xff9f1c, station: 'gun', weapon: 'ballast', desc: 'Sticks on, adds {250} · 5 s' },
   ram:     { name: 'Ram spike',      cost: 90,  hp: 120, density: 5,    size: [0.9, 0.4, 0.4],  vol: 0.02,  color: 0x9aa5b4, weapon: 'ram', side: true,         desc: 'Mount on a side · hurts by ramming' },
 };
 for (const k in PARTS) { const P = PARTS[k]; if (!P.vol) P.vol = P.size[0] * P.size[1] * P.size[2]; P.mass = P.vol * P.density; }
@@ -1308,7 +1340,8 @@ function partMesh(type, ghost) {
 const snapCfg = { on: true, size: 0.25 };
 const SNAP_SIZES = [0.125, 0.25, 0.5, 1];
 const BUILD_HALF = 6;             // build area: |x|, |z| up to this (m)
-const BUILD_TOP = 4.6;
+const BUILD_TOP = 5.6;
+const BUILD_BASE = 1.0;            // the build plane: well above the water, so there's room to hang floats under the first deck
 const FC = 0.25, FHALF = 8;       // walking grid: quarter-metre columns over ±8 m
 const colKey = (i, j) => i * 1000 + j;
 const colOf = (x, z) => [Math.floor((x + FHALF) / FC), Math.floor((z + FHALF) / FC)];
@@ -1824,8 +1857,8 @@ function analyse() {
 const ray = new THREE.Raycaster(), ndc = new THREE.Vector2();
 ray.params.Line.threshold = 0.01;
 const groundPlane = new THREE.Mesh(new THREE.PlaneGeometry(BUILD_HALF * 2 + 2, BUILD_HALF * 2 + 2).rotateX(-Math.PI / 2), new THREE.MeshBasicMaterial({ visible: false }));
-raftGroup.add(groundPlane);
-const grid = new THREE.Group(); raftGroup.add(grid);
+raftGroup.add(groundPlane); groundPlane.position.y = BUILD_BASE;
+const grid = new THREE.Group(); raftGroup.add(grid); grid.position.y = BUILD_BASE;
 {
   const mat = new THREE.LineBasicMaterial({ color: 0xffffff, transparent: true, opacity: 0.35 }), pts = [];
   for (let i = -BUILD_HALF; i <= BUILD_HALF; i++) pts.push(new THREE.Vector3(i, 0.01, -BUILD_HALF), new THREE.Vector3(i, 0.01, BUILD_HALF), new THREE.Vector3(-BUILD_HALF, 0.01, i), new THREE.Vector3(BUILD_HALF, 0.01, i));
@@ -1865,15 +1898,23 @@ function partUnder(clientX, clientY) {
   return null;
 }
 // where a part of this type (turned as q) would go for a pick. Returns { box, rot, n, mount, why } (why = reason it can't)
+// does a part (turned as it is in hand) cover this face exactly - a plank on a plank, a crate on a crate?
+function sameFootprint(type, q, f) {
+  const b = makeBox(type, new THREE.Vector3(), q), ax = boxAxes(b);
+  const ext = dir => ax.reduce((e, a, k) => e + Math.abs(a.dot(dir)) * b.size[k] / 2, 0);
+  return Math.abs(ext(f.u) - f.hu) < 0.03 && Math.abs(ext(f.v) - f.hv) < 0.03;
+}
 function placement(type, t, q, rot) {
   if (!t) return null;
   const P = PARTS[type];
   let anchor, n, onto = null;
-  if (t.plane) { const G = snapCfg.on ? snapCfg.size : 0; anchor = G ? new THREE.Vector3(Math.round(t.lp.x / G) * G, 0, Math.round(t.lp.z / G) * G) : new THREE.Vector3(t.lp.x, 0, t.lp.z); n = UP.clone(); }
+  if (t.plane) { const G = snapCfg.on ? snapCfg.size : 0; anchor = G ? new THREE.Vector3(Math.round(t.lp.x / G) * G, BUILD_BASE, Math.round(t.lp.z / G) * G) : new THREE.Vector3(t.lp.x, BUILD_BASE, t.lp.z); n = UP.clone(); }
   else {
     onto = t.part;
     const f = faceFromNormal(onto.box, t.nL);
     n = f.n.clone(); anchor = snapOnFace(f, t.lp);
+    // stacking: anywhere over the middle of a face, it lines up square with the part under it (aim near an edge to offset it)
+    if (snapCfg.on && sameFootprint(type, q, f)) { const rel = _ga.copy(t.lp).sub(f.c); if (Math.abs(rel.dot(f.u)) < f.hu * 0.45 && Math.abs(rel.dot(f.v)) < f.hv * 0.45) anchor = f.c.clone(); }
   }
   const res = { n: [n.x, n.y, n.z], mount: onto ? onto.id : null, rot: 0, anchor };
   if (P.station === 'gun') {
@@ -1898,9 +1939,25 @@ function placement(type, t, q, rot) {
     if (f.n.dot(n) > -0.95) { res.box = makeBox(type, anchor, q); res.why = 'Turn it to sit flat against that face'; return res; }
     res.box = makeBox(type, anchor.clone().addScaledVector(n, P.size[f.k] / 2), q);
     if (onto && (PARTS[onto.type].station || PARTS[onto.type].side)) res.why = "Nothing attaches to that";
-    else settleFlush(type, res, n);
+    else { if (snapCfg.on && onto && Math.abs(n.y) < 0.3) levelSnap(res, onto); settleFlush(type, res, n); }
   }
   return res;
+}
+// against the side of something, the part's underside goes on the grid counted up from the build plane, so steps,
+// shelves and second decks come out evenly spaced and level with each other (not centred on the grid)
+function levelSnap(res, onto) {
+  const G = snapCfg.size, a = boxAabb(res.box), o = onto.aabb || boxAabb(onto.box);
+  // nearest of: a grid level, or flush with the bottom or top of the part it's on (extending a deck sideways)
+  let dy = BUILD_BASE + Math.round((a.min.y - BUILD_BASE) / G) * G - a.min.y;
+  if (!isWall(onto)) for (const d of [o.min.y - a.min.y, o.max.y - a.max.y]) if (Math.abs(d) <= Math.abs(dy) + 1e-6) dy = d;
+  // still has to touch the face it's on
+  for (let i = 0; i < 4; i++) {
+    if (a.min.y + dy > o.max.y - 0.02) dy -= G;
+    else if (a.max.y + dy < o.min.y + 0.02) dy += G;
+    else break;
+  }
+  if (a.min.y + dy > o.max.y - 0.02 || a.max.y + dy < o.min.y + 0.02) return;
+  res.box.center.y += dy; res.anchor = res.anchor.clone(); res.anchor.y += dy;
 }
 // butt joints: where the snapped spot just pokes into a neighbour (a wall meeting another wall at a corner), slide it
 // back along the surface until it sits flush against it, rather than refusing it
@@ -1988,6 +2045,129 @@ function tapAt(x, y) {
     raft.history.push({ op: 'add', id: p.id }); changed();
   } else if (pl && pl.box) flash(problem || 'Not enough gold');
 }
+// ---------- ctrl-drag: lay a row of the part in hand, side by side, as far as the cursor goes ----------
+// the row runs along whichever of the part's own sides the drag follows, and stops at the first spot that's blocked.
+// Ghosts are green while the gold lasts and red after; letting go places the green ones.
+let paint = null;
+const canPaint = type => type && !PARTS[type].station && !PARTS[type].thrust && !PARTS[type].side;
+function paintStart(x, y, area = false) {
+  if (!canPaint(selected) || locked()) return false;
+  const h = handFor(selected), pl = placement(selected, pick(x, y), h.q, h.rot);
+  if (!pl || !pl.box || placeProblem(selected, pl)) return false;
+  if (sel) closeMenu();
+  paint = { type: selected, pl, n: new THREE.Vector3().fromArray(pl.n), ghosts: [], rows: [], area };
+  hideGhost();
+  paintUpdate(x, y);
+  return true;
+}
+// the cursor's ray against each line the row could run along: the line the cursor sits closest to (by angle, as
+// seen from the camera, so it matches what's on screen even looking along the deck) wins, and how far along it the
+// cursor is gives the length. (Hitting a plane instead goes wrong at low angles: a tiny move up the screen is
+// metres further away.)
+function cursorRay(x, y) {
+  const r = canvas.getBoundingClientRect();
+  ndc.set((x - r.left) / r.width * 2 - 1, -(y - r.top) / r.height * 2 + 1);
+  ray.setFromCamera(ndc, camera);
+  const qi = raftGroup.quaternion.clone().invert();
+  return { o: raftGroup.worldToLocal(ray.ray.origin.clone()), d: ray.ray.direction.clone().applyQuaternion(qi).normalize() };
+}
+function alongLine(R, p, a) {
+  // the line and the camera make a plane; on screen the line is where that plane cuts. How far the cursor's ray
+  // leans out of the plane is how far the cursor is from the line on screen
+  const w = p.clone().sub(R.o), m = new THREE.Vector3().crossVectors(w, a);
+  if (m.lengthSq() < 1e-8) return null;
+  m.normalize();
+  const miss = Math.abs(R.d.dot(m));
+  // where on the line the cursor is: the ray laid flat into that plane, met with the line
+  const d = R.d.clone().addScaledVector(m, -R.d.dot(m)).normalize();
+  const b = a.dot(d), c = a.dot(w), e = d.dot(w), den = 1 - b * b;
+  if (den < 1e-4) return null;                      // looking straight down the line
+  const s = (b * e - c) / den, u = e + b * s;
+  if (u <= 0.05) return null;                       // past the line's vanishing point
+  return { s, miss };
+}
+function paintUpdate(x, y) {
+  const P = paint; if (!P) return;
+  const b0 = P.pl.box, R = cursorRay(x, y);
+  // the part's sides a row can run along: not up off the face it sits on (a pile), and not along its thin side (a
+  // stack of slices); out from the side of something it was put against is fine, that's the usual way to run a row
+  // off a deck edge
+  const axes = [];
+  boxAxes(b0).forEach((a, k) => { if ((Math.abs(a.dot(P.n)) > 0.3 && Math.abs(P.n.y) > 0.7) || b0.size[k] < 0.3) return; axes.push({ a, k }); });
+  if (P.area) { if (axes.length >= 2) paintArea(P, R, axes[0], axes[1]); paintShow(x, y); return; }
+  // ctrl: a row, along the side the cursor follows
+  let best = null;
+  for (const { a, k } of axes) {
+    const L = alongLine(R, b0.center, a); if (!L) continue;
+    if (!best || L.miss < best.miss) best = { a, s: L.s, k, miss: L.miss };
+  }
+  const rows = [P.pl];
+  if (best) {
+    const step = b0.size[best.k], cnt = Math.min(40, Math.floor(Math.abs(best.s) / step + 0.5)), dir = best.a.clone().multiplyScalar(Math.sign(best.s) * step);
+    for (let i = 1; i <= cnt; i++) {
+      const box = { center: b0.center.clone().addScaledVector(dir, i), size: b0.size.slice(), q: b0.q.clone() };
+      const pl = { ...P.pl, box, anchor: P.pl.anchor.clone().addScaledVector(dir, i), mount: null };
+      if (placeProblem(P.type, pl)) break;
+      rows.push(pl);
+    }
+  }
+  P.rows = rows;
+  paintShow(x, y);
+}
+// shift: a block, from the first part to the corner under the cursor (one step out diagonally is 2 × 2, then 3 × 3).
+// Spots that are taken are skipped; the nearest ones are paid for first
+const AREA_MAX = 12;
+function paintArea(P, R, A, Bx) {
+  const b0 = P.pl.box, n = new THREE.Vector3().crossVectors(A.a, Bx.a).normalize();
+  const den = n.dot(R.d); if (Math.abs(den) < 1e-4) return;
+  const t = n.dot(b0.center.clone().sub(R.o)) / den; if (t <= 0) return;
+  const d = R.o.clone().addScaledVector(R.d, t).sub(b0.center);
+  const sa = b0.size[A.k], sb = b0.size[Bx.k];
+  const ni = Math.min(AREA_MAX - 1, Math.floor(Math.abs(d.dot(A.a)) / sa + 0.5)), nj = Math.min(AREA_MAX - 1, Math.floor(Math.abs(d.dot(Bx.a)) / sb + 0.5));
+  const da = A.a.clone().multiplyScalar(Math.sign(d.dot(A.a)) * sa), db = Bx.a.clone().multiplyScalar(Math.sign(d.dot(Bx.a)) * sb);
+  const cells = [];
+  for (let i = 0; i <= ni; i++) for (let j = 0; j <= nj; j++) cells.push([i, j]);
+  cells.sort((p, q) => (p[0] * p[0] + p[1] * p[1]) - (q[0] * q[0] + q[1] * q[1]));
+  const rows = [];
+  for (const [i, j] of cells) {
+    if (!i && !j) { rows.push(P.pl); continue; }
+    const off = da.clone().multiplyScalar(i).addScaledVector(db, j);
+    const box = { center: b0.center.clone().add(off), size: b0.size.slice(), q: b0.q.clone() };
+    const pl = { ...P.pl, box, anchor: P.pl.anchor.clone().add(off), mount: null };
+    if (!placeProblem(P.type, pl)) rows.push(pl);
+  }
+  P.rows = rows;
+}
+function paintShow(x, y) {
+  const P = paint, rows = P.rows;
+  while (P.ghosts.length < rows.length) { const g = partMesh(P.type, true); g.traverse(o => { if (o.material) o.renderOrder = 7; }); raftGroup.add(g); P.ghosts.push(g); }
+  const cost = PARTS[P.type].cost, can = Math.min(rows.length, Math.floor(raft.gold / cost));
+  P.ghosts.forEach((g, i) => {
+    g.visible = i < rows.length; if (!g.visible) return;
+    g.position.copy(rows[i].box.center); g.quaternion.copy(rows[i].box.q); applyRot(g, P.type, rows[i].rot, true);
+    g.traverse(o => { if (o.material) o.material.color.set(i < can ? 0x6bffb0 : 0xff5a6b); });
+  });
+  const L = $('paintCost'); L.hidden = false; L.style.left = (x + 18) + 'px'; L.style.top = (y + 14) + 'px';
+  L.classList.toggle('short', can < rows.length);
+  L.textContent = `${rows.length} × ${cost}g = ${rows.length * cost}g` + (can < rows.length ? ` · can afford ${can}` : '');
+}
+function paintClear() {
+  if (!paint) return;
+  for (const g of paint.ghosts) raftGroup.remove(g);
+  paint = null; $('paintCost').hidden = true;
+}
+function paintCommit() {
+  const P = paint; if (!P) return;
+  paintClear();
+  const cost = PARTS[P.type].cost, ids = [];
+  for (const pl of P.rows) {
+    if (raft.gold < cost) break;
+    const p = addPartFrom({ type: P.type, center: pl.box.center.toArray(), q: pl.box.q.toArray(), rot: pl.rot, n: pl.n, mount: pl.mount, mountTop: pl.mountTop, anchor: pl.anchor.toArray() });
+    raft.gold -= cost; ids.push(p.id);
+  }
+  if (ids.length) { raft.history.push({ op: 'adds', ids }); changed(); }
+  if (ids.length < P.rows.length) flash("Can't afford");
+}
 // parts that only hang on this one (guns on it, motors and rams clamped to it) go with it
 function dependentsOf(part) {
   return raft.parts.filter(p => p !== part && (PARTS[p.type].station || PARTS[p.type].side) && p.mount === part.id);
@@ -2049,6 +2229,7 @@ function undo() {
   const drop = s => { const p = byId(s.id); if (p) { raft.gold += PARTS[p.type].cost; removePart(p, false); } };
   const put = s => { addPartFrom(s, true); raft.gold -= PARTS[s.type].cost; };
   if (h.op === 'add') drop({ id: h.id });
+  else if (h.op === 'adds') [...h.ids].reverse().forEach(id => drop({ id }));
   else if (h.op === 'remove') h.items.forEach(put);
   else if (h.op === 'move') { [...h.to].reverse().forEach(drop); h.from.forEach(put); remount(h.detached); }
   else if (h.op === 'turn') { const p = byId(h.id); if (p) setPartBox(p, new THREE.Vector3().fromArray(h.from.center), new THREE.Quaternion().fromArray(h.from.q), h.from.rot); }
@@ -2428,7 +2609,7 @@ function startTest() {
   raftSamples = raft.parts.flatMap(samplesOf);
   raftGroups = raft.parts.map(p => ({ samples: samplesOf(p), flood: 0 }));
   engines = raft.parts.filter(p => PARTS[p.type].thrust);
-  raft.mode = 'test'; SWELL.target = TEST_SWELL * Number(document.getElementById('swell').value);
+  raft.mode = 'test'; SWELL.target = waveLevel();
   prevRaft.p.copy(raftGroup.position); prevRaft.q.copy(raftGroup.quaternion);
   updateUI();
 }
@@ -2689,7 +2870,12 @@ $('clear').addEventListener('click', () => {
 });
 $('test').addEventListener('click', () => raft.mode === 'test' ? endTest() : startTest());
 $('rock').addEventListener('click', rockIt);
-$('swell').addEventListener('input', () => { if (raft.mode === 'test') SWELL.target = TEST_SWELL * Number($('swell').value); });
+// demo: the wave height slider in the top bar (tests and battles; building stays calm), and free gold
+$('waveLvl').addEventListener('input', () => {
+  $('waveVal').textContent = waveLevel().toFixed(2);
+  if (raft.mode === 'test' || (raft.mode === 'battle' && !(battle.net && !battle.net.host))) SWELL.target = waveLevel();
+});
+$('addGold').addEventListener('click', () => { raft.gold += 500; if (typeof teamGold === 'function') teamGold(500); updateUI(); flash('+500g'); });
 
 let showWaterline = false;
 $('waterlineOn').addEventListener('change', e => { showWaterline = e.target.checked; });
@@ -2781,6 +2967,7 @@ addEventListener('contextmenu', e => e.preventDefault());
 function rightClick() {
   if (raft.mode === 'battle') { if (typeof battleRightClick === 'function') battleRightClick(); return; }
   if (carry) dropCarry(true);
+  if (paint) { paintClear(); if (downAt) downAt.paint = false; return; }
   if (sel) closeMenu();
   selected = null; tool = 'place';
   hideGhost(); if (ghost) { ghost.userData.what = null; ghost.userData.key = null; }
@@ -2795,7 +2982,8 @@ canvas.addEventListener('pointerdown', e => {
   if (ptrs.size === 1) {
     downAt = { x: e.clientX, y: e.clientY, t: performance.now(), moved: false, pan: e.button === 1, rmb: e.button === 2 };
     if (e.button === 1) { e.preventDefault(); downAt.moved = true; downAt.part = null; }
-    if (raft.mode === 'build' && tool === 'place' && !carry && e.button === 0) { const p = partUnder(e.clientX, e.clientY); if (p) downAt.part = p; }
+    if (raft.mode === 'build' && tool === 'place' && !carry && e.button === 0 && (e.ctrlKey || e.shiftKey) && selected && paintStart(e.clientX, e.clientY, !e.ctrlKey && e.shiftKey)) downAt.paint = true;
+    else if (raft.mode === 'build' && tool === 'place' && !carry && e.button === 0) { const p = partUnder(e.clientX, e.clientY); if (p) downAt.part = p; }
   }
   if (ptrs.size === 2) { const [a, b] = [...ptrs.values()]; pinch0 = Math.hypot(a.x - b.x, a.y - b.y); dist0 = view.dist; downAt = null; }
 });
@@ -2805,6 +2993,7 @@ canvas.addEventListener('pointermove', e => {
   if (!p) { if (e.pointerType === 'mouse' && raft.mode === 'build') { if (carry) carryMove(e.clientX, e.clientY); else showGhost(pick(e.clientX, e.clientY)); } return; }
   const dx = e.clientX - p.x, dy = e.clientY - p.y; p.x = e.clientX; p.y = e.clientY;
   if (ptrs.size === 2) { const [a, b] = [...ptrs.values()]; view.dist = clamp(dist0 * pinch0 / Math.max(20, Math.hypot(a.x - b.x, a.y - b.y)), CAM.minDist, CAM.maxDist); return; }
+  if (downAt && downAt.paint) { paintUpdate(e.clientX, e.clientY); return; }
   if (downAt && Math.hypot(e.clientX - downAt.x, e.clientY - downAt.y) > 6) downAt.moved = true;
   if (downAt && downAt.moved && downAt.part && !downAt.drag && !downAt.pan && !e.shiftKey && raft.mode === 'build') { downAt.drag = pickUp(downAt.part); downAt.part = null; }
   if (downAt && downAt.drag) { document.body.classList.add('dragging'); carryMove(e.clientX, e.clientY); return; }
@@ -2822,12 +3011,13 @@ const up = e => {
   if (gizmoUp()) return;
   if (!ptrs.has(e.pointerId)) return;
   ptrs.delete(e.pointerId);
-  if (downAt && downAt.drag) dropCarry();
+  if (downAt && downAt.paint) paintCommit();
+  else if (downAt && downAt.drag) dropCarry();
   else if (downAt && downAt.rmb) { if (!downAt.moved) rightClick(); }
   else if (downAt && !downAt.moved && performance.now() - downAt.t < 450) tapAt(e.clientX, e.clientY);
   downAt = null;
 };
-canvas.addEventListener('pointerup', up); canvas.addEventListener('pointercancel', e => { ptrs.delete(e.pointerId); if (downAt && downAt.drag && carry) dropCarry(true); downAt = null; });
+canvas.addEventListener('pointerup', up); canvas.addEventListener('pointercancel', e => { ptrs.delete(e.pointerId); paintClear(); if (downAt && downAt.drag && carry) dropCarry(true); downAt = null; });
 canvas.addEventListener('wheel', e => { e.preventDefault(); if (raft.mode === 'battle' && battleWheel(e)) return; view.dist = clamp(view.dist * Math.exp(e.deltaY * 0.001), CAM.minDist, CAM.maxDist); }, { passive: false });
 const keys = new Set();
 const typingInField = e => { const t = e.target; return !!(t && t.closest && t.closest('input:not([type=checkbox]):not([type=range]), textarea, select, [contenteditable]')); };
@@ -2840,6 +3030,7 @@ addEventListener('keydown', e => {
   else if (raft.mode === 'build' && (e.code === 'KeyQ' || e.code === 'KeyE') && !e.repeat) { e.preventDefault(); turn(e.code === 'KeyQ' ? 1 : -1); }
   else if (raft.mode === 'build' && e.code === 'KeyR' && !e.repeat && !e.ctrlKey && !e.metaKey) { e.preventDefault(); flip(); }
   else if (raft.mode === 'build' && e.code === 'KeyG' && !e.repeat) { e.preventDefault(); setSnap(!snapCfg.on, snapCfg.size); }
+  if (e.code === 'Escape' && paint) { paintClear(); if (downAt) downAt.paint = false; }
   if (e.code === 'Escape' && sel) closeMenu();
   if (e.code === 'Enter' && raft.mode !== 'battle' && match.phase === 'build') { e.preventDefault(); nextPhase(); }
 });
@@ -2988,6 +3179,27 @@ function frame(now) {
   renderWorld(dt);
   requestAnimationFrame(frame);
 }
+const deckMat = new THREE.ShaderMaterial({
+  vertexShader: 'varying float vNy; void main(){ vNy = normalize(mat3(modelMatrix) * normal).y; gl_Position = projectionMatrix * viewMatrix * modelMatrix * vec4(position, 1.0); }',
+  fragmentShader: 'varying float vNy; void main(){ if (vNy < 0.5) discard; gl_FragColor = vec4(1.0); }' });
+const _dkSz = new THREE.Vector2();
+function deckMapUpdate() {
+  const groups = [];
+  if (battle.on) for (const sh of battle.ships) groups.push(sh.group);
+  else if (raft.mode === 'test') groups.push(raftGroup);
+  if (!groups.length) { DECK_O_UNIFORM.value.z = 0; return; }
+  for (const g of groups) g.traverse(o => { if (o.isMesh && !(o.material && o.material.transparent)) o.layers.enable(3); });
+  renderer.getDrawingBufferSize(_dkSz);
+  if (deckRT.width !== _dkSz.x || deckRT.height !== _dkSz.y) deckRT.setSize(_dkSz.x, _dkSz.y);
+  const prevO = scene.overrideMaterial, prevBg = scene.background, prevAuto = renderer.shadowMap.autoUpdate, prevMask = camera.layers.mask;
+  scene.overrideMaterial = deckMat; scene.background = null; renderer.shadowMap.autoUpdate = false; camera.layers.set(3);
+  renderer.setRenderTarget(deckRT); renderer.clear(true, true, false);
+  renderer.render(scene, camera);
+  renderer.setRenderTarget(null);
+  scene.overrideMaterial = prevO; scene.background = prevBg; renderer.shadowMap.autoUpdate = prevAuto; camera.layers.mask = prevMask;
+  NEARFAR_UNIFORM.value.set(camera.near, camera.far);
+  DECK_O_UNIFORM.value.set(_dkSz.x, _dkSz.y, 1, 0);
+}
 function renderWorld(dt) {
   for (const pm of palms) { pm.crown.rotation.z = Math.sin(simTime * 0.9 + pm.phase) * 0.05; for (const f of pm.fronds) f.tilt.rotation.z = f.base + Math.sin(simTime * 1.4 + f.ph) * 0.05; }
   for (const c of clouds) { c.userData.a += c.userData.s * dt; c.position.x = Math.cos(c.userData.a) * c.userData.r; c.position.z = Math.sin(c.userData.a) * c.userData.r; }
@@ -2998,6 +3210,7 @@ function renderWorld(dt) {
   SIM_O_UNIFORM.value.set(simOX, simOZ);
   waterInner.position.set(simOX + SIM_HALF, 0, simOZ + SIM_HALF);
   sky.position.copy(camera.position);
+  try { deckMapUpdate(); } catch (e) { DECK_O_UNIFORM.value.z = 0; }
   renderer.render(scene, camera);
 }
 updateUI();
@@ -3013,10 +3226,10 @@ const JUMP_V = 3.9;                  // clears about 0.75 m: a half wall or a gu
 const FLOOD_RATE = 0.09;
 const WEAPONS = {
   cannon: { speed: 30, reload: 2.2, pitch: [-0.12, 0.62], yawRate: 1.5, pitchRate: 0.9, dmg: 40, splashR: 1.4, splashDmg: 18, push: 0.9, recoil: 0.45 },
-  mortar: { speed: 20, reload: 4.0, pitch: [0.75, 1.35], yawRate: 1.2, pitchRate: 0.7, dmg: 70, blastR: 6.5, push: 2.2, recoil: 0.35, fuse: 1.3 },
+  mortar: { speed: 20, rangeAim: true, range: [6, 38], maxSpeed: 30, wheelArc: true, reload: 4.0, pitch: [0.75, 1.35], yawRate: 1.2, pitchRate: 0.7, dmg: 70, blastR: 6.5, push: 2.2, recoil: 0.35, fuse: 1.3 },
   swivel: { speed: 34, reload: 0.7, pitch: [-0.15, 0.5], yawRate: 2.6, pitchRate: 1.6, dmg: 12, splashR: 0, splashDmg: 0, push: 0.25, recoil: 0.08 },
   harpoon: { speed: 28, reload: 6.0, pitch: [-0.1, 0.5], yawRate: 1.4, pitchRate: 0.9, dmg: 8, push: 0.3, recoil: 0.2, reel: 2.2, holdShip: 5, holdLoot: 12, autoReel: false },
-  ballast: { speed: 18, rangeAim: true, range: [5, 42], maxSpeed: 32, reload: 5.0, pitch: [0.3, 1.25], yawRate: 1.3, pitchRate: 0.8, dmg: 5, push: 0.2, recoil: 0.25, load: 0.25, wheelArc: true },
+  ballast: { speed: 18, rangeAim: true, range: [5, 42], maxSpeed: 32, reload: 5.0, pitch: [0.3, 1.25], yawRate: 1.3, pitchRate: 0.8, dmg: 5, push: 0.2, recoil: 0.25, load: 0.3375, wheelArc: true },          // load: 35% heavier than it was
 };
 const RAM = { minSpeed: 1.5, dmgPerMs: 14, cool: 0.6 };
 const HIGH_ARC = { mortar: true, ballast: true };
@@ -3037,7 +3250,7 @@ function dummyLayout() {
   return legacyLayout(L);
 }
 const UPV = new THREE.Vector3(0, 1, 0);
-const _opv = new THREE.Vector3(), _bv = new THREE.Vector3(), _bv2 = new THREE.Vector3(), _bv3 = new THREE.Vector3(), _bq = new THREE.Quaternion(), _bq2 = new THREE.Quaternion();
+const _opv = new THREE.Vector3(), _bv = new THREE.Vector3(), _bv2 = new THREE.Vector3(), _bv3 = new THREE.Vector3(), _bq = new THREE.Quaternion(), _bq2 = new THREE.Quaternion(), _bq3 = new THREE.Quaternion();
 
 // ---------- ships ----------
 const battle = { on: false, ships: [], sailors: [], projectiles: [], debris: [], puffs: [], tethers: [], loads: [], loot: [], wreck: null, wreckAt: 0, over: false, overT: 0, result: null, player: null, dummy: null, dummyFires: true, myTeam: 'you', net: null, fx: [] };
@@ -3224,10 +3437,12 @@ function shipStep(ship, t) {
   const up = _bv.set(0, 1, 0).applyQuaternion(_bq);
   if (ship.alive) {
     ship.capT = up.y < 0.1 ? ship.capT + DT : Math.max(0, ship.capT - DT);
-    if (ship.capT > 1.0) killShip(ship, 'capsized');
-    else if (c.y < -3.2 || !ship.parts.some(p => p.alive)) killShip(ship, 'sank');
+    if (ship.capT > CAPSIZE_TIME) killShip(ship, 'capsized');     // a brief roll in a storm it can come back from
+    // sunk: well under the water where it is (not under sea level - in a big sea a raft riding a deep trough is not sunk)
+    else if (c.y < surfaceH(c.x, c.z, t) - 3.2 || !ship.parts.some(p => p.alive)) killShip(ship, 'sank');
   }
 }
+const CAPSIZE_TIME = 4.0;
 function killShip(ship, why) {
   ship.alive = false; ship.why = why;
   for (const s of battle.sailors) if (s.ship === ship && (s.state === 'aboard' || s.state === 'station' || s.state === 'climb' || s.state === 'haul')) throwOff(s, _bv.set(0, 1.5, 0));
@@ -3652,7 +3867,8 @@ function sailorHurt(s, at) {
   s.hurtAt = now; playSfx('grunt', at, 0.9);
   beltDrop(s);                                   // shot: the pouches on his belt go flying
 }
-function throwOff(s, v) {
+function throwOff(s, v, why) {
+  if (why && s === battle.player && s.state !== 'swim' && s.state !== 'air') flash(why);   // say why he went over
   // leaves the deck with the deck's own motion plus the push
   const w = s.state === 'swim' || s.state === 'air' ? s.pos.clone() : toWorld(s.ship, s.local, new THREE.Vector3());
   const base = pointVel(s.ship, w, new THREE.Vector3());
@@ -3789,10 +4005,25 @@ function interactTarget(s) {
     const w = toWorld(s.ship, c, new THREE.Vector3()), sc = score(w.x, w.z);
     if (sc < bs) { bs = sc; best = { st }; }
   }
+  // a harpoon bolt stuck in your raft: pull it out and the rope's gone
+  for (const tt of battle.tethers) {
+    if (tt.loot || tt.b !== s.ship || tt.life <= 0 || !tt.bolt) continue;
+    const d = Math.hypot(tt.bLocal.x - s.local.x, tt.bLocal.z - s.local.z);
+    if (d >= PRY_REACH || Math.abs(tt.bLocal.y - s.local.y) > 1.4) continue;
+    const w = toWorld(s.ship, tt.bLocal, new THREE.Vector3()), sc = score(w.x, w.z) - 0.3;
+    if (sc < bs) { bs = sc; best = { load: boltLoad(tt) }; }
+  }
+  for (const ld of battle.loads) {
+    if (ld.ship !== s.ship || !ld.part.alive || ld.pried) continue;
+    const d = Math.hypot(ld.local.x - s.local.x, ld.local.z - s.local.z);
+    if (d >= PRY_REACH || Math.abs(ld.local.y - s.local.y) > 1.4) continue;
+    const w = toWorld(s.ship, ld.local, new THREE.Vector3()), sc = score(w.x, w.z) - 0.3;          // a bomb on your deck comes first
+    if (sc < bs) { bs = sc; best = { load: ld }; }
+  }
   for (const t of battle.loot) {
     if (t.gone || t.haul || t.carried || t.belt || t.hooked) continue;
     const c = t.body.translation(), d = Math.hypot(c.x - me.x, c.z - me.z);
-    if (d >= (t.type === 'pouch' ? POUCH_REACH : HAUL_REACH) || c.y < me.y - 2.2 || c.y > me.y + 1.6) continue;
+    if (d - lootHalf(t) >= POUCH_REACH || c.y < me.y - 2.2 || c.y > me.y + 1.6) continue;   // big or small, the same reach (to its near side)
     const sc = score(c.x, c.z);
     if (sc < bs) { bs = sc; best = { loot: t }; }
   }
@@ -3833,6 +4064,15 @@ function sailorStep(s, t, inp) {
     const { q } = shipPose(ship);
     const gL = _bv.set(0, -1, 0).applyQuaternion(_bq2.copy(q).invert());
     const tilt = Math.acos(clamp(-gL.y, -1, 1));
+    // past ~65° (or capsized) nobody can keep their footing, whatever walls are there to lean on: he falls off,
+    // down the slope
+    s.lostT = tilt > DECK_LOST ? (s.lostT || 0) + DT : 0;
+    if (s.lostT > 0.35) {
+      const v = new THREE.Vector3(gL.x, 0, gL.z).applyQuaternion(q); v.y = 0;
+      if (v.lengthSq() < 1e-4) v.set(1, 0, 0);
+      throwOff(s, v.normalize().multiplyScalar(1.5), 'Lost your footing'); s.spin.multiplyScalar(0.15);   // slides off, not flung
+      return;
+    }
     // walking: input is relative to the camera, turned into the deck's frame
     let mv = _bv2.set(0, 0, 0);
     if (s.state === 'aboard' && s.stagger <= 0 && s.shoveT > 0.35 && inp && (inp.mx || inp.mz)) {
@@ -3840,12 +4080,24 @@ function sailorStep(s, t, inp) {
       if (mv.lengthSq() > 1e-6) mv.normalize().multiplyScalar(WALK_SPEED * carrySpeed(s) * Math.min(1, Math.hypot(inp.mx, inp.mz)));
     }
     if (s.pad && (s.pad.active || s.pad.w > 0.3)) mv.set(0, 0, 0);          // kneeling to paddle: he stays put
+    if (s.pry) { mv.set(0, 0, 0); pryStep(s); }                              // working a ballast bomb loose
     s.move.lerp(mv, 1 - Math.exp(-12 * DT));
+    // his weight: a hard lurch of the deck under him (not just its slope) shoves him across it; gunners hold on
+    if (BALANCE.on && s.state === 'aboard') {
+      const pv = pointVel(ship, toWorld(ship, s.local, new THREE.Vector3()), new THREE.Vector3());
+      if (s.pvPrev) {
+        const a = pv.clone().sub(s.pvPrev).divideScalar(DT);
+        s.aFelt = (s.aFelt || new THREE.Vector3()).lerp(a, 0.25);
+        const aL = s.aFelt.clone().applyQuaternion(_bq3.copy(q).invert()); aL.y = 0;
+        const m = aL.length(); if (m > LURCH_FELT) s.slide.addScaledVector(aL, -(m - LURCH_FELT) / m * 0.35 * DT);
+      }
+      s.pvPrev = pv;
+    } else s.pvPrev = null;
     // a steep deck makes you slide
-    if (tilt > 0.48) s.slide.addScaledVector(_bv3.set(gL.x, 0, gL.z), G * 0.9 * DT);
+    if (tilt > 0.6) { s.slide.addScaledVector(_bv3.set(gL.x, 0, gL.z), G * 0.6 * (tilt - 0.6) / 0.6 * DT); const l = s.slide.length(), cap = 0.6 + 2.5 * (tilt - 0.6); if (l > cap) s.slide.multiplyScalar(cap / l); }   // steeper, faster
     else s.slide.multiplyScalar(Math.exp(-6 * DT));
     if (s.state === 'station') {
-      if (tilt > 0.75) { leaveStation(s); }
+      if (tilt > 1.0) { leaveStation(s); }
       else if (s.station && s.station.stand) {
         s.slide.multiplyScalar(0.5);
         if (s.route && s.route.length) {
@@ -3890,7 +4142,7 @@ function sailorStep(s, t, inp) {
     const surf = (i, j) => { const k = colKey(i, j); if (!ship.cols.has(k)) return null; return s.state !== 'station' && ship.blocked.has(k) ? (ship.obst && ship.obst.has(k) ? ship.obst.get(k) : Infinity) : ship.cols.get(k); };
     const okCol = (i, j) => { if (s.state === 'station') return ship.cols.has(colKey(i, j)); const k = colKey(i, j); if (!ship.cols.has(k)) return false; return !ship.blocked.has(k) || surf(i, j) <= s.local.y + 0.06; };
     const tryCol = (x, z) => { const [i, j] = colOf(x, z), k = colKey(i, j), top = surf(i, j); if (top === null || !okCol(i, j)) return null; return top <= s.local.y + (s.state !== 'station' && ship.blocked.has(k) ? 0.06 : STEP_UP) ? [i, j] : null; };
-    const sliding = s.slide.length() > 1.0;
+    const sliding = s.slide.length() > 1.0 && (tilt > 0.95 || s.stagger > 0);   // a really steep deck, or a shove          // only a really steep deck slides you off the edge
     const offDeck = !ship.cols.has(colKey(...colOf(nx, nz)));
     if (!dragAllows(s, nx, nz)) { /* held back by the weight */ }
     else if (s.air && s.state === 'aboard' && offDeck && s.speed > 0.3) {
@@ -3905,13 +4157,19 @@ function sailorStep(s, t, inp) {
     else if (sliding) {
       // slid off the edge
       const [i, j] = colOf(nx, nz);
-      if (!ship.cols.has(colKey(i, j))) { s.local.x = nx; s.local.z = nz; throwOff(s, _bv.set(0, 0.5, 0)); return; }
+      if (!ship.cols.has(colKey(i, j))) { s.local.x = nx; s.local.z = nz; throwOff(s, _bv.set(0, 0.5, 0), 'Slid off the edge'); return; }
     } else {
       if (tryCol(nx, s.local.z)) s.local.x = nx; else if (tryCol(s.local.x, nz)) s.local.z = nz;
     }
     const [ci, cj] = colOf(s.local.x, s.local.z);
-    if (!okCol(ci, cj)) { throwOff(s, _bv.set(0, 0.3, 0)); return; }     // the deck under him is gone
-    const top = surf(ci, cj);
+    if (!ship.cols.has(colKey(ci, cj))) { throwOff(s, _bv.set(0, 0.3, 0), 'The deck under you broke away'); return; }     // the deck under him is gone
+    if (!okCol(ci, cj)) {
+      // standing in a gun's or wall's cell (stepped off a gun as the deck lurched): step out to the nearest free spot
+      let best = null, bd = 9;
+      for (let di = -3; di <= 3; di++) for (let dj = -3; dj <= 3; dj++) { const k = colKey(ci + di, cj + dj); if (!ship.cols.has(k) || ship.blocked.has(k)) continue; const d = Math.hypot(di, dj); if (d < bd) { bd = d; best = colCenter(ci + di, cj + dj); } }
+      if (best) { const dx = best[0] - s.local.x, dz = best[1] - s.local.z, l = Math.hypot(dx, dz), st = Math.min(l, 2.5 * DT); s.local.x += dx / l * st; s.local.z += dz / l * st; }
+    }
+    const top = okCol(ci, cj) ? surf(ci, cj) : ship.cols.get(colKey(ci, cj));
     // jumping / falling: off the ground he flies; otherwise feet follow the deck (and step down off anything over 0.2 m)
     if (s.state === 'aboard' && s.jumpReq && !s.air && !(s.carry && s.carry.drag) && s.stagger <= 0) { s.air = true; s.jv = JUMP_V; }
     s.jumpReq = false;
@@ -3948,9 +4206,11 @@ function sailorStep(s, t, inp) {
     return;
   }
   if (s.state === 'air') {
+    _airPrev.copy(s.pos);
     s.vel.y -= G * DT; s.pos.addScaledVector(s.vel, DT);
+    if (airHitsDeck(s)) return;
     const h = surfaceH(s.pos.x, s.pos.z, t);
-    if (s.pos.y < h) {
+    if (s.pos.y < h && s.vel.y < 0) {          // (on the way down: jumping up out of the water isn't landing in it)
       s.state = 'swim'; s.dive = false;
       spray(s.pos, 10 + Math.min(14, Math.floor(-s.vel.y * 3)), 2 + Math.min(4, -s.vel.y * 0.5), 1.5);
       kickWater(s.pos.x, s.pos.z, -0.03 * Math.min(8, -s.vel.y + 2), 0.4);
@@ -3966,38 +4226,150 @@ function sailorStep(s, t, inp) {
     if (inp && (inp.mx || inp.mz)) { const l = Math.hypot(inp.mx, inp.mz); sx = inp.mx / Math.max(l, 1e-6) * SWIM_SPEED * Math.min(1, l); sz = inp.mz / Math.max(l, 1e-6) * SWIM_SPEED * Math.min(1, l); }
     s.vel.x += (wx + sx - s.vel.x) * (1 - Math.exp(-3 * DT)); s.vel.z += (wz + sz - s.vel.z) * (1 - Math.exp(-3 * DT));
     s.pos.addScaledVector(s.vel, DT);
+    if (swimOutFromUnder(s)) return;              // feet found his own deck: aboard again
     s.speed = Math.hypot(sx, sz);
     if (s.speed > 0.2) s.worldYaw = lerpAngle(s.worldYaw, Math.atan2(-sz, sx), 1 - Math.exp(-6 * DT));
     s.overT -= DT;
     if (s.speed > 0.3 && Math.random() < 0.15) addFoam(s.pos.x, s.pos.z, 0.08);
     // reach the edge of any piece of your own raft and you pull yourself up
-    let best = null, bd = 0.75, bestShip = null, bestLp = null;
-    for (const sh of teamShips(ship.team)) {
-      if (!sh.alive) continue;
-      const lp = toLocal(sh, s.pos, new THREE.Vector3());
-      for (const [k, top] of sh.cols) {
-        if (sh.blocked.has(k)) continue;
-        const i = Math.floor(k / 1000), j = k % 1000, [x, z] = colCenter(i, j);
-        const d = Math.hypot(Math.max(Math.abs(lp.x - x) - FC / 2, 0), Math.max(Math.abs(lp.z - z) - FC / 2, 0));
-        if (d < bd && top - lp.y < 1.9) { bd = d; best = [x, top, z]; bestShip = sh; bestLp = lp; }
+    // getting back aboard is a jump: Space kicks him up out of the water, and it has to carry him up and over the
+    // edge of the deck (the hull's side stops him otherwise). Bots kick for it when they're close to their raft.
+    let jump = !!s.jumpReq; s.jumpReq = false;
+    s.jumpCool = Math.max(0, (s.jumpCool || 0) - DT);
+    let jdir = null;
+    if (!s.isPlayer && !s.remote && s.jumpCool <= 0) {
+      let bd = 1.4;
+      for (const sh of teamShips(ship.team)) {
+        if (!sh.alive || shipUp(sh).y < DECK_OK) continue;
+        const lp = toLocal(sh, s.pos, new THREE.Vector3());
+        for (const [k, top] of sh.cols) {
+          if (sh.blocked.has(k) || top - lp.y > 1.6) continue;
+          const i = Math.floor(k / 1000), j = k % 1000, [x, z] = colCenter(i, j), d = Math.hypot(lp.x - x, lp.z - z);
+          if (d < bd) { bd = d; jdir = toWorld(sh, new THREE.Vector3(x, top, z), new THREE.Vector3()).sub(s.pos).setY(0); }
+        }
       }
+      if (jdir && jdir.lengthSq() > 1e-6) jump = true;
     }
-    {
-      const lp = bestLp;
-      if (best) {
-        s.ship = bestShip;
-        s.state = 'climb';
-        const inset = new THREE.Vector3(best[0], best[1], best[2]);
-        s.climb = { t: 0, from: lp.clone(), to: inset };
-        s.local.copy(lp);
-        s.yaw = Math.atan2(-(best[2] - lp.z), best[0] - lp.x);
-        return;
-      }
+    if (jump && s.jumpCool <= 0) {
+      if (!jdir) jdir = Math.hypot(sx, sz) > 0.2 ? new THREE.Vector3(sx, 0, sz) : new THREE.Vector3(Math.cos(s.worldYaw || 0), 0, -Math.sin(s.worldYaw || 0));
+      jdir.normalize();
+      s.worldYaw = Math.atan2(-jdir.z, jdir.x);
+      s.state = 'air'; s.dive = false; s.spin.set(0, 0, 0); s.jumpCool = SWIM_JUMP.cool;
+      s.vel.set(s.vel.x * 0.4 + jdir.x * SWIM_JUMP.fwd, SWIM_JUMP.up, s.vel.z * 0.4 + jdir.z * SWIM_JUMP.fwd);
+      spray(s.pos, 8, 1.4, 0.5); kickWater(s.pos.x, s.pos.z, -0.03, 0.35);
+      playSfx('effort', s.pos, 0.6);
+      return;
     }
     if (s.overT <= 0) { s.state = 'drowned'; s.dead = true; s.vel.set(0, -0.3, 0); spray(s.pos, 6, 1.5, 0.6); playSfx('drown', s.pos, 1); }
     return;
   }
   if (s.state === 'drowned') { s.pos.y -= 0.45 * DT; s.fade = Math.max(0, s.fade - DT * 0.45); }
+}
+// ---- rafts are solid to bodies off the deck ----
+// a body flying through the air (thrown off by a lurch, shoved, jumping) comes down on a deck it meets rather than
+// falling through it: on his own team's raft he lands and is aboard again; any other raft he lands on, he's
+// bounced off toward its nearest edge
+const SWIM_JUMP = { up: 5.4, fwd: 2.4, cool: 0.9 };    // out of the water: about 1.5 m up, 2.5 m along
+const SHOULDER = 0.9, _shT = new THREE.Vector3();
+const DECK_LOST = 1.4, DECK_OK = 0.3;   // tilt (rad) at which footing is lost; up.y a deck has to have to be stood on
+const _airPrev = new THREE.Vector3(), _ahL = new THREE.Vector3(), _ahP = new THREE.Vector3(), _ahW = new THREE.Vector3();
+function deckTopAt(sh, lp) {
+  const k = colKey(...colOf(lp.x, lp.z)); if (!sh.cols.has(k)) return null;
+  return { k, top: sh.blocked.has(k) ? (sh.obst && sh.obst.has(k) ? sh.obst.get(k) : sh.cols.get(k)) : sh.cols.get(k), blocked: sh.blocked.has(k) };
+}
+function airHitsDeck(s) {
+  for (const sh of battle.ships) {
+    if (!sh.cols || !sh.parts.length || shipUp(sh).y < DECK_OK) continue;   // too steep or capsized: nothing to land on
+    const lp = toLocal(sh, s.pos, _ahL), d = deckTopAt(sh, lp); if (!d) continue;
+    const pp = toLocal(sh, _airPrev, _ahP);
+    if (lp.y > d.top) continue;                                 // still above it
+    if (pp.y < d.top - 0.45) {
+      // didn't clear the edge: he hits the side of the hull and drops back
+      if (lp.y > d.top - 3) {
+        s.pos.x = _airPrev.x; s.pos.z = _airPrev.z;
+        pointVel(sh, s.pos, _ahW); s.vel.x = _ahW.x - (s.vel.x - _ahW.x) * 0.2; s.vel.z = _ahW.z - (s.vel.z - _ahW.z) * 0.2;
+      }
+      continue;
+    }
+    if (sh.alive && sh.team === s.ship.team) {
+      s.ship = sh; s.state = 'aboard'; s.air = false; s.jv = 0; s.landT = 0; s.dive = false;
+      s.local.set(lp.x, d.top, lp.z); s.slide.set(0, 0, 0); s.move.set(0, 0, 0); s.spin.set(0, 0, 0);
+      s.overT = OVERBOARD_TIME;
+      const fw = _ahW.set(Math.cos(s.worldYaw || 0), 0, -Math.sin(s.worldYaw || 0)).applyQuaternion(_bq2.copy(shipPose(sh).q).invert());
+      s.yaw = Math.atan2(-fw.z, fw.x);
+      return true;
+    }
+    // not his to stand on: set on top and sent sliding off the nearest edge
+    lp.y = d.top + 0.02;
+    toWorld(sh, lp, s.pos);
+    const out = edgeOut(sh, lp);
+    pointVel(sh, s.pos, _ahW);
+    s.vel.set(_ahW.x, Math.max(_ahW.y, 0) + 1.2, _ahW.z);
+    if (out) { const ow = _ahP.set(out[0], 0, out[1]).applyQuaternion(shipPose(sh).q); s.vel.x += ow.x * 2.5; s.vel.z += ow.z * 2.5; }
+    return false;
+  }
+  return false;
+}
+// the way out from a spot on a raft's footprint to its nearest edge (local x, z unit vector), or null
+function edgeOut(sh, lp) {
+  const [ci, cj] = colOf(lp.x, lp.z);
+  let best = null, bd = 1e9;
+  for (let r = 1; r <= 24 && !best; r++) {
+    for (let di = -r; di <= r; di++) for (let dj = -r; dj <= r; dj++) {
+      if (Math.max(Math.abs(di), Math.abs(dj)) !== r || sh.cols.has(colKey(ci + di, cj + dj))) continue;
+      const d = di * di + dj * dj; if (d < bd) { bd = d; best = [di, dj]; }
+    }
+  }
+  if (!best) return null;
+  const l = Math.hypot(best[0], best[1]); return [best[0] / l, best[1] / l, Math.sqrt(bd) * FC];
+}
+// swimmers never end up under a raft: the hull's edges shove them back out into open water. A deck the waves have
+// washed over is solid underfoot: swimming over his own, he's aboard again the moment it comes up under his feet;
+// anyone else's lifts him and he slides off it. Returns true when he's back aboard.
+const SWIM_R = 0.3;
+function swimOutFromUnder(s) {
+  for (const sh of battle.ships) {
+    if (!sh.cols || !sh.parts.length) continue;                 // a wrecked raft still floating is still solid
+    const lp = toLocal(sh, s.pos, _ahL);
+    if (Math.abs(lp.x) > FHALF || Math.abs(lp.z) > FHALF) continue;
+    const upY = shipUp(sh).y, d = deckTopAt(sh, lp);
+    if (d && upY > DECK_OK && lp.y > d.top - 0.25) {
+      // over the deck, not under it
+      if (lp.y > d.top + 0.15) continue;                   // still swimming above it
+      if (sh.alive && sh.team === s.ship.team && !d.blocked) {
+        s.ship = sh; s.state = 'aboard'; s.air = false; s.jv = 0; s.landT = 0;
+        s.local.set(lp.x, lp.y, lp.z);                      // the deck's last bit of rise eases him up onto it
+        s.slide.set(0, 0, 0); s.move.set(0, 0, 0); s.overT = OVERBOARD_TIME;
+        const fw = _ahW.set(Math.cos(s.worldYaw || 0), 0, -Math.sin(s.worldYaw || 0)).applyQuaternion(_bq2.copy(shipPose(sh).q).invert());
+        s.yaw = Math.atan2(-fw.z, fw.x);
+        return true;
+      }
+      // someone else's: it carries him up, and he slips off toward the nearest edge
+      if (lp.y < d.top) { lp.y = d.top; const x = s.pos.x, z = s.pos.z; toWorld(sh, lp, s.pos); s.pos.x = x; s.pos.z = z; s.vel.y = Math.max(s.vel.y, pointVel(sh, s.pos, _ahW).y); }
+      const out = edgeOut(sh, lp);
+      if (out) { const ow = _ahP.set(out[0], 0, out[1]).applyQuaternion(shipPose(sh).q); s.vel.x += ow.x * 4 * DT; s.vel.z += ow.z * 4 * DT; }
+      continue;
+    }
+    let under = false, topY = -Infinity;
+    for (const [ox, oz] of [[0, 0], [SWIM_R, 0], [-SWIM_R, 0], [0, SWIM_R], [0, -SWIM_R]]) {
+      const k = colKey(...colOf(lp.x + ox, lp.z + oz));
+      if (sh.cols.has(k)) { under = true; topY = Math.max(topY, sh.cols.get(k)); }
+    }
+    // under it: below the deck of an upright raft; either side of one that's on its side or upside down
+    if (!under || (upY > DECK_OK ? (lp.y > topY + 0.2 || lp.y < topY - 4) : Math.abs(lp.y - topY) > 4)) continue;
+    // which way is open water, and how far
+    const out = edgeOut(sh, lp);
+    if (!out) continue;
+    const step = Math.min(out[2] + SWIM_R, 6 * DT);       // out at a firm 6 m/s, never a jump
+    lp.x += out[0] * step; lp.z += out[1] * step;
+    const y = s.pos.y; toWorld(sh, lp, s.pos); s.pos.y = y;
+    // carried along by the hull, and pushed away from it
+    pointVel(sh, s.pos, _ahW);
+    const ow = _ahP.set(out[0], 0, out[1]).applyQuaternion(shipPose(sh).q);
+    if (sh.alive && sh.team === s.ship.team) continue;            // his own: just out to the edge, where he grabs it
+    const vo = s.vel.x * ow.x + s.vel.z * ow.z, want = (_ahW.x * ow.x + _ahW.z * ow.z) + 1.2;
+    if (vo < want) { s.vel.x += ow.x * (want - vo); s.vel.z += ow.z * (want - vo); }
+  }
 }
 const lerpAngle = (a, b, k) => { let d = b - a; d = Math.atan2(Math.sin(d), Math.cos(d)); return a + d * k; };
 
@@ -4005,7 +4377,7 @@ function drawSailor(s, dt, camPosW) {
   const M = s.model;
   // pose weights crossfade toward the current state
   let want = 'idle';
-  if (s.state === 'aboard') want = s.air ? 'jump' : s.pad && s.pad.active ? 'paddle' : s.speed > 0.25 ? 'walk' : 'idle';
+  if (s.state === 'aboard') want = s.pry ? 'heave' : s.air ? 'jump' : s.pad && s.pad.active ? 'paddle' : s.speed > 0.25 ? 'walk' : 'idle';
   else if (s.state === 'station') want = s.route && s.route.length ? (s.speed > 0.25 ? 'walk' : 'idle') : s.station && s.station.kind === 'drive' ? 'drive' : 'gun';
   else want = s.state === 'haul' && s.haulT && s.haulT.haul && s.haulT.haul.heavy ? 'heave' : s.state === 'air' && s.dive ? 'jump' : s.state;
   let tot = 0;
@@ -4031,6 +4403,7 @@ function drawSailor(s, dt, camPosW) {
       P[12] += (s.dragLow || 0) + 0.18 * s.dragM - 0.12 * Math.max(0, -s.dragM);   // lower for a lower piece; leaning in to push, sitting back to tow
       for (const i of [0, 1, 2, 3, 4, 5, 12, 13]) J[i] = J[i] * (1 - cw) + P[i] * cw; J[6] += 0.8 * cw; J[7] += 0.8 * cw; J[10] -= 1.3 * cw; J[11] -= 1.3 * cw; }   // knees bent under the crouch
   }
+  const bal = balancePose(s, dt, J);
   for (let i = 0; i < 2; i++) {
     M.sh[i].rotation.set(J[2 + i], 0, J[i]);
     M.el[i].rotation.z = J[4 + i];
@@ -4039,6 +4412,9 @@ function drawSailor(s, dt, camPosW) {
   }
   M.spine.rotation.z = -J[12]; M.hips.position.y = 0.9 + J[13]; M.body.rotation.z = J[14];
   M.spine.rotation.x = 0; M.spine.rotation.y = 0;
+  M.hips.position.x = M.hips.position.z = 0;
+  if (bal) { M.spine.rotation.z += bal.lf; M.spine.rotation.x += bal.ls; M.hips.position.x = bal.hx; M.hips.position.z = bal.hz; M.neck.rotation.z = -bal.lf * 0.5; M.neck.rotation.x = -bal.ls * 0.5; }
+  else { M.neck.rotation.z = M.neck.rotation.x = 0; }
   // place the body
   if (s.state === 'aboard' || s.state === 'station' || s.state === 'climb' || s.state === 'haul') {
     s.ship.group.updateMatrixWorld();
@@ -4074,6 +4450,60 @@ function drawSailor(s, dt, camPosW) {
   itemsDraw(s, dt);
   if (s.state === 'aboard' || s.state === 'haul') lootGrip(s, dt); else s.lgW = 0;
   beltDraw(s, dt);
+}
+
+// ---------- balance: he rides the deck instead of standing on it like a statue ----------
+// What he feels through his feet (the deck's slope, plus the pull of it lurching, heaving and swinging under him)
+// drives a springy balance offset. His hips go with it and his upper body leans against it, his knees soak up the
+// heave, his arms come out when it's rough, and a big lurch makes him take a quick step to catch himself.
+// Purely how he's drawn (every player's game works it out from the raft's own motion), and BALANCE.on turns it off.
+const LURCH_FELT = 4.0;     // m/s² of deck lurch before it starts to shove him about
+const BALANCE = { on: true, gain: 1.5, k: 28, c: 5, lean: 0.55, hip: 0.11, knee: 0.85, arms: 1.15, brace: 1 };   // (v1.08 was gain 1, k 38, c 7.5, lean 0.32, hip 0.07, knee 0.55, arms 0.75, step 0.42)
+const _blP = new THREE.Vector3(), _blV = new THREE.Vector3(), _blA = new THREE.Vector3(), _blQ = new THREE.Quaternion(), _blM = new THREE.Matrix4();
+function balancePose(s, dt, J) {
+  const aboard = s.state === 'aboard' || s.state === 'station' || s.state === 'haul';
+  if (!BALANCE.on || !aboard || !s.ship || dt <= 0) { s.bal = null; return null; }
+  const B = s.bal || (s.bal = { pm: new THREE.Matrix4(), v: new THREE.Vector3(), a: new THREE.Vector3(), b: new THREE.Vector2(), bv: new THREE.Vector2(), heave: 0, rough: 0, fresh: 2 });
+  const g = s.ship.group; g.updateMatrixWorld();
+  // the deck point under him, now and where the deck had it a frame ago: how the deck is moving there
+  _blP.copy(s.local).applyMatrix4(g.matrixWorld);
+  _blV.copy(s.local).applyMatrix4(B.pm); B.pm.copy(g.matrixWorld);
+  const h = Math.min(dt, 0.05);
+  _blV.subVectors(_blP, _blV).divideScalar(h);
+  if (B.fresh > 0) { B.fresh--; B.v.copy(_blV); B.a.set(0, 0, 0); return null; }
+  _blA.subVectors(_blV, B.v).divideScalar(h); B.v.copy(_blV);
+  if (_blA.length() > 60) _blA.setLength(60);                      // a teleport (respawn, snap correction) isn't a lurch
+  B.a.lerp(_blA, 1 - Math.exp(-12 * h));                            // smoothed: frames aren't evenly spaced
+  // into his own frame: x the way he faces, z to his right
+  _blQ.setFromAxisAngle(UPV, s.yaw).premultiply(g.quaternion).invert();
+  const aB = _blA.copy(B.a).applyQuaternion(_blQ);
+  const gB = _blV.set(0, -G, 0).applyQuaternion(_blQ);
+  // felt pull = gravity's slope component minus the deck's acceleration; as a lean (1 = 45°)
+  const tx = clamp(BALANCE.gain * (gB.x - aB.x) / G, -1.4, 1.4), tz = clamp(BALANCE.gain * (gB.z - aB.z) / G, -1.4, 1.4);
+  B.bv.x += (BALANCE.k * (tx - B.b.x) - BALANCE.c * B.bv.x) * h; B.bv.y += (BALANCE.k * (tz - B.b.y) - BALANCE.c * B.bv.y) * h;
+  B.b.x += B.bv.x * h; B.b.y += B.bv.y * h;
+  // the deck heaving up under him makes him heavier (knees give), dropping away makes him light
+  B.heave += (clamp(BALANCE.gain * aB.y / G, -0.7, 1.0) - B.heave) * (1 - Math.exp(-8 * h));
+  const free = (s.w.idle || 0) + (s.w.walk || 0);                  // arms and steps only when his hands and feet are his own
+  const m = Math.hypot(B.b.x, B.b.y);
+  // rough going: he gets down lower and plants his feet wider (eases in, eases out slowly, so his feet don't shuffle)
+  const roughT = clamp((m - 0.12) * 1.6 + Math.abs(B.heave) * 0.8, 0, 1);
+  B.rough += (roughT - B.rough) * (1 - Math.exp(-(roughT > B.rough ? 3 : 0.8) * h));
+  const r = B.rough * BALANCE.brace;
+  J[8] += r * 0.22; J[9] -= r * 0.22;                               // feet apart
+  J[10] -= r * 0.55; J[11] -= r * 0.55; J[6] += r * 0.3; J[7] += r * 0.3; J[12] += r * 0.18; J[13] -= r * 0.13;   // knees bent, hips down
+  // knees soak up the heave
+  const kv = BALANCE.knee * B.heave;
+  J[10] -= kv; J[11] -= kv; J[6] += kv * 0.5; J[7] += kv * 0.5; J[12] += kv * 0.25; J[13] -= kv * 0.12;
+  // arms out for balance when it's rough
+  const ar = BALANCE.arms * clamp(m - 0.08, 0, 0.8) * free;
+  J[2] += ar; J[3] -= ar; J[0] += ar * 0.35; J[1] += ar * 0.35; J[4] += ar * 0.4; J[5] += ar * 0.4;
+  // hips go with the pull, legs angle back so his feet stay planted
+  const lw = 1 - clamp((s.w.paddle || 0) + (s.w.heave || 0), 0, 1) * 0.8;      // hands busy on a paddle or a pull: sway less
+  const hx = clamp(B.b.x, -1, 1) * BALANCE.hip * lw, hz = clamp(B.b.y, -1, 1) * BALANCE.hip * lw;
+  J[6] -= hx / 0.84; J[7] -= hx / 0.84; J[8] += hz / 0.84; J[9] += hz / 0.84;
+  // and he leans against it
+  return { lf: B.b.x * BALANCE.lean * lw, ls: -B.b.y * BALANCE.lean * lw, hx, hz };
 }
 
 // ---------- shove: push sailors, swimmers and loot in front of you back a bit ----------
@@ -4127,8 +4557,9 @@ function playerShove(s = battle.player, yaw = view.yaw) {
   if (!s || battle.over) return;
   if (s.carry && s.carry.drag) return;                                                                   // too heavy to throw
   if (s.carry) { if (s.shoveCool <= 0) { dropLoot(s, true); s.shoveCool = SHOVE.cool; } return; }      // carrying: Q throws it
-  // shove where you're looking
-  shove(s, _bv.set(-Math.sin(yaw), 0, -Math.cos(yaw)));
+  // shove the way his body faces (not the camera)
+  const wy = s.state === 'swim' || s.state === 'air' ? s.worldYaw : worldYawOf(s);
+  shove(s, _bv.set(Math.cos(wy), 0, -Math.sin(wy)));
 }
 
 // ---------- weapons ----------
@@ -4168,6 +4599,8 @@ function fire(ship, st) {
   st.reload = W.reload;
   puff(p, 0xeeeeee, st.weapon === 'swivel' ? 0.5 : st.weapon === 'harpoon' ? 0.4 : 1);
   if (st.weapon === 'cannon') playSfx('cannonFire', p, 1);
+  else if (st.weapon === 'swivel') playSfx('swivelFire', p, 0.9);
+  else if (st.weapon === 'ballast') playSfx('ballastFire', p, 1);
   st.kick = 1;
   return true;
 }
@@ -4190,10 +4623,30 @@ function chargeMesh() {
   for (const y of [-0.12, 0.12]) { const b = new THREE.Mesh(new THREE.CylinderGeometry(0.175, 0.175, 0.05, 14), toon(0xffcf3a)); b.position.y = y; g.add(b); }
   return g;
 }
+// a shot meeting a piece of treasure; true if the shot is spent. A harpoon hooks it, even out of someone's hands
+// (it's torn away from whoever was dragging or hauling it, and the rope starts pulling it home)
+function projHitsLoot(pr) {
+  for (const t of battle.loot) {
+    const dragged = t.drag || t.haul;                 // heavy treasure being dragged or hauled can be harpooned away
+    if (t.gone || t.belt || t.hooked || (t.carried && !dragged) || (dragged && pr.kind !== 'harpoon')) continue;
+    if (pr.kind === 'harpoon' && t.holder && t.holder.team === pr.owner.team) continue;   // already yours
+    const c = t.body.translation();
+    if (Math.hypot(c.x - pr.p.x, c.y - pr.p.y, c.z - pr.p.z) > Math.max(...t.L.size) / 2 + (pr.kind === 'harpoon' ? 0.3 : 0.15)) continue;
+    if (dragged && pr.owner.alive) { const v = t.body.linvel(); releaseLoot(t, new THREE.Vector3(v.x, v.y, v.z)); }   // torn out of his hands
+    if (pr.kind === 'charge') { detonate(pr.p, pr.owner, true); return true; }
+    if (pr.kind === 'harpoon' && pr.owner.alive) { attachLootTether(pr, t); return true; }
+    const k = pr.weapon === 'swivel' ? 0.03 : 0.08;
+    t.body.applyImpulseAtPoint({ x: pr.v.x * k, y: pr.v.y * k + 0.6 * k * 10, z: pr.v.z * k }, { x: pr.p.x, y: pr.p.y, z: pr.p.z }, true);
+    puff(pr.p, 0xffe08a, 0.5); restoreBolt(pr); return true;
+  }
+  return false;
+}
 function projStep(pr, t) {
   pr.t += DT;
   if (pr.state === 'air') {
     pr.v.y -= G * DT; pr.p.addScaledVector(pr.v, DT);
+    // a harpoon looks for treasure first: it snags it off a deck rather than sticking in the planks under it
+    if (pr.kind === 'harpoon' && projHitsLoot(pr)) return false;
     // ships
     for (const ship of battle.ships) {
       if (ship === pr.owner && pr.t < 0.25) continue;
@@ -4206,17 +4659,7 @@ function projStep(pr, t) {
         return false;
       }
     }
-    // loot
-    for (const t of battle.loot) {
-      if (t.gone || t.haul || t.carried || t.belt || t.hooked) continue;
-      const c = t.body.translation();
-      if (Math.hypot(c.x - pr.p.x, c.y - pr.p.y, c.z - pr.p.z) > Math.max(...t.L.size) / 2 + 0.15) continue;
-      if (pr.kind === 'charge') { detonate(pr.p, pr.owner, true); return false; }
-      if (pr.kind === 'harpoon' && pr.owner.alive) { attachLootTether(pr, t); return false; }
-      const k = pr.weapon === 'swivel' ? 0.03 : 0.08;
-      t.body.applyImpulseAtPoint({ x: pr.v.x * k, y: pr.v.y * k + 0.6 * k * 10, z: pr.v.z * k }, { x: pr.p.x, y: pr.p.y, z: pr.p.z }, true);
-      puff(pr.p, 0xffe08a, 0.5); restoreBolt(pr); return false;
-    }
+    if (pr.kind !== 'harpoon' && projHitsLoot(pr)) return false;
     // sailors
     for (const s of battle.sailors) {
       if (s.dead || (s.ship === pr.owner && pr.t < 0.25)) continue;
@@ -4226,7 +4669,7 @@ function projStep(pr, t) {
         if (pr.kind === 'charge') { detonate(pr.p, pr.owner, true); return false; }
         const f = pr.weapon === 'swivel' ? 4 : pr.kind === 'ballast' ? 3 : 7;
         sailorHurt(s, c);
-        if (s.state !== 'swim') throwOff(s, _bv2.copy(pr.v).normalize().multiplyScalar(f).add(_bv3.set(0, 3, 0)));
+        if (s.state !== 'swim') throwOff(s, _bv2.copy(pr.v).normalize().multiplyScalar(f).add(_bv3.set(0, 3, 0)), 'Blown off by a blast');
         puff(pr.p, 0xffffff, 0.8); restoreBolt(pr); return false;
       }
     }
@@ -4310,7 +4753,7 @@ function ballHit(ship, part, pr, scale = 1) {
   for (const s of battle.sailors) {
     if (s.dead || s.state === 'swim' || s.state === 'air') continue;
     const c = toWorld(s.ship, s.local, _bv2); c.y += 0.9;
-    if (c.distanceTo(pr.p) < (pr.weapon === 'swivel' ? 0.6 : 1.2)) { sailorHurt(s, c); throwOff(s, dir.clone().multiplyScalar(pr.weapon === 'swivel' ? 3 : 5).add(_bv3.set(0, 3, 0))); }
+    if (c.distanceTo(pr.p) < (pr.weapon === 'swivel' ? 0.6 : 1.2)) { sailorHurt(s, c); throwOff(s, dir.clone().multiplyScalar(pr.weapon === 'swivel' ? 3 : 5).add(_bv3.set(0, 3, 0)), 'Hit by a shot'); }
   }
 }
 // ---- harpoon rope: pulls the two rafts together along the line and reels in ----
@@ -4340,15 +4783,16 @@ function attachLootTether(pr, t) {
 }
 function tetherEnd(tt, out) { if (tt.loot) { const c = tt.loot.body.translation(); return out.set(c.x, c.y, c.z); } return toWorld(tt.b, tt.bLocal, out); }
 function tetherStep(tt) {
-  const lootOk = tt.loot ? !tt.loot.gone && !tt.loot.holder : true;
+  const lootOk = tt.loot ? !tt.loot.gone && !(tt.loot.holder && tt.loot.holder.team === tt.a.team) : true;   // done once it's on one of your rafts; off someone else's deck it keeps pulling
   if (tt.life <= 0 || !tt.aPart.alive || !tt.a.alive || !lootOk || (!tt.loot && (!tt.bPart.alive || !tt.b.alive))) { tt.life = 0; return; }
-  tt.life -= DT;
+  // a rope holds until it snaps, the raft it's in pulls the bolt out, or (on treasure) it's in or nobody's on the harpoon
+  if (tt.loot) { tt.idle = tt.st.user ? 0 : (tt.idle || 0) + DT; if (tt.idle > 4) { tt.life = 0; return; } }
   const A = toWorld(tt.a, tt.aLocal, new THREE.Vector3()), B = tetherEnd(tt, new THREE.Vector3());
   const d = A.distanceTo(B), u = B.clone().sub(A).divideScalar(d || 1);
   const user = tt.st.user, W = WEAPONS.harpoon;
   tt.reeling = W.autoReel || (user && (user.isPlayer ? battle.reelHeld : user.remote ? !!user.remote.held : true));
-  // reeling in treasure: the heavier it is, the slower it comes (pouch ~1.8 m/s, chest ~1.3, strongbox ~0.7, idol ~0.55)
-  const reel = tt.loot ? W.reel / (1 + tt.loot.L.mass * 6) : W.reel;
+  // reeling in treasure: the heavier it is, the slower it comes (pouch ~1.9 m/s, chest ~1.5, strongbox ~0.9, idol ~0.75)
+  const reel = tt.loot ? W.reel / (1 + tt.loot.L.mass * 4) : W.reel;       // (was mass * 6: heavy pieces came in too slow)
   if (tt.reeling) tt.L = Math.max(2.5, tt.L - reel * DT);
   const stretch = d - tt.L;
   if (stretch > 6) { tt.life = 0; return; }        // snaps
@@ -4386,6 +4830,41 @@ function attachLoad(pr, ship, part) {
   battle.loads.push({ ship, part, local, mass: W.load, mesh });
   ship.body.applyImpulseAtPoint({ x: pr.v.x * 0.02, y: pr.v.y * 0.02, z: pr.v.z * 0.02 }, { x: pr.p.x, y: pr.p.y, z: pr.p.z }, true);
   puff(pr.p, 0xffcf3a, 0.6);
+}
+// ---- prying a ballast bomb off: crouched over it, he heaves on it a few times (slow, about 2.4 s) and it comes
+// loose and tumbles over the side; shoved, knocked off his feet or walking away, he lets go ----
+const PRY_REACH = 1.3, PRY_TIME = 2.4, BOLT_TIME = 1.6;
+// an enemy harpoon bolt in your deck, worked loose the same way as a ballast bomb
+function boltLoad(tt) { const o = tt.pryObj || (tt.pryObj = { tether: tt, local: tt.bLocal, mesh: tt.bolt }); o.ship = tt.b; o.part = tt.bPart; return o; }
+function startPry(s, ld) {
+  s.pry = { ld, t: 0 };
+  s.yaw = Math.atan2(-(ld.local.z - s.local.z), ld.local.x - s.local.x);
+  playSfx('effort', toWorld(s.ship, s.local, _bv), 0.8);
+}
+function pryStep(s) {
+  const P = s.pry, ld = P.ld;
+  const still = ld.tether ? battle.tethers.includes(ld.tether) && ld.tether.life > 0 && ld.tether.b === ld.ship : battle.loads.includes(ld);
+  if (!still || !ld.part.alive || ld.ship !== s.ship || s.stagger > 0 || s.carry || Math.hypot(ld.local.x - s.local.x, ld.local.z - s.local.z) > PRY_REACH + 0.3) { s.pry = null; return; }
+  s.yaw = lerpAngle(s.yaw, Math.atan2(-(ld.local.z - s.local.z), ld.local.x - s.local.x), 1 - Math.exp(-8 * DT));
+  const before = P.t; P.t += DT / (ld.tether ? BOLT_TIME : PRY_TIME);
+  if (Math.floor(before * 3) !== Math.floor(P.t * 3) && P.t < 1) creakAt(s.ship, ld.local);            // each heave: a creak
+  // it works loose a little with each heave
+  const k = Math.min(1, P.t), loose = k - Math.sin(2 * Math.PI * 3 * k) / (2 * Math.PI * 3);
+  ld.mesh.position.copy(ld.local).add(_bv.set(0, 0.06 * loose, 0));
+  if (P.t >= 1) { s.pry = null; pryOff(s, ld); }
+}
+function creakAt(ship, local) { puff(toWorld(ship, local, new THREE.Vector3()), 0xd8c3a0, 0.25); }
+function pryOff(s, ld) {
+  if (ld.tether) ld.tether.life = 0; else battle.loads.splice(battle.loads.indexOf(ld), 1);
+  ld.pried = true;
+  // off it comes: thrown away from him, over the side, and down it goes
+  const w = toWorld(ld.ship, ld.local, new THREE.Vector3());
+  const me = toWorld(s.ship, s.local, new THREE.Vector3()), out = w.clone().sub(me); out.y = 0; if (out.lengthSq() < 1e-4) out.set(1, 0, 0); out.normalize();
+  const m = ld.mesh; m.parent.remove(m); m.position.copy(w); m.quaternion.premultiply(shipPose(ld.ship).q); scene.add(m);
+  const v = pointVel(ld.ship, w, new THREE.Vector3()).addScaledVector(out, 3.2).add(_bv.set(0, 2.4, 0));
+  battle.debris.push({ m, v, w: new THREE.Vector3((Math.random() - 0.5) * 6, (Math.random() - 0.5) * 6, (Math.random() - 0.5) * 6), density: 6, life: 6, size: 0.4 });
+  playSfx('effort', me, 0.9);
+  puff(w, 0xffcf3a, 0.5);
 }
 // ---- rams: the spike's tip hurts whatever it drives into ----
 function ramStep(ship) {
@@ -4447,7 +4926,7 @@ function detonate(p, owner, surface) {
       const s = 1 - d / 4.5, dir = c.clone().sub(p); dir.y = Math.abs(dir.y) + 1; dir.normalize();
       if (s > 0.25) sailorHurt(sl, c);
       if (sl.state === 'swim') { sl.vel.addScaledVector(dir, 6 * s); }
-      else if (s > 0.25) throwOff(sl, dir.multiplyScalar(9 * s).add(_bv3.set(0, 3 * s, 0)));
+      else if (s > 0.25) throwOff(sl, dir.multiplyScalar(9 * s).add(_bv3.set(0, 3 * s, 0)), 'Knocked off by a blast');
     }
   }
 }
@@ -4636,7 +5115,7 @@ function setupBattle() {
   teardownBattle();
   raft.mode = 'battle'; battle.on = true; battle.over = false; battle.overT = 0; battle.result = null; battle.net = null; battle.myTeam = 'you';
   raftGroup.visible = false; comMark.visible = cobMark.visible = false; if (ghost) ghost.visible = false;
-  SWELL.target = BATTLE_SWELL;
+  SWELL.target = waveLevel();
   const mine = buildShip(battle.layout, ARENA_A, 0, 'you');
   const theirs = buildShip(dummyLayout(), ARENA_B, Math.PI, 'dummy');
   battle.ships = [mine, theirs];
@@ -4756,8 +5235,9 @@ function interact(s = battle.player) {
   if (s.state === 'station') { leaveStation(s); return; }
   if (s.carry) { dropLoot(s, false); return; }
   if (s.state === 'swim') { const tgt = interactTarget(s); if (tgt && tgt.loot) { beltAttach(s, tgt.loot); playSfx('effort', s.pos, 0.5); } return; }   // grabbed from the water
+  if (s.pry) { s.pry = null; return; }                  // let go of the bomb
   const tgt = interactTarget(s);
-  if (tgt && tgt.st) useStation(s, tgt.st); else if (tgt && tgt.loot) startHaul(s, tgt.loot);
+  if (tgt && tgt.st) useStation(s, tgt.st); else if (tgt && tgt.load) startPry(s, tgt.load); else if (tgt && tgt.loot) startHaul(s, tgt.loot);
 }
 function playerFire(s = battle.player) {
   if (s === battle.player && netGuest()) { netAct({ k: 'fire' }); return; }
@@ -4767,11 +5247,14 @@ addEventListener('keydown', e => {
   if (typingInField(e)) return;                     // typing a name: the keys are letters, not controls
   if (raft.mode !== 'battle') return;
   if (e.code === 'KeyE') { e.preventDefault(); interact(); }
-  if (e.code === 'Space' && battle.player && battle.player.state === 'aboard' && !battle.over) { e.preventDefault(); if (!e.repeat) { if (netGuest()) netAct({ k: 'jump' }); else battle.player.jumpReq = true; } return; }   // on deck, Space jumps
+  if (e.code === 'Space' && battle.player && (battle.player.state === 'aboard' || battle.player.state === 'swim') && !battle.over) { e.preventDefault(); if (!e.repeat) { if (netGuest()) netAct({ k: 'jump' }); else battle.player.jumpReq = true; } return; }   // on deck, Space jumps
   if (e.code === 'Space' || e.code === 'KeyF') { e.preventDefault(); if (!e.repeat) { battle.reelHeld = true; playerFire(); } }
   if (e.code === 'KeyQ') { e.preventDefault(); playerShove(); }
+  if (e.code === 'KeyX' && !e.repeat) { e.preventDefault(); battle.shoulder = -(battle.shoulder ?? 1); }    // swap the camera's shoulder
 });
 $('interact').addEventListener('click', () => interact());
+// demo: balance on/off, to compare
+$('balBtn').addEventListener('click', () => { BALANCE.on = !BALANCE.on; $('balBtn').setAttribute('aria-pressed', String(BALANCE.on)); $('balBtn').textContent = BALANCE.on ? 'Balance on' : 'Balance off'; });
 $('fire').addEventListener('pointerdown', e => { e.preventDefault(); battle.reelHeld = true; playerFire(); });
 // letting go of the trigger stops reeling
 const releaseReel = () => { battle.reelHeld = false; };
@@ -4808,15 +5291,17 @@ function updateBattleHud(force) {
   const s = battle.player;
   const swim = s.state === 'swim' && !battle.over;
   $('overboard').hidden = !swim;
-  if (swim) setText('overT', Math.max(0, s.overT).toFixed(1));
+  if (swim) { setText('overT', Math.max(0, s.overT).toFixed(1)); setText('overMsg', teamShips(s.ship.team).some(sh => sh.alive) ? 'Swim to your raft · Space to jump aboard' : 'Your raft is out of the fight'); }
   // context button
   let label = '';
   if (!battle.over) {
     if (s.state === 'station') label = 'Leave';
+    else if (s.state === 'aboard' && s.pry) label = 'Let go';
     else if (s.state === 'aboard' && s.carry) label = `${s.carry.drag ? 'Let go of' : 'Put down'} ${s.carry.L.name.toLowerCase()}`;
     else if (s.state === 'aboard') {
       const tgt = interactTarget(s);
       if (tgt && tgt.st) label = tgt.st.kind === 'drive' ? 'Drive' : 'Use ' + WEAPON_NAMES[tgt.st.weapon];
+      else if (tgt && tgt.load) label = tgt.load.tether ? 'Pull out harpoon' : 'Pry off ballast bomb';
       else if (tgt && tgt.loot) label = `${isHeavy(tgt.loot) ? 'Haul in' : 'Pick up'} ${tgt.loot.L.name.toLowerCase()}`;
     }
     else if (s.state === 'swim') {
@@ -4951,6 +5436,8 @@ function battleFrame(dt) {
       st.yaw += clamp(dy, -W.yawRate * DT, W.yawRate * DT);
       st.pitch += clamp(st.tPitch - st.pitch, -W.pitchRate * DT, W.pitchRate * DT);
       st.reload = Math.max(0, st.reload - DT);
+      // the swivel gun keeps firing while the trigger's held
+      if (st.weapon === 'swivel' && st.user && st.reload <= 0 && !battle.over && (st.user === me ? battle.reelHeld : st.user.remote ? !!st.user.remote.held : false)) fire(sh, st);
     }
     for (const [s, i] of ins) sailorStep(s, simTime, i && i.mx !== undefined ? i : null);
     battle.projectiles = battle.projectiles.filter(pr => { const keep = projStep(pr, simTime); if (!keep) scene.remove(pr.mesh); return keep; });
@@ -5038,9 +5525,14 @@ function battleDraw(dt, a) {
     }
   }
   const dist = gun ? 6 : view.dist;
-  bCam.set(view.target.x + Math.sin(view.yaw) * Math.cos(view.pitch) * dist, view.target.y + Math.sin(view.pitch) * dist, view.target.z + Math.cos(view.yaw) * Math.cos(view.pitch) * dist);
+  // at a gun the view sits over one shoulder (X swaps sides); it eases across, and back to centre off the gun
+  battle.shW = (battle.shW || 0) + ((gun ? 1 : 0) - (battle.shW || 0)) * (1 - Math.exp(-4 * dt));
+  battle.shK = (battle.shK ?? 1) + ((battle.shoulder ?? 1) - (battle.shK ?? 1)) * (1 - Math.exp(-6 * dt));
+  const sh = SHOULDER * battle.shW * battle.shK, rx = Math.cos(view.yaw) * sh, rz = -Math.sin(view.yaw) * sh;
+  bCam.set(view.target.x + rx + Math.sin(view.yaw) * Math.cos(view.pitch) * dist, view.target.y + Math.sin(view.pitch) * dist, view.target.z + rz + Math.cos(view.yaw) * Math.cos(view.pitch) * dist);
+  _shT.set(view.target.x + rx, view.target.y, view.target.z + rz);
   bCam.y = Math.max(bCam.y, waveH(bCam.x, bCam.z, simTime) + 0.8);
-  camera.position.lerp(bCam, 1 - Math.exp(-10 * dt)); camera.lookAt(view.target);
+  camera.position.lerp(bCam, 1 - Math.exp(-10 * dt)); camera.lookAt(_shT);
   // sailors
   for (const s of battle.sailors) drawSailor(s, dt, camera.position);
   // projectiles, debris, puffs, spray
@@ -5598,7 +6090,8 @@ const LOOT = {
 };
 for (const k in LOOT) { const L = LOOT[k]; L.vol = L.size[0] * L.size[1] * L.size[2]; L.mass = L.vol * L.density; }
 const ARENA_C = new THREE.Vector3(0, 0, 80);
-const HAUL_REACH = 2.4, POUCH_REACH = 1.2, SWIM_GRAB = 1.1;    // a coin pouch has to be right by you to pick it up
+const HAUL_REACH = 2.4, POUCH_REACH = 1.2, SWIM_GRAB = 1.1;    // reach for anything in the water from the deck: 1.2 m to its near side
+const lootHalf = t => t.type === 'pouch' ? 0 : Math.min(t.L.size[0], t.L.size[2]) / 2;
 
 function lootMesh(type) {
   const L = LOOT[type], g = new THREE.Group();
@@ -5611,9 +6104,13 @@ function lootMesh(type) {
     for (let i = 0; i < 3; i++) add(new THREE.CylinderGeometry(0.05, 0.05, 0.012, 12), 0xffd84a, Math.cos(i * 2) * 0.07, 0.16 + i * 0.01, Math.sin(i * 2) * 0.07).rotation.x = 0.3;
   } else if (type === 'chest') {
     add(new THREE.BoxGeometry(sx, sy * 0.62, sz), L.color, 0, -sy * 0.19, 0);
-    const lid = add(new THREE.CylinderGeometry(sz / 2, sz / 2, sx, 16, 1, false, 0, Math.PI).rotateZ(Math.PI / 2).rotateX(-Math.PI / 2), 0xc77a3a, 0, sy * 0.12, 0);
+    // a rounded lid across the top (the half-round faces up), and gold bands down the sides and over the lid
+    const lid = add(new THREE.CylinderGeometry(sz / 2, sz / 2, sx, 16, 1, false, 0, Math.PI).rotateZ(Math.PI / 2), 0xc77a3a, 0, sy * 0.12, 0);
     lid.scale.set(1, 0.55, 1);
-    for (const x of [-sx * 0.36, sx * 0.36]) add(new THREE.BoxGeometry(0.06, sy * 0.95, sz + 0.02), 0xffcf3a, x, -0.02, 0);
+    for (const x of [-sx * 0.36, sx * 0.36]) {
+      add(new THREE.BoxGeometry(0.06, sy * 0.62 + 0.01, sz + 0.02), 0xffcf3a, x, -sy * 0.19, 0);
+      add(new THREE.CylinderGeometry(sz / 2 + 0.012, sz / 2 + 0.012, 0.06, 16, 1, false, 0, Math.PI).rotateZ(Math.PI / 2), 0xffcf3a, x, sy * 0.12, 0).scale.set(1, 0.55 * (sz / 2 + 0.012) / (sz / 2) + 0.02, 1);
+    }
     add(new THREE.BoxGeometry(0.12, 0.14, 0.04), 0xffcf3a, 0, 0.0, sz / 2 + 0.01);
   } else if (type === 'strongbox') {
     add(new THREE.BoxGeometry(sx, sy, sz), L.color);
@@ -5721,11 +6218,11 @@ function handLocal(s, out) {
 function haulable(s) {
   if (s.state !== 'aboard' || s.dead || s.carry) return null;
   const w = toWorld(s.ship, s.local, new THREE.Vector3());
-  let best = null, bd = HAUL_REACH;
+  let best = null, bd = POUCH_REACH;
   for (const t of battle.loot) {
     if (t.gone || t.haul || t.carried || t.belt || t.hooked) continue;
     const c = t.body.translation();
-    const d = Math.hypot(c.x - w.x, c.z - w.z);
+    const d = Math.hypot(c.x - w.x, c.z - w.z) - lootHalf(t);
     if (d < bd && c.y > w.y - 2.2 && c.y < w.y + 1.6) { bd = d; best = t; }
   }
   return best;
@@ -5978,6 +6475,16 @@ function towPose(t, ship, outC, outQ) {
   return outQ;
 }
 // is the deck there for the piece to sit at this F / G? (no hole under it, no wall or gun in the way)
+// how many of the box's footprint samples sit on something it can't slide over (a gun, a wall, a step up)
+function towBad(ship, F, G, w, deckY) {
+  let dx = G.x - F.x, dz = G.y - F.y; const l = Math.hypot(dx, dz) || 1; dx /= l; dz /= l;
+  const px = -dz, pz = dx; let n = 0;
+  for (const a of [0.03, 0.26, 0.5, 0.74, 0.97]) for (const b of [-0.47, -0.24, 0, 0.24, 0.47]) {
+    const [i, j] = colOf(F.x + (G.x - F.x) * a + px * b * w, F.y + (G.y - F.y) * a + pz * b * w), key = colKey(i, j);
+    if (ship.cols.has(key) && (ship.blocked.has(key) || ship.cols.get(key) > deckY + 0.3)) n++;
+  }
+  return n;
+}
 function towClear(ship, F, G, w, deckY) {
   let dx = G.x - F.x, dz = G.y - F.y; const l = Math.hypot(dx, dz) || 1; dx /= l; dz /= l;
   const px = -dz, pz = dx;
@@ -6022,6 +6529,9 @@ function dragStep(t, s) {
     // either way about his hands, then edging the whole piece sideways, then going only part of the way
     const alt = towWorkAround(ship, T, F, G, g, mode);
     if (alt) { F.copy(alt.F); G.copy(alt.G); clear = 'ok'; worked = true; }
+    // already overlapping something (it ended up half over a gun's footing): any move that doesn't dig it in deeper is
+    // allowed, so it can always be worked free instead of locking solid
+    else if (towBad(ship, T.F, T.G, g.w, T.deck) > 0 && towBad(ship, F, G, g.w, T.deck) <= towBad(ship, T.F, T.G, g.w, T.deck)) { clear = 'edge'; worked = true; }
   }
   T.slow = itemApproach(T.slow ?? 1, worked ? 0.45 : clear === 'blocked' ? 0.3 : 1, DT * (worked || clear === 'blocked' ? 4 : 1.5));   // grinding round a corner is slow going
   if (clear === 'off') { const c = t.body.translation(); releaseLoot(t, pointVel(ship, _tw1.set(c.x, c.y, c.z), new THREE.Vector3())); return; }   // pulled or pushed off the edge
@@ -6137,6 +6647,17 @@ function beltDraw(s, dt) {
 // side, in the piece's own frame (so they stay put on it however it turns or tips)
 const _lgA = new THREE.Vector3(), _lgB = new THREE.Vector3();
 function lootGrip(s, dt) {
+  if (s.pry || (s.pryW || 0) > 0.001) {                     // both hands on a ballast bomb
+    s.pryW = itemApproach(s.pryW || 0, s.pry ? 1 : 0, dt / 0.25);
+    if (s.pry) s.pryLd = s.pry.ld;
+    const ld = s.pryLd;
+    if (ld && ld.mesh && s.pryW > 0.001) {
+      const M = s.model; M.root.updateMatrixWorld(true); ld.mesh.updateMatrixWorld(true);
+      const c = ld.mesh.getWorldPosition(_lgA), me = M.root.position, dx = c.x - me.x, dz = c.z - me.z, l = Math.hypot(dx, dz) || 1;
+      for (const i of [0, 1]) { const sd = i ? 1 : -1; armTo(M, i, _lgB.set(c.x + (-dz / l) * sd * 0.13 - dx / l * 0.12, c.y + 0.12, c.z + (dx / l) * sd * 0.13 - dz / l * 0.12), itemSmooth(s.pryW)); }   // his right hand to his right
+    }
+    if (s.pry) return;
+  }
   const t = s.carry && s.carry.drag ? s.carry : s.haulT && s.haulT.haul && s.haulT.haul.heavy ? s.haulT : null;
   s.lgW = itemApproach(s.lgW || 0, t ? 1 : 0, dt / 0.3);
   if (t) s.lgT = t;
@@ -6162,6 +6683,11 @@ function gripPoint(g, F, i, out) {
 
 // heaving: braced in a squat, rocking back on each pull
 function heavePose(s) {
+  if (s.pry) {                                    // prying a bomb loose: the same braced squat, three heaves
+    const P = poseFor('heave', s.ph), k = Math.min(1, s.pry.t), pull = 0.5 - 0.5 * Math.cos(2 * Math.PI * 3 * k);
+    P[12] += 0.55 - 0.4 * pull; P[6] += 0.15 * pull; P[7] += 0.15 * pull;
+    return P;
+  }
   const P = poseFor('heave', s.ph), h = s.haulT && s.haulT.haul;
   if (!h || !h.heavy) return P;
   const k = Math.min(1, h.t), pull = h.pulls > 1 ? 0.5 - 0.5 * Math.cos(2 * Math.PI * h.pulls * k) : Math.sin(Math.PI * k);
@@ -6484,7 +7010,7 @@ $('toMenu').addEventListener('click', () => { leaveRoom(); lobby.game = null; en
 addEventListener('pagehide', () => { try { leaveRoom(); } catch (_) {} });
 
 // the game opens on the menu (the tests skip straight to a practice match with the old starter raft)
-if (typeof __FG_TEST !== 'undefined' && __FG_TEST) { addStarterRaft(); raft.gold = BUDGET - STARTER_COST; changed(); bigFlash(`Round 1 of ${match.rounds}`, 'Build your raft'); }
+if (typeof __FG_TEST !== 'undefined' && __FG_TEST) { addStarterRaft(); raft.gold = 2000; changed(); bigFlash(`Round 1 of ${match.rounds}`, 'Build your raft'); }
 else enterMenu();
 
 // =====================================================================================
@@ -6633,7 +7159,7 @@ function netSetup(p, host) {
   if (p.total) { match.battleTotal = p.total; match.battleLeft = p.tl; }
   else { match.battleTotal = match.battleLeft = Number($('battleTime').value) || BATTLE_TIME; }
   raftGroup.visible = false; comMark.visible = cobMark.visible = false; if (ghost) ghost.visible = false;
-  SWELL.target = BATTLE_SWELL;
+  SWELL.target = waveLevel();
   battle.myTeam = lobby.game.team;
   battle.net = { host, ships: new Map(), sailors: new Map(), loot: new Map(), proj: new Map(), acts: [], snaps: [], sendT: 0, inT: 0, nextShip: 100, nextLoot: 1, nextProj: 1, crewDesc: p.crew, offset: null, out: {}, ropes: [], last: null };
   battle.ships = []; battle.sideMax = {};
@@ -6822,6 +7348,7 @@ function netSnapSend(force) {
     if (s.belt && s.belt.length) o.bl = s.belt.map(t => t.nid);
     if (s.helm !== undefined) { o.hm = +s.helm.toFixed(3); o.hv = +(s.helmV || 0).toFixed(3); }
     if (s.overT < OVERBOARD_TIME) o.ot = +s.overT.toFixed(2);
+    if (s.pry) o.py = [battle.loads.indexOf(s.pry.ld), +s.pry.t.toFixed(3)];
     return o;
   });
   const loot = battle.loot.map(t => {
@@ -6833,6 +7360,8 @@ function netSnapSend(force) {
   const ropes = battle.tethers.filter(tt => tt.life > 0).map(tt => { const A = toWorld(tt.a, tt.aLocal, new THREE.Vector3()), B = tetherEnd(tt, new THREE.Vector3()); return [...r3(A), ...r3(B)]; });
   const out = {}; for (const t of gameTeams()) out[t] = teamOut(t);
   const snapMsg = { t: Math.round(performance.now()), tl: +match.battleLeft.toFixed(2), sh: ships, sa: sailors, lo: loot, pr: proj, te: ropes, fx: battle.fx.splice(0), out, pts: Object.fromEntries(gameTeams().map(t => [t, teamPts(t)])) };
+  snapMsg.ld = battle.loads.map(ld => [ld.ship.nid, +ld.mesh.position.x.toFixed(3), +ld.mesh.position.y.toFixed(3), +ld.mesh.position.z.toFixed(3)]);   // ballast bombs stuck on rafts
+  snapMsg.sw = +SWELL.target.toFixed(2);      // the host's sea, so everyone floats on the same waves
   if (battle.wreck) snapMsg.wk = [+battle.wreck.p.x.toFixed(2), +battle.wreck.p.z.toFixed(2), +battle.wreck.t.toFixed(2)];
   lobby.room.send('snap', snapMsg);
 }
@@ -6869,6 +7398,7 @@ function netSnapIn(p) {
     else if (f[0] === 'f') bigFlash(f[1], f[2]);
   }
   N.out = p.out || {}; N.pts = p.pts || {};
+  if (p.sw !== undefined) SWELL.target = p.sw;
   match.battleLeft = p.tl;
 }
 const _nga = new THREE.Vector3(), _ngb = new THREE.Vector3(), _ngqa = new THREE.Quaternion(), _ngqb = new THREE.Quaternion();
@@ -6972,6 +7502,7 @@ function netApply(A, B, k, dt) {
     s.belt = (so.bl || []).map(n => N.loot.get(n)).filter(Boolean);
     if (so.hm !== undefined) { s.helm = so.hm; s.helmV = so.hv; } else { s.helm = undefined; s.helmV = 0; }
     s.overT = so.ot ?? OVERBOARD_TIME;
+    s.pry = so.py ? { t: so.py[1], ld: (N.loadMeshes && N.loadMeshes[so.py[0]]) || null } : null;     // (-1: a harpoon bolt)
   }
   // projectiles
   const seen = new Set();
@@ -6984,6 +7515,16 @@ function netApply(A, B, k, dt) {
   }
   for (const [n, m] of N.proj) if (!seen.has(n)) { scene.remove(m); N.proj.delete(n); }
   N.ropeData = B.te; N.wk = B.wk || null;
+  // ballast bombs stuck on rafts: one lump per bomb the host reports, on the right raft
+  N.loadMeshes ||= [];
+  const lds = B.ld || [];
+  while (N.loadMeshes.length > lds.length) { const L = N.loadMeshes.pop(); if (L.mesh.parent) L.mesh.parent.remove(L.mesh); }
+  lds.forEach((d, i) => {
+    const sh = N.ships.get(d[0]); if (!sh) return;
+    let L = N.loadMeshes[i]; if (!L) { L = N.loadMeshes[i] = { mesh: lumpMesh(), local: new THREE.Vector3() }; }
+    if (L.mesh.parent !== sh.group) sh.group.add(L.mesh);
+    L.local.set(d[1], d[2], d[3]); L.mesh.position.copy(L.local);
+  });
 }
 function projMeshFor(kind, weapon) {
   const m = kind === 'charge' ? chargeMesh() : kind === 'harpoon' ? boltMesh() : kind === 'ballast' ? lumpMesh() : new THREE.Mesh(new THREE.SphereGeometry(weapon === 'swivel' ? 0.07 : 0.14, 12, 10), toon(0x1b1f2a));
