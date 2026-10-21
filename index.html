@@ -248,7 +248,7 @@
 
 <canvas id="game" aria-label="3D raft building view on the water"></canvas>
 <div class="top">
-  <div class="brand"><h1>FLOAT GOAT</h1><span>v0.80</span></div>
+  <div class="brand"><h1>FLOAT GOAT</h1><span>v0.82</span></div>
   <div class="pill phasep" title="Phase and time left"><span id="phase">Build</span><span id="timer">3:00</span></div>
   <div class="pill" id="round">Round 1/3</div>
   <div class="pill" title="Treasure points: you – dummy">★ <span id="score">0 – 0</span></div>
@@ -1094,6 +1094,7 @@ function nextFromDeck(name) {
 // play an effect; at a world position it's quieter far away and comes from that side
 const _sp = new THREE.Vector3(), _sr = new THREE.Vector3();
 function playSfx(name, worldPos, vol = 1) {
+  if (battle.net && battle.net.host && worldPos) battle.fx.push(['a', name, +worldPos.x.toFixed(2), +worldPos.y.toFixed(2), +worldPos.z.toFixed(2), vol]);   // the guests hear it too
   const ctx = audio.ctx; if (!ctx) return;
   const url = nextFromDeck(name); const buf = url && audio.buffers.get(url); if (!buf) return;
   let gain = vol, pan = 0;
@@ -1563,7 +1564,7 @@ function rigAllMotors() {
 const raft = { parts: [], joins: [], gold: BUDGET, mode: 'build', history: [] };
 const raftGroup = new THREE.Group(); scene.add(raftGroup);
 const partsGroup = new THREE.Group(); raftGroup.add(partsGroup);
-let nextId = 1;
+let nextId = 1, ID_BASE = 0;                    // ID_BASE: in a team game, my block of part ids
 const byId = id => raft.parts.find(p => p.id === id);
 // a part as data (for undo, moving, and handing the layout to the battle)
 const snap = p => ({ id: p.id, type: p.type, center: p.box.center.toArray(), q: p.box.q.toArray(), rot: p.rot || 0, n: p.n ? [...p.n] : null, mount: p.mount ?? null, mountTop: p.mountTop, anchor: p.anchor ? p.anchor.toArray() : null });
@@ -1576,7 +1577,7 @@ function addPartFrom(s, animate = true) {
   const box = makeBox(s.type, new THREE.Vector3().fromArray(s.center), new THREE.Quaternion().fromArray(s.q));
   const mesh = partMesh(s.type, false);
   const part = { id: s.id || nextId++, type: s.type, box, rot: s.rot || 0, n: s.n || null, mount: s.mount ?? null, mountTop: s.mountTop, anchor: s.anchor ? new THREE.Vector3().fromArray(s.anchor) : null, mesh, hp: PARTS[s.type].hp, joins: [] };
-  nextId = Math.max(nextId, part.id + 1);
+  if (!ID_BASE || (part.id >= ID_BASE && part.id < ID_BASE + 100000)) nextId = Math.max(nextId, part.id + 1);   // only my own block of ids
   part.aabb = boxAabb(box);
   placeMesh(part); applyRot(mesh, s.type, part.rot);
   part.proxy = new THREE.Mesh(new THREE.BoxGeometry(box.size[0], box.size[1], box.size[2]), PROXY_MAT);
@@ -2370,6 +2371,7 @@ function changed() {
   updateUI();
   drawArea();
   if (gizmo.on && !gizmo.drag) gizmoBuild();          // the rings follow the part's new turn
+  teamSync();                                          // teammates see it too
   markLoose();
 }
 
@@ -2508,6 +2510,7 @@ function setPhase(ph) {
   updateUI();
 }
 function nextPhase() {
+  if (match.phase === 'build' && typeof lobby !== 'undefined' && lobby.game) { netBuildOver(); return; }   // online: the host ends the build for everyone
   if (match.phase === 'build') {
     if (raft.mode === 'test') endTest();
     const dropped = dropLooseParts();
@@ -2529,6 +2532,7 @@ function restartMatch() {
   newRound();
 }
 function bigFlash(title, sub) {
+  if (battle.net && battle.net.host && raft.mode === 'battle') battle.fx.push(['f', title, sub || '']);   // the guests see it too
   const f = $('phaseFlash'); $('pfTitle').textContent = title; $('pfSub').textContent = sub || '';
   f.classList.remove('on'); void f.offsetWidth; f.classList.add('on');
 }
@@ -2675,7 +2679,7 @@ function setUnits(u) {
 }
 $('units').addEventListener('click', () => setUnits(imp() ? 'metric' : 'imperial'));
 setUnits(units);
-$('ready').addEventListener('click', () => { if (!raft.parts.length) { flash('Build something first'); return; } nextPhase(); });
+$('ready').addEventListener('click', () => { if (lobby.game) { netReady(); return; } if (!raft.parts.length) { flash('Build something first'); return; } nextPhase(); });
 $('musicVol').value = audio.musicVol; $('sfxVol').value = audio.sfxVol;
 // volume: the sliders in the top bar and on the main menu are the same two settings, kept in step
 $('mMusicVol').value = audio.musicVol; $('mSfxVol').value = audio.sfxVol;
@@ -2858,6 +2862,7 @@ function frame(now) {
   SWELL.amp += (SWELL.target - SWELL.amp) * (1 - Math.exp(-1.5 * dt));
   SWELL_UNIFORM.value = SWELL.amp;
   if (match.phase === 'build') { timer.left -= dt; if (timer.left <= 0) { timer.left = 0; nextPhase(); } }
+  if (match.phase === 'collect') netCollectTick();
   $('timer').textContent = fmtTime(timer.left);
   $('timer').classList.toggle('low', timer.left < 20);
 
@@ -3005,7 +3010,9 @@ const UPV = new THREE.Vector3(0, 1, 0);
 const _opv = new THREE.Vector3(), _bv = new THREE.Vector3(), _bv2 = new THREE.Vector3(), _bv3 = new THREE.Vector3(), _bq = new THREE.Quaternion(), _bq2 = new THREE.Quaternion();
 
 // ---------- ships ----------
-const battle = { on: false, ships: [], sailors: [], projectiles: [], debris: [], puffs: [], tethers: [], loads: [], loot: [], wreck: null, wreckAt: 0, over: false, overT: 0, result: null, player: null, dummy: null, dummyFires: true };
+const battle = { on: false, ships: [], sailors: [], projectiles: [], debris: [], puffs: [], tethers: [], loads: [], loot: [], wreck: null, wreckAt: 0, over: false, overT: 0, result: null, player: null, dummy: null, dummyFires: true, myTeam: 'you', net: null, fx: [] };
+// online: am I watching the host's battle (not running it)?
+const netGuest = () => !!(battle.net && !battle.net.host);
 
 function buildShip(layout, origin, yaw, team) {
   const ship = { team, parts: [], group: new THREE.Group(), alive: true, capT: 0, why: '', cols: new Map(), blocked: new Set(), stations: [], maxHp: 0,
@@ -3341,6 +3348,7 @@ function hitTest(ship, worldP, r) {
 // ---------- effects ----------
 const puffGeo = new THREE.SphereGeometry(0.5, 12, 8);
 function puff(p, color, size) {
+  if (battle.net && battle.net.host) battle.fx.push(['p', +p.x.toFixed(2), +p.y.toFixed(2), +p.z.toFixed(2), color, size]);
   const m = new THREE.Mesh(puffGeo, new THREE.MeshBasicMaterial({ color, transparent: true, opacity: 0.85, depthWrite: false }));
   m.position.copy(p); m.scale.setScalar(0.2 * size); scene.add(m);
   battle.puffs.push({ m, t: 0, size });
@@ -3350,6 +3358,7 @@ const drops = [];
 for (let i = 0; i < 260; i++) { const m = new THREE.Mesh(dropGeoB, dropMatB); m.visible = false; scene.add(m); drops.push({ m, v: new THREE.Vector3(), life: 0, s: 1 }); }
 let dropI = 0;
 function spray(p, n, up, out, base) {
+  if (battle.net && battle.net.host) battle.fx.push(['s', +p.x.toFixed(2), +p.y.toFixed(2), +p.z.toFixed(2), n, up, out, base ?? null]);
   for (let i = 0; i < n; i++) {
     const d = drops[dropI++ % drops.length], a = Math.random() * Math.PI * 2, o = out * (0.4 + Math.random() * 0.8);
     d.m.position.set(p.x + Math.cos(a) * 0.3, p.y + 0.05, p.z + Math.sin(a) * 0.3);
@@ -3961,7 +3970,9 @@ function drawSailor(s, dt, camPosW) {
     if (s.carryW > 0.001) { const P = poseFor('carry', s.ph), cw = s.carryW * (1 - e); for (const i of [0, 1, 2, 3, 4, 5, 12]) J[i] = J[i] * (1 - cw) + P[i] * cw; }
     // dragging: crouched and leaning back against the weight; the legs keep walking
     s.dragW = (s.dragW || 0) + ((s.carry && s.carry.drag ? 1 : 0) - (s.dragW || 0)) * (1 - Math.exp(-8 * dt));
-    if (s.dragW > 0.001) { const P = poseFor('drag', s.ph), cw = s.dragW * (1 - e); if (s.carry && s.carry.drag) s.dragLow = clamp((0.7 - s.carry.L.size[1]) * 2, 0, 0.5); P[12] += s.dragLow || 0;   // bends lower for a lower piece
+    if (s.dragW > 0.001) { const P = poseFor('drag', s.ph), cw = s.dragW * (1 - e); if (s.carry && s.carry.drag) s.dragLow = clamp((0.7 - s.carry.L.size[1]) * 2, 0, 0.5);
+      s.dragM = (s.dragM || 0) + ((s.dragMode || 0) - (s.dragM || 0)) * (1 - Math.exp(-6 * dt));
+      P[12] += (s.dragLow || 0) + 0.18 * s.dragM - 0.12 * Math.max(0, -s.dragM);   // lower for a lower piece; leaning in to push, sitting back to tow
       for (const i of [0, 1, 2, 3, 4, 5, 12, 13]) J[i] = J[i] * (1 - cw) + P[i] * cw; J[6] += 0.8 * cw; J[7] += 0.8 * cw; J[10] -= 1.3 * cw; J[11] -= 1.3 * cw; }   // knees bent under the crouch
   }
   for (let i = 0; i < 2; i++) {
@@ -4055,12 +4066,13 @@ function shoveImpact(s) {
   }
   puff(origin.clone().addScaledVector(dir, 0.9).add(_bv.set(0, 1.1, 0)), 0xffffff, 0.35);
 }
-function playerShove() {
-  const s = battle.player; if (!s || battle.over) return;
+function playerShove(s = battle.player, yaw = view.yaw) {
+  if (s === battle.player && netGuest()) { netAct({ k: 'shove', y: view.yaw }); return; }
+  if (!s || battle.over) return;
   if (s.carry && s.carry.drag) return;                                                                   // too heavy to throw
   if (s.carry) { if (s.shoveCool <= 0) { dropLoot(s, true); s.shoveCool = SHOVE.cool; } return; }      // carrying: Q throws it
   // shove where you're looking
-  shove(s, _bv.set(-Math.sin(view.yaw), 0, -Math.cos(view.yaw)));
+  shove(s, _bv.set(-Math.sin(yaw), 0, -Math.cos(yaw)));
 }
 
 // ---------- weapons ----------
@@ -4278,7 +4290,7 @@ function tetherStep(tt) {
   const A = toWorld(tt.a, tt.aLocal, new THREE.Vector3()), B = tetherEnd(tt, new THREE.Vector3());
   const d = A.distanceTo(B), u = B.clone().sub(A).divideScalar(d || 1);
   const user = tt.st.user, W = WEAPONS.harpoon;
-  tt.reeling = W.autoReel || (user && (user.isPlayer ? battle.reelHeld : true));
+  tt.reeling = W.autoReel || (user && (user.isPlayer ? battle.reelHeld : user.remote ? !!user.remote.held : true));
   // reeling in treasure: the heavier it is, the slower it comes (pouch ~1.8 m/s, chest ~1.3, strongbox ~0.7, idol ~0.55)
   const reel = tt.loot ? W.reel / (1 + tt.loot.L.mass * 6) : W.reel;
   if (tt.reeling) tt.L = Math.max(2.5, tt.L - reel * DT);
@@ -4461,7 +4473,10 @@ function walkTo(s, local) {
   dir.normalize().applyQuaternion(shipPose(s.ship).q);
   return { mx: dir.x, mz: dir.z };
 }
+// is o on the other side from s?
+const enemyOf = (s, o) => battle.net ? o.teamId !== s.teamId : o !== s;
 function botThink(s, dt) {
+  const bot = s.brain || (s.brain = { err: { yaw: 0, pitch: 0 }, wait: 2.5, retarget: 0, target: null });   // each bot keeps its own mind
   if (s.dead || (!s.ship.alive && s.state !== 'swim')) return null;
   if (s.state === 'swim') {
     let c = s.ship.body.translation(), bd = 1e9;
@@ -4476,11 +4491,13 @@ function botThink(s, dt) {
     if (!best || Math.hypot(s.local.x - best.x, s.local.z - best.z) < 0.5) { dropLoot(s, false); return null; }
     return walkTo(s, best);
   }
-  {
-    const me = battle.player;
-    if (s.state === 'aboard' && !me.dead && me.state !== 'air') {
-      const a = toWorld(s.ship, s.local, new THREE.Vector3()), b = sailorWorld(me, new THREE.Vector3());
-      if (Math.hypot(b.x - a.x, b.z - a.z) < SHOVE.range * 0.9 && Math.abs(b.y - a.y) < 1.5) shove(s, b.sub(a));
+  // shove any enemy who comes close
+  if (s.state === 'aboard' && s.shoveCool <= 0) {
+    const a = toWorld(s.ship, s.local, new THREE.Vector3());
+    for (const o of battle.sailors) {
+      if (!enemyOf(s, o) || o.dead || o.state === 'air' || o.state === 'swim') continue;
+      const b = sailorWorld(o, new THREE.Vector3());
+      if (Math.hypot(b.x - a.x, b.z - a.z) < SHOVE.range * 0.9 && Math.abs(b.y - a.y) < 1.5) { shove(s, b.sub(a)); break; }
     }
   }
   // loot first: pick the best free piece (value against distance) every so often
@@ -4497,8 +4514,9 @@ function botThink(s, dt) {
       if (score > best) { best = score; bot.target = t; }
     }
   }
-  const eng = s.ship.stations.find(st => st.kind === 'drive' && st.part.alive && st.stand);
-  if (bot.target && !eng) { const r = botPaddle(s, bot.target.body.translation()); if (r !== undefined) return r; }   // no motor: paddle there
+  const eng = s.ship.stations.find(st => st.kind === 'drive' && st.part.alive && st.stand && (!st.user || st.user === s));
+  const anyMotor = s.ship.stations.some(st => st.kind === 'drive' && st.part.alive);
+  if (bot.target && !anyMotor) { const r = botPaddle(s, bot.target.body.translation()); if (r !== undefined) return r; }   // no motor: paddle there
   else s.botPaddle = false;
   if (bot.target && eng) {
     const tp = bot.target.body.translation(), dist = Math.hypot(tp.x - c.x, tp.z - c.z);
@@ -4518,7 +4536,7 @@ function botThink(s, dt) {
     return walkTo(s, lt);
   }
   if (!battle.dummyFires) { if (s.state === 'station') leaveStation(s); return null; }
-  const gun = s.ship.stations.find(st => st.kind === 'gun' && st.part.alive);
+  const gun = s.ship.stations.find(st => st.kind === 'gun' && st.part.alive && (!st.user || st.user === s));
   if (!gun) return null;
   if (s.state === 'station' && s.station !== gun) leaveStation(s);
   if (s.state === 'aboard') {
@@ -4527,7 +4545,11 @@ function botThink(s, dt) {
     if (d < 0.6) { useStation(s, gun); return null; }
     return walkTo(s, gun.stand);
   }
-  const targetShip = battle.player.ship.alive ? battle.player.ship : teamShips('you').find(sh => sh.alive);
+  let targetShip = null;
+  if (battle.net) {            // the nearest enemy raft
+    const me = s.ship.body.translation(); let bd = 1e9;
+    for (const sh of battle.ships) { if (!sh.alive || sh.team === s.ship.team) continue; const t = sh.body.translation(), d = Math.hypot(t.x - me.x, t.z - me.z); if (d < bd) { bd = d; targetShip = sh; } }
+  } else targetShip = battle.player.ship.alive ? battle.player.ship : teamShips('you').find(sh => sh.alive);
   if (s.state === 'station' && s.station === gun && targetShip) {
     const tgt = targetShip.body.translation(), p = new THREE.Vector3(), dd = new THREE.Vector3();
     muzzleOf(gun, p, dd);
@@ -4556,7 +4578,7 @@ function startBattle() {
 }
 function setupBattle() {
   teardownBattle();
-  raft.mode = 'battle'; battle.on = true; battle.over = false; battle.overT = 0; battle.result = null;
+  raft.mode = 'battle'; battle.on = true; battle.over = false; battle.overT = 0; battle.result = null; battle.net = null; battle.myTeam = 'you';
   raftGroup.visible = false; comMark.visible = cobMark.visible = false; if (ghost) ghost.visible = false;
   SWELL.target = BATTLE_SWELL;
   const mine = buildShip(battle.layout, ARENA_A, 0, 'you');
@@ -4568,14 +4590,17 @@ function setupBattle() {
   battle.wreckDone = false; battle.cutShort = false; bot.target = null; bot.retarget = 0;
   spawnRoundLoot();
   battle.dummy = makeCrew(theirs, { shirt: 0xff4f6d, pants: 0x3a2a2a, band: 0x1b1f2a }, false);
+  battle.dummy.brain = bot;
   bot.wait = 2.5;
   view.dist = 10; view.pitch = 0.42; view.yaw = -Math.PI / 2 - 0.5;
   $('banner').hidden = true;
+  hudNames('You', 'Dummy');
   updateUI(); updateBattleHud(true);
   flash(`The dummy brought a ${WEAPON_NAMES[battle.dummyWeapon]}`);
   lockAim();
 }
 function teardownBattle() {
+  if (battle.net) netCleanup();
   for (const sh of battle.ships) { world.removeRigidBody(sh.body); scene.remove(sh.group); }
   for (const s of battle.sailors) { scene.remove(s.model.root); itemsTeardown(s); }
   for (const p of battle.projectiles) scene.remove(p.mesh);
@@ -4599,8 +4624,9 @@ function exitBattle() {
   changed(); updateBattleHud(true);
 }
 // a side scores only if its raft is afloat and its sailor is alive
-const teamShips = team => battle.ships.filter(s => s.team === team);
+const teamShips = team => battle.ships.filter(s => battle.net ? (team === 'you' ? s.team === battle.myTeam : team === 'dummy' ? s.team !== battle.myTeam : s.team === team) : s.team === team);
 function sideOut(team, crew) {
+  if (battle.net) return netSideOut(team);
   if (crew.dead) return 'drowned';
   const ships = teamShips(team);
   if (ships.some(s => s.alive)) return '';
@@ -4667,23 +4693,27 @@ function battleDrag(dx, dy) {
   st.tYaw -= dx * 0.004; st.tPitch = clamp(st.tPitch - dy * 0.003, W.pitch[0], W.pitch[1]);
   return true;
 }
-function interact() {
-  const s = battle.player; if (!s || battle.over) return;
+function interact(s = battle.player) {
+  if (s === battle.player && netGuest()) { netAct({ k: 'interact' }); return; }
+  if (!s || battle.over) return;
   if (s.state === 'station') { leaveStation(s); return; }
   if (s.carry) { dropLoot(s, false); return; }
   const tgt = interactTarget(s);
   if (tgt && tgt.st) useStation(s, tgt.st); else if (tgt && tgt.loot) startHaul(s, tgt.loot);
 }
-function playerFire() { const s = battle.player; if (s && s.station && s.station.kind === 'gun' && !battle.over) fire(s.ship, s.station); }
+function playerFire(s = battle.player) {
+  if (s === battle.player && netGuest()) { netAct({ k: 'fire' }); return; }
+  if (s && s.station && s.station.kind === 'gun' && !battle.over) fire(s.ship, s.station);
+}
 addEventListener('keydown', e => {
   if (typingInField(e)) return;                     // typing a name: the keys are letters, not controls
   if (raft.mode !== 'battle') return;
   if (e.code === 'KeyE') { e.preventDefault(); interact(); }
-  if (e.code === 'Space' && battle.player && battle.player.state === 'aboard' && !battle.over) { e.preventDefault(); if (!e.repeat) battle.player.jumpReq = true; return; }   // on deck, Space jumps
+  if (e.code === 'Space' && battle.player && battle.player.state === 'aboard' && !battle.over) { e.preventDefault(); if (!e.repeat) { if (netGuest()) netAct({ k: 'jump' }); else battle.player.jumpReq = true; } return; }   // on deck, Space jumps
   if (e.code === 'Space' || e.code === 'KeyF') { e.preventDefault(); if (!e.repeat) { battle.reelHeld = true; playerFire(); } }
   if (e.code === 'KeyQ') { e.preventDefault(); playerShove(); }
 });
-$('interact').addEventListener('click', interact);
+$('interact').addEventListener('click', () => interact());
 $('fire').addEventListener('pointerdown', e => { e.preventDefault(); battle.reelHeld = true; playerFire(); });
 // letting go of the trigger stops reeling
 const releaseReel = () => { battle.reelHeld = false; };
@@ -4692,11 +4722,12 @@ $('fire').addEventListener('pointerup', releaseReel); $('fire').addEventListener
 addEventListener('keyup', e => { if (e.code === 'Space' || e.code === 'KeyF') releaseReel(); });
 addEventListener('blur', releaseReel);
 $('shove').addEventListener('pointerdown', e => { e.preventDefault(); playerShove(); });
-$('nextRound').addEventListener('click', nextRound);
-$('quit').addEventListener('click', () => { if (!battle.over) { battle.player.dead = true; endRound('You forfeited'); } });
+$('nextRound').addEventListener('click', () => { if (battle.net) netNextRound(); else nextRound(); });
+$('quit').addEventListener('click', () => { if (battle.net) { netForfeit(); return; } if (!battle.over) { battle.player.dead = true; endRound('You forfeited'); } });
 $('dummyFires').addEventListener('change', e => { battle.dummyFires = e.target.checked; });
 
 // ---------- HUD ----------
+function hudNames(a, b) { const y = document.querySelector('.bhud .who.you'), t = document.querySelector('.bhud .who.them'); if (y) y.textContent = a; if (t) t.textContent = b; }
 const hudCache = {};
 function setText(id, v) { if (hudCache[id] !== v) { hudCache[id] = v; $(id).textContent = v; } }
 function shipHp(ship) { let h = 0; for (const p of ship.parts) if (p.alive) h += Math.max(0, p.hp); return h / ship.maxHp; }
@@ -4777,7 +4808,7 @@ function drawMinimap() {
   // raft pieces, part by part
   const v = new THREE.Vector3();
   for (const sh of battle.ships) {
-    g.fillStyle = sh.team === 'you' ? (sh.alive ? '#ffffff' : 'rgba(255,255,255,.4)') : (sh.alive ? '#ff4f6d' : 'rgba(255,79,109,.4)');
+    g.fillStyle = sh.team === battle.myTeam ? (sh.alive ? '#ffffff' : 'rgba(255,255,255,.4)') : (sh.alive ? (battle.net ? TEAMS[sh.team].color : '#ff4f6d') : 'rgba(255,79,109,.4)');
     for (const p of sh.parts) {
       if (!p.alive || p.box.center.y > 1.6) continue;
       toWorld(sh, p.box.center, v); const [x, y] = P(v.x, v.z), s = Math.max(2.5, k * 1.05);
@@ -4790,13 +4821,13 @@ function drawMinimap() {
     const b = t.body.translation(), [x, y] = P(b.x, b.z), r = LOOT_DOT[t.type];
     g.fillStyle = '#ffcf3a'; g.strokeStyle = '#0b2a4a'; g.lineWidth = 1.5;
     g.beginPath(); g.arc(x, y, r, 0, Math.PI * 2); g.fill(); g.stroke();
-    if (t.holder) { g.strokeStyle = t.holder.team === 'you' ? '#ffffff' : '#ff4f6d'; g.lineWidth = 2; g.beginPath(); g.arc(x, y, r + 3, 0, Math.PI * 2); g.stroke(); }
+    if (t.holder) { g.strokeStyle = t.holder.team === battle.myTeam ? '#ffffff' : battle.net ? TEAMS[t.holder.team].color : '#ff4f6d'; g.lineWidth = 2; g.beginPath(); g.arc(x, y, r + 3, 0, Math.PI * 2); g.stroke(); }
   }
   // sailors: you are the arrow in the middle, pointing where you face
   for (const s of battle.sailors) {
     if (s.dead || s === me) continue;
     const p = sailorWorld(s, v), [x, y] = P(p.x, p.z);
-    g.fillStyle = '#ff4f6d'; g.strokeStyle = '#0b2a4a'; g.lineWidth = 1.5; g.beginPath(); g.arc(x, y, 4, 0, Math.PI * 2); g.fill(); g.stroke();
+    g.fillStyle = battle.net && s.teamId !== undefined ? TEAMS[s.teamId].color : '#ff4f6d'; g.strokeStyle = '#0b2a4a'; g.lineWidth = 1.5; g.beginPath(); g.arc(x, y, 4, 0, Math.PI * 2); g.fill(); g.stroke();
   }
   {
     const yw = me.state === 'swim' || me.state === 'air' ? me.worldYaw : worldYawOf(me);
@@ -4814,6 +4845,7 @@ function drawMinimap() {
 // ---------- battle frame ----------
 const bCam = new THREE.Vector3(), bLook = new THREE.Vector3();
 function battleFrame(dt) {
+  if (netGuest()) { netGuestFrame(dt); return; }
   SWELL.amp += (SWELL.target - SWELL.amp) * (1 - Math.exp(-1.5 * dt));
   SWELL_UNIFORM.value = SWELL.amp;
   const me = battle.player, them = battle.dummy;
@@ -4823,14 +4855,19 @@ function battleFrame(dt) {
     followSim(focus.x, focus.z);
     dNow.fill(0);
     const pin = battle.over ? null : playerInput();
-    const din = botThink(them, DT);
+    const ins = new Map();                                       // what each sailor wants this step
+    for (const s of battle.sailors) {
+      if (s === me) ins.set(s, pin);
+      else if (s.remote) ins.set(s, battle.over ? null : netRemoteInput(s));
+      else ins.set(s, botThink(s, DT));
+    }
     for (const sh of battle.ships) {
       const t = sh.body.translation(), r = sh.body.rotation();
       sh.prev.p.set(t.x, t.y, t.z); sh.prev.q.set(r.x, r.y, r.z, r.w);
       sh.driveIn.thr = 0; sh.driveIn.steer = 0;
     }
-    if (pin && pin.drive) Object.assign(me.ship.driveIn, pin.drive);
-    if (din && din.drive) Object.assign(them.ship.driveIn, din.drive);
+    for (const [s, i] of ins) if (i && i.drive && s.station && s.station.kind === 'drive') Object.assign(s.ship.driveIn, i.drive);
+    if (battle.net) netHostActs();                               // online players' button presses
     for (const t of battle.loot) { const c = t.body.translation(), r = t.body.rotation(); t.prev.p.set(c.x, c.y, c.z); t.prev.q.set(r.x, r.y, r.z, r.w); if (!t.gone) lootStep(t, simTime); }
     for (const sh of battle.ships) shipStep(sh, simTime);
     for (const tt of battle.tethers) tetherStep(tt);
@@ -4842,7 +4879,8 @@ function battleFrame(dt) {
       if (st.user === me && pin && pin.aim) { st.tYaw += pin.aim.yaw * 1.1 * DT; if (W.rangeAim) st.range = clamp(st.range + pin.aim.pitch * 14 * DT, W.range[0], W.range[1]); else st.tPitch = clamp(st.tPitch + pin.aim.pitch * 0.6 * DT, W.pitch[0], W.pitch[1]); }
       // the aim never runs ahead of the gun: mouse movement turns the gun directly, up to how fast the gun can
       // turn; anything faster is dropped. Angles are running totals (never wrapped), so it always turns the way you moved
-      if (st.user && st.user !== me && st.wantYaw !== undefined) st.tYaw = st.wantYaw;   // the dummy aims at its target
+      if (st.user && st.user.remote && st.user.remote.aim) { const a = st.user.remote.aim; st.tYaw = a[0]; if (W.rangeAim) st.range = clamp(a[2], W.range[0], W.range[1]); else st.tPitch = clamp(a[1], W.pitch[0], W.pitch[1]); }   // an online player's aim
+      else if (st.user && st.user !== me && st.wantYaw !== undefined) st.tYaw = st.wantYaw;   // a bot aims at its target
       const lead = W.yawRate * DT;
       st.tYaw = st.yaw + clamp(st.tYaw - st.yaw, -lead, lead);
       if (st.user) clampAim(st);
@@ -4852,8 +4890,7 @@ function battleFrame(dt) {
       st.pitch += clamp(st.tPitch - st.pitch, -W.pitchRate * DT, W.pitchRate * DT);
       st.reload = Math.max(0, st.reload - DT);
     }
-    sailorStep(me, simTime, pin && (pin.mx !== undefined) ? pin : null);
-    sailorStep(them, simTime, din && din.mx !== undefined ? din : null);
+    for (const [s, i] of ins) sailorStep(s, simTime, i && i.mx !== undefined ? i : null);
     battle.projectiles = battle.projectiles.filter(pr => { const keep = projStep(pr, simTime); if (!keep) scene.remove(pr.mesh); return keep; });
     simStep();
     world.step();
@@ -4870,19 +4907,27 @@ function battleFrame(dt) {
   if (!battle.over) {
     match.battleLeft -= dt;
     if (!battle.wreck && !battle.wreckDone && match.battleTotal - match.battleLeft >= battle.wreckAt) { battle.wreckDone = true; wreckWarning(); }
-    const outA = sideOut('you', me), outB = sideOut('dummy', them);
-    if (outA && outB) endRound('Both sides are out');
-    else if ((outA || outB) && !battle.cutShort) {
-      battle.cutShort = true;
-      if (match.battleLeft > 20) { match.battleLeft = 20; bigFlash(outA ? `You ${outA}` : `The dummy ${outB}`, '20 seconds left in the round'); }
+    if (battle.net) netHostRoundCheck();
+    else {
+      const outA = sideOut('you', me), outB = sideOut('dummy', them);
+      if (outA && outB) endRound('Both sides are out');
+      else if ((outA || outB) && !battle.cutShort) {
+        battle.cutShort = true;
+        if (match.battleLeft > 20) { match.battleLeft = 20; bigFlash(outA ? `You ${outA}` : `The dummy ${outB}`, '20 seconds left in the round'); }
+      }
+      if (match.battleLeft <= 0) endRound();
     }
-    if (match.battleLeft <= 0) endRound();
   }
   wreckStep(dt);
+  battleDraw(dt, acc / DT);
+  if (battle.net) netHostTick(dt);
+}
+// everything drawn each frame (the host's own world, or the guest's copy of it)
+function battleDraw(dt, a) {
+  const me = battle.player;
   $('timer').textContent = fmtTime(Math.max(0, match.battleLeft));
   $('timer').classList.toggle('low', match.battleLeft < 20);
   // ships: draw between physics steps, with gun aim, hit pulses, dying parts
-  const a = acc / DT;
   for (const t of battle.loot) t.holder = holderOf(t);
   drawLoot(dt, a);
   for (const sh of battle.ships) {
@@ -5006,6 +5051,7 @@ function giveInventory(s) {
 }
 const heldItem = s => s.inv && s.eq >= 0 ? s.inv[s.eq] : null;
 function toggleSlot(s, i) {
+  if (s === battle.player && netGuest()) { netAct({ k: 'slot', i }); return; }
   if (!s || !s.inv || battle.over || i < 0 || i >= INV_SLOTS) return;
   if (!s.inv[i]) return;
   if (s.eq === i) { s.eq = -1; return; }                                  // put it away
@@ -5015,7 +5061,7 @@ function toggleSlot(s, i) {
   s.eq = i;
 }
 // who wants to stroke: the player while the trigger (click / Space) is held; a bot when it decides to
-const paddleWanted = s => s.isPlayer ? !!battle.reelHeld : !!s.botPaddle;
+const paddleWanted = s => s.isPlayer ? !!battle.reelHeld : s.remote ? !!s.remote.held : !!s.botPaddle;
 
 // --- the stroke, in his own frame (x forward, y up, z to his right; feet on the deck at the origin) ---
 // u runs 0..1 over one stroke: pull from the catch (forward) to the exit (by the hip), then lift and swing
@@ -5075,8 +5121,9 @@ function itemsStep(s) {
   P.hintT = Math.max(0, P.hintT - DT);
   let want = held && s.eqK > 0.97 && s.state === 'aboard' && s.stagger <= 0 && paddleWanted(s);
   if (want) {
-    if (s.isPlayer) {     // the player paddles the way the camera looks
-      const fw = _iv.set(-Math.sin(view.yaw), 0, -Math.cos(view.yaw)).applyQuaternion(_iq.copy(shipPose(s.ship).q).invert());
+    if (s.isPlayer || s.remote) {     // a player paddles the way their camera looks
+      const vy = s.isPlayer ? view.yaw : s.remote.vy || 0;
+      const fw = _iv.set(-Math.sin(vy), 0, -Math.cos(vy)).applyQuaternion(_iq.copy(shipPose(s.ship).q).invert());
       P.dir = Math.atan2(-fw.z, fw.x);
     }
     const settled = P.w < 0.05;                // only change sides between strokes, never mid-stroke
@@ -5413,7 +5460,7 @@ function carryStep(t) {
 // let go: back to a normal physics object, keeping the motion it has (or the given velocity)
 function releaseLoot(t, vel) {
   const s = t.carried || (t.haul && t.haul.s);
-  t.haul = null; t.carried = null; t.drag = false;
+  t.haul = null; t.carried = null; t.drag = false; t.tow = null;
   if (s) { if (s.carry === t) s.carry = null; s.haulT = null; if (s.state === 'haul') s.state = 'aboard'; }
   t.collider.setSensor(false); t.body.setGravityScale(1, true);
   if (vel) t.body.setLinvel({ x: vel.x, y: vel.y, z: vel.z }, true);
@@ -5567,43 +5614,110 @@ function heaveStep(t, h, s) {
     t.haul = null; s.haulT = null;
     if (s.state === 'haul') s.state = 'aboard';
     t.carried = s; s.carry = t; t.drag = true;
-    t.dragQ = new THREE.Quaternion().copy(t.body.rotation()).premultiply(_hvyQ.copy(shipPose(h.ship).q).invert());   // its turn on the deck
+    towBegin(t, s);
   }
 }
-// dragging: it slides after him at arm's length, on the deck; off the edge, it goes
+// ---- towing and pushing ----
+// He holds the near top edge of the piece. Towing, the near end comes up a little and the far bottom edge stays
+// on the planks: the piece follows him like a trailer (his hands lead, the far edge trails along behind), so it
+// can't swing about; to turn it he has to walk round. Walking into it, he pushes it flat along the deck instead.
+// All of it in the raft's frame: F = the far bottom edge (on the deck), G = where his hands are (the near top edge).
+const TOW_REACH = 0.42, TOW_TILT = 0.2;
+const _tw1 = new THREE.Vector3(), _tw2 = new THREE.Vector3(), _twq = new THREE.Quaternion(), _twq2 = new THREE.Quaternion();
+// the piece's own axis that points at him, its depth along that axis, its width across, its height
+function towGeom(t) {
+  const k = t.tow.k, d = t.L.size[k], w = t.L.size[k === 0 ? 2 : 0], h = t.L.size[1];
+  return { d, w, h, gh: h - 0.04 };
+}
+// F to G across the deck, with the near end lifted by tilt
+const towSpan = (g, tilt) => g.d * Math.cos(tilt) - g.gh * Math.sin(tilt);
+function towBegin(t, s) {
+  const ship = s.ship, c = t.body.translation(), cl = toLocal(ship, _tw1.set(c.x, c.y, c.z), new THREE.Vector3());
+  const qL = _twq.copy(t.body.rotation()).premultiply(_twq2.copy(shipPose(ship).q).invert());
+  // which face of it is toward him
+  const toMe = _tw2.set(s.local.x - cl.x, 0, s.local.z - cl.z).applyQuaternion(_twq2.copy(qL).invert());
+  const k = Math.abs(toMe.x) >= Math.abs(toMe.z) ? 0 : 2, sg = Math.sign(k === 0 ? toMe.x : toMe.z) || 1;
+  t.tow = { k, sg, tilt: 0, mode: 0, deck: s.local.y };
+  const g = towGeom(t);
+  let dx = s.local.x - cl.x, dz = s.local.z - cl.z; const l = Math.hypot(dx, dz) || 1; dx /= l; dz /= l;
+  t.tow.F = new THREE.Vector2(cl.x - dx * g.d / 2, cl.z - dz * g.d / 2);
+  t.tow.G = new THREE.Vector2(cl.x + dx * g.d / 2, cl.z + dz * g.d / 2);
+}
+// the piece's pose from F, the direction to G and the tilt
+function towPose(t, ship, outC, outQ) {
+  const T = t.tow, g = towGeom(t);
+  let dx = T.G.x - T.F.x, dz = T.G.y - T.F.y; const l = Math.hypot(dx, dz) || 1; dx /= l; dz /= l;
+  const cu = g.d / 2 * Math.cos(T.tilt) - g.h / 2 * Math.sin(T.tilt), cv = g.d / 2 * Math.sin(T.tilt) + g.h / 2 * Math.cos(T.tilt);
+  outC.set(T.F.x + dx * cu, T.deck + cv, T.F.y + dz * cu);
+  const ax = T.k === 0 ? _tw1.set(T.sg, 0, 0) : _tw1.set(0, 0, T.sg);
+  outQ.setFromUnitVectors(ax, _tw2.set(dx, 0, dz));
+  outQ.premultiply(_twq2.setFromAxisAngle(_tw2.set(dx, 0, dz).cross(UPV).normalize(), T.tilt));
+  return outQ;
+}
+// is the deck there for the piece to sit at this F / G? (no hole under it, no wall or gun in the way)
+function towClear(ship, F, G, w, deckY) {
+  let dx = G.x - F.x, dz = G.y - F.y; const l = Math.hypot(dx, dz) || 1; dx /= l; dz /= l;
+  const px = -dz, pz = dx;
+  let support = 0;
+  for (const a of [0.08, 0.5, 0.92]) for (const b of [-0.4, 0, 0.4]) {
+    const x = F.x + (G.x - F.x) * a + px * b * w, z = F.y + (G.y - F.y) * a + pz * b * w;
+    const [i, j] = colOf(x, z), key = colKey(i, j);
+    if (!ship.cols.has(key)) continue;
+    if (ship.blocked.has(key) || ship.cols.get(key) > deckY + 0.3) return 'blocked';
+    support++;
+  }
+  return support ? (support >= 3 ? 'ok' : 'edge') : 'off';
+}
 function dragStep(t, s) {
   if (s.state !== 'aboard' || !s.ship.alive) { releaseLoot(t, null); return; }
-  const ship = s.ship, c = t.body.translation(), cur = toLocal(ship, _hvyV.set(c.x, c.y, c.z), new THREE.Vector3());
-  const D = dragDist(t);
-  let dx = cur.x - s.local.x, dz = cur.z - s.local.z; const d = Math.hypot(dx, dz) || 1; dx /= d; dz /= d;
-  // it's pulled, never pushed: with slack in his arms it stays where it is
-  const k = d > D ? 1 - Math.exp(-7 * DT) : 0;
-  const nx = cur.x + (s.local.x + dx * D - cur.x) * k, nz = cur.z + (s.local.z + dz * D - cur.z) * k;
-  const [i, j] = colOf(nx, nz), key = colKey(i, j);
-  if (!ship.cols.has(key)) { releaseLoot(t, pointVel(ship, _hvyV.set(c.x, c.y, c.z), new THREE.Vector3())); return; }   // pulled off the edge
-  let x = nx, z = nz;
-  const top = ship.cols.get(key);
-  if (ship.blocked.has(key) || top > cur.y - t.L.size[1] / 2 + 0.3) { x = cur.x; z = cur.z; }    // snagged on a wall or a gun
-  const y = cur.y + ((ship.blocked.has(key) ? cur.y : top + t.L.size[1] / 2 + 0.01) - cur.y) * (1 - Math.exp(-12 * DT));
-  const w = toWorld(ship, _hvyV.set(x, y, z), new THREE.Vector3());
+  const ship = s.ship;
+  if (!t.tow) towBegin(t, s);
+  const T = t.tow, g = towGeom(t);
+  const S = { x: s.local.x, y: s.local.z };
+  const dSG = Math.hypot(S.x - T.G.x, S.y - T.G.y);
+  const toBox = (T.G.x - S.x) * s.move.x + (T.G.y - S.y) * s.move.z;      // moving toward it?
+  const F = T.F.clone(), G = T.G.clone();
+  let mode = 0;
+  if (dSG > TOW_REACH + 0.005) {
+    // towing: his hands lead, the far edge trails behind on the deck
+    const span = towSpan(g, T.tilt);
+    G.set(S.x - (S.x - T.G.x) / dSG * TOW_REACH, S.y - (S.y - T.G.y) / dSG * TOW_REACH);
+    const gf = Math.hypot(G.x - F.x, G.y - F.y) || 1;
+    F.set(G.x - (G.x - F.x) / gf * span, G.y - (G.y - F.y) / gf * span);
+    mode = -1;
+  } else if (dSG < TOW_REACH - 0.02 && toBox > 0.05) {
+    // pushing: it slides away along its own length, flat on the deck
+    let fx = T.G.x - T.F.x, fz = T.G.y - T.F.y; const fl = Math.hypot(fx, fz) || 1; fx /= fl; fz /= fl;
+    const push = TOW_REACH - dSG;
+    G.set(G.x - fx * push, G.y - fz * push); F.set(F.x - fx * push, F.y - fz * push);
+    mode = 1;
+  }
+  T.mode += (mode - T.mode) * (1 - Math.exp(-6 * DT));
+  const clear = mode ? towClear(ship, F, G, g.w, T.deck) : 'ok';
+  if (clear === 'off') { const c = t.body.translation(); releaseLoot(t, pointVel(ship, _tw1.set(c.x, c.y, c.z), new THREE.Vector3())); return; }   // pulled or pushed off the edge
+  if (clear === 'blocked') {
+    // it won't go: he's held where his hands are on it
+    const l = dSG || 1;
+    s.local.x = T.G.x + (S.x - T.G.x) / l * TOW_REACH; s.local.z = T.G.y + (S.y - T.G.y) / l * TOW_REACH;
+  } else { T.F.copy(F); T.G.copy(G); }
+  // the near end comes up as he tows, settles flat as he pushes or stops
+  const tiltWant = T.mode < -0.2 ? TOW_TILT : 0;
+  T.tilt += (tiltWant - T.tilt) * (1 - Math.exp(-4 * DT));
+  { const [i, j] = colOf(T.F.x, T.F.y), key = colKey(i, j); if (ship.cols.has(key) && !ship.blocked.has(key)) T.deck += (ship.cols.get(key) - T.deck) * (1 - Math.exp(-10 * DT)); }
+  const cL = new THREE.Vector3(), qL = towPose(t, ship, cL, new THREE.Quaternion());
+  const w = toWorld(ship, cL, new THREE.Vector3());
   t.body.setTranslation({ x: w.x, y: w.y, z: w.z }, true);
-  t.body.setRotation(new THREE.Quaternion().copy(t.dragQ || _hvyQ.identity()).premultiply(shipPose(ship).q), true);
+  t.body.setRotation(qL.premultiply(shipPose(ship).q), true);
   const v = pointVel(ship, w, new THREE.Vector3());
   t.body.setLinvel({ x: v.x, y: v.y, z: v.z }, true); t.body.setAngvel({ x: 0, y: 0, z: 0 }, true);
-  ship.body.applyImpulseAtPoint({ x: 0, y: -t.L.mass * G * DT, z: 0 }, { x: w.x, y: w.y, z: w.z }, true);
-  if (Math.random() < 0.04 && s.speed > 0.1) puff(_hvyV.set(w.x, w.y - t.L.size[1] / 2, w.z), 0xd8c3a0, 0.12);   // scrape
+  ship.body.applyImpulseAtPoint({ x: 0, y: -t.L.mass * G_ACC_SAFE() * DT, z: 0 }, { x: w.x, y: w.y, z: w.z }, true);
+  s.dragMode = T.mode;
+  if (mode && Math.random() < 0.05) { const fw = toWorld(ship, _tw1.set(T.F.x, T.deck, T.F.y), new THREE.Vector3()); puff(fw, 0xd8c3a0, 0.12); }   // the far edge scraping
 }
-// he can't walk further from it than arm's length allows
-function dragAllows(s, nx, nz) {
-  const t = s.carry; if (!t || !t.drag) return true;
-  const c = t.body.translation(), cur = toLocal(s.ship, _hvyV.set(c.x, c.y, c.z), new THREE.Vector3());
-  const now = Math.hypot(cur.x - s.local.x, cur.z - s.local.z), next = Math.hypot(cur.x - nx, cur.z - nz), D = dragDist(t);
-  if (next > D + 0.22 && next > now) return false;
-  const touch = 0.18 + Math.max(t.L.size[0], t.L.size[2]) / 2;
-  if (next < touch && next < now) return false;           // or walk into it
-  return true;
-}
-function dragYaw(s) { const t = s.carry, c = t.body.translation(), cur = toLocal(s.ship, _hvyV.set(c.x, c.y, c.z), new THREE.Vector3()); return Math.atan2(-(cur.z - s.local.z), cur.x - s.local.x); }
+const G_ACC_SAFE = () => G;
+// the old free-walk limit isn't needed: towing holds him at arm's length itself
+function dragAllows() { return true; }
+function dragYaw(s) { const T = s.carry.tow; if (!T) return s.yaw; return Math.atan2(-(T.G.y - s.local.z), T.G.x - s.local.x); }
 
 // =====================================================================================
 // POUCHES ON THE BELT: up to three small bags hang from his waist. Shot, he loses them.
@@ -5661,22 +5775,31 @@ function beltDraw(s, dt) {
   });
 }
 
-// hands on whatever heavy thing he's heaving or dragging: on its near face, either side
+// hands on whatever heavy thing he's heaving or dragging: on the near top edge of the face toward him, either
+// side, in the piece's own frame (so they stay put on it however it turns or tips)
+const _lgA = new THREE.Vector3(), _lgB = new THREE.Vector3();
 function lootGrip(s, dt) {
   const t = s.carry && s.carry.drag ? s.carry : s.haulT && s.haulT.haul && s.haulT.haul.heavy ? s.haulT : null;
   s.lgW = itemApproach(s.lgW || 0, t ? 1 : 0, dt / 0.3);
   if (t) s.lgT = t;
   const g = s.lgT; if (s.lgW < 0.001 || !g) return;
-  const M = s.model; M.root.updateMatrixWorld(true);
-  const c = g.mesh.position, me = M.root.position;
-  const dx = me.x - c.x, dz = me.z - c.z, d = Math.hypot(dx, dz) || 1, ux = dx / d, uz = dz / d;
-  const half = Math.max(g.L.size[0], g.L.size[2]) / 2 * 0.85, hy = Math.min(c.y + g.L.size[1] / 2 - 0.04, c.y - g.L.size[1] / 2 + 0.8);   // its top edge (or as high as he reaches)
+  const M = s.model; M.root.updateMatrixWorld(true); g.mesh.updateMatrixWorld(true);
+  // which face is toward him (in the piece's frame); keep it once chosen, so his hands never hop to another face
+  const me = g.mesh.worldToLocal(_lgA.copy(M.root.position));
+  // while hauling it in (it's still turning) the face nearest him; once he's towing, the face he took hold of
+  if (g.tow) s.lgFace = { t: g, k: g.tow.k, sg: g.tow.sg, fixed: true };
+  else if (!s.lgFace || s.lgFace.t !== g || !(s.lgFace.fixed || (g.drag && (s.lgFace.fixed = true, false)))) { const k = Math.abs(me.x) >= Math.abs(me.z) ? 0 : 2; s.lgFace = { t: g, k, sg: Math.sign(k === 0 ? me.x : me.z) || 1, fixed: !!g.drag }; }
+  const F = s.lgFace, d = g.L.size[F.k] / 2, wd = g.L.size[F.k === 0 ? 2 : 0] / 2, top = Math.min(g.L.size[1] / 2 - 0.04, -g.L.size[1] / 2 + 0.85);
+  const lat = Math.min(0.2, wd - 0.06);
   const w = s.lgW * s.lgW * (3 - 2 * s.lgW);
-  for (const i of [0, 1]) {
-    const sd = i ? 1 : -1;                // his right hand goes to his right of the face
-    _hvyV.set(c.x + ux * half + uz * sd * 0.2, hy, c.z + uz * half - ux * sd * 0.2);
-    armTo(M, i, _hvyV, w);
-  }
+  for (const i of [0, 1]) armTo(M, i, gripPoint(g, F, i, _lgB), w);
+}
+// where hand i (1 = right) holds the piece, in the world
+function gripPoint(g, F, i, out) {
+  const d = g.L.size[F.k] / 2, wd = g.L.size[F.k === 0 ? 2 : 0] / 2, top = Math.min(g.L.size[1] / 2 - 0.04, -g.L.size[1] / 2 + 0.85), lat = Math.min(0.2, wd - 0.06);
+  const sd = (i ? 1 : -1) * F.sg * (F.k === 0 ? -1 : 1);            // his right hand to his right as he faces it
+  if (F.k === 0) out.set(F.sg * d, top, sd * lat); else out.set(sd * lat, top, F.sg * d);
+  return g.mesh.localToWorld(out);
 }
 
 // heaving: braced in a squat, rocking back on each pull
@@ -5874,6 +5997,20 @@ async function openRoom(id) {
   room.onBroadcast('team', p => { if (!lobby.host) return; const r = lobby.roster.find(x => x.id === p.id); if (r && p.team >= 0 && p.team < TEAMS.length) { r.team = p.team; pushRoster(); } });
   room.onBroadcast('start', p => { if (lobby.host) return; startGame(p); });
   room.onBroadcast('hello', () => { if (lobby.host) pushRoster(); });
+  room.onBroadcast('build', p => teamApply(p));
+  // the online battle
+  room.onBroadcast('ready', p => netReadyFrom(p && p.r));
+  room.onBroadcast('collect', () => netSendLayout());
+  room.onBroadcast('layout', p => netCollectFrom(p));
+  room.onBroadcast('bstart', p => netGuestStart(p));
+  room.onBroadcast('snap', p => netSnapIn(p));
+  room.onBroadcast('bend', p => { if (!lobby.host && battle.net) netShowEnd(p); });
+  room.onBroadcast('next', p => { if (!lobby.host) netGoNext(!!(p && p.done)); });
+  if (lobby.host) {                                    // players' controls come in on a channel only the host listens to
+    const inCh = c.channel('fg-in-' + id, NET.id);
+    inCh.onBroadcast('in', p => netInputFrom(p)); inCh.onBroadcast('act', p => netActFrom(p));
+    await inCh.subscribe(); lobby.inHost = inCh;
+  }
   await room.subscribe();
   lobby.room = room;
   await room.track({ name: playerName(), host: lobby.host });
@@ -5896,7 +6033,9 @@ function roomPresence(members) {
     if (changedR || lobby.roster.length !== before) pushRoster();
   } else if (lobby.hostId && !here.has(lobby.hostId)) {
     // the host is gone: the game is over
-    leaveRoom(); flashMenu('The host left the game.'); if (!lobby.game) menuPanel('mMain');
+    const playing = !!lobby.game; leaveRoom(); lobby.game = null;
+    if (playing) { battle.net = null; enterMenu(); } else menuPanel('mMain');
+    flashMenu('The host left the game.');
   }
 }
 function pushRoster() {
@@ -5906,6 +6045,8 @@ function pushRoster() {
 }
 function leaveRoom() {
   if (lobby.room) { lobby.room.leave(); lobby.room = null; }
+  if (lobby.inHost) { lobby.inHost.leave(); lobby.inHost = null; }
+  lobby.inCh = null;
   if (lobby.host && lobby.dir) { lobby.dir.send('gone', { room: lobby.roomId }); const d = lobby.dir; lobby.dir = null; setTimeout(() => d.leave(), 300); }
   lobby.host = false; lobby.roster = []; lobby.roomId = null;
 }
@@ -5968,6 +6109,7 @@ function startGame(p) {
   const me = p.roster.find(r => r.id === NET.id);
   lobby.game = { roster: p.roster, settings: p.settings, host: p.host, seed: p.seed, team: me ? me.team : 0 };
   freshMatch(p.settings);
+  teamBegin();
   const T = TEAMS[lobby.game.team];
   bigFlash(`Round 1 of ${match.rounds}`, `Team ${T.name} · build your raft`);
 }
@@ -5978,12 +6120,571 @@ $('mFind').addEventListener('click', findGames);
 $('mBack').addEventListener('click', () => { if (lobby.dir && !lobby.host) { lobby.dir.leave(); lobby.dir = null; } menuPanel('mMain'); });
 $('mLeave').addEventListener('click', () => { leaveRoom(); menuPanel('mMain'); });
 $('mStart').addEventListener('click', hostStart);
-$('mSolo').addEventListener('click', () => { lobby.game = null; freshMatch(null); bigFlash(`Round 1 of ${match.rounds}`, 'Build your raft'); });
+$('mSolo').addEventListener('click', () => { lobby.game = null; ID_BASE = 0; freshMatch(null); bigFlash(`Round 1 of ${match.rounds}`, 'Build your raft'); });
 $('toMenu').addEventListener('click', () => { leaveRoom(); lobby.game = null; enterMenu(); });
 addEventListener('pagehide', () => { try { leaveRoom(); } catch (_) {} });
 
 // the game opens on the menu (the tests skip straight to a practice match with the old starter raft)
 if (typeof __FG_TEST !== 'undefined' && __FG_TEST) { addStarterRaft(); raft.gold = BUDGET - STARTER_COST; changed(); bigFlash(`Round 1 of ${match.rounds}`, 'Build your raft'); }
 else enterMenu();
+
+// =====================================================================================
+// SHARED TEAM RAFT: teammates build one raft together. Every change anyone makes is sent to the team as a
+// list of part additions, moves/turns and removals (worked out by comparing the raft with what was last
+// shared), and applied by the others with the usual place/remove animations. Part ids are unique per player
+// (each gets their own block of 100000), so a part placed on a teammate's part mounts to the same id
+// everywhere. Gold is the team's: a teammate's part costs everyone's purse the same.
+// =====================================================================================
+var TEAMSYNC = { synced: new Map(), applying: false };
+const ID_BLOCK = 100000;
+const specKey = s => JSON.stringify([s.type, s.center.map(v => +v.toFixed(4)), s.q.map(v => +v.toFixed(4)), +(s.rot || 0).toFixed(4), s.mount ?? null, s.n ? s.n.map(v => +v.toFixed(3)) : null]);
+function teamOn() { return !!(lobby.game && lobby.room && lobby.game.roster.some(r => !r.bot && r.id !== NET.id && r.team === lobby.game.team)); }
+// a new match: everyone starts from the same empty raft; my ids come from my own block
+function teamBegin() {
+  TEAMSYNC.synced = new Map();
+  const idx = lobby.game ? Math.max(0, lobby.game.roster.findIndex(r => r.id === NET.id)) : 0;
+  ID_BASE = lobby.game ? (idx + 1) * ID_BLOCK : 0;
+  nextId = Math.max(1, ID_BASE + 1);
+}
+// called whenever the raft changes: send the difference from what the team last saw
+function teamSync() {
+  if (typeof TEAMSYNC === 'undefined' || !TEAMSYNC || TEAMSYNC.applying) return;
+  if (!lobby.game || match.phase !== 'build' || carry) return;            // mid-drag: share it when it's put down
+  const now = new Map(raft.parts.map(p => [p.id, snap(p)]));
+  if (!teamOn()) { TEAMSYNC.synced = now; return; }
+  const ops = [];
+  for (const [id, s] of now) { const old = TEAMSYNC.synced.get(id); if (!old) ops.push({ a: s }); else if (specKey(old) !== specKey(s)) ops.push({ u: s }); }
+  for (const id of TEAMSYNC.synced.keys()) if (!now.has(id)) ops.push({ r: id });
+  TEAMSYNC.synced = now;
+  if (ops.length) lobby.room.send('build', { team: lobby.game.team, by: NET.id, ops });
+}
+// a teammate changed the raft
+function teamApply(p) {
+  if (!p || !lobby.game || p.team !== lobby.game.team || p.by === NET.id || match.phase !== 'build') return;
+  TEAMSYNC.applying = true;
+  try {
+    for (const op of p.ops) {
+      if (op.a || op.u) {
+        const s = op.a || op.u, have = byId(s.id);
+        if (!have) { addPartFrom(s, true); raft.gold -= PARTS[s.type].cost; }
+        else {
+          have.mount = s.mount ?? null; have.n = s.n || null; have.mountTop = s.mountTop; have.anchor = s.anchor ? new THREE.Vector3().fromArray(s.anchor) : null;
+          setPartBox(have, new THREE.Vector3().fromArray(s.center), new THREE.Quaternion().fromArray(s.q), s.rot || 0);
+        }
+        TEAMSYNC.synced.set(s.id, s);
+      } else if (op.r !== undefined) {
+        const have = byId(op.r);
+        if (have) { if (sel === have) closeMenu(); raft.gold += PARTS[have.type].cost; removePart(have, true); }
+        TEAMSYNC.synced.delete(op.r);
+      }
+    }
+    changed();
+  } finally { TEAMSYNC.applying = false; }
+  // whatever of mine is in sync now stays in sync (the diff above is against the shared state)
+}
+
+// =====================================================================================
+// ONLINE BATTLE. The host's game runs the real battle (all the physics, every sailor, the bots, the loot) and
+// sends a snapshot of it ten times a second. Everyone else's game builds the same rafts and crew, draws the
+// host's world (smoothed between snapshots), and sends the host their controls: movement, steering, aim, and
+// button presses (use, fire, shove, jump, inventory). One raft per team.
+//
+// Flow: the build phase ends (the host's timer, or everyone pressed Ready) -> the host asks every team for
+// its raft ('collect'), builds the battle and sends 'bstart' -> snapshots ('snap') until the round ends
+// ('bend') -> the host moves everyone on ('next').
+// =====================================================================================
+const NET_SNAP_MS = 100, NET_INPUT_MS = 100, NET_DELAY_MS = 140;
+const TEAM_SPAWN_R = 17;
+const teamColorsFor = t => {
+  const c = new THREE.Color(TEAMS[t].color).getHex();
+  return { shirt: c, pants: [0x3a2a2a, 0x22325a, 0x1f3d2a, 0x4a3a12][t], band: [0xffcf3a, 0xffcf3a, 0xffcf3a, 0x1b1f2a][t] };
+};
+const r3 = v => [+v.x.toFixed(3), +v.y.toFixed(3), +v.z.toFixed(3)];
+const q4 = q => [+q.x.toFixed(4), +q.y.toFixed(4), +q.z.toFixed(4), +q.w.toFixed(4)];
+const humansOn = t => lobby.game.roster.some(r => !r.bot && r.team === t);
+const gameTeams = () => [...new Set(lobby.game.roster.map(r => r.team))].sort((a, b) => a - b);
+
+// ---------- build phase: ready / collect ----------
+function netReady() {
+  if (!lobby.game) return;
+  if (!raft.parts.length) { flash('Build something first'); return; }
+  battle.ready = true; $('ready').textContent = 'Waiting…';
+  if (lobby.host) netReadyFrom(NET.id); else lobby.room.send('ready', { r: NET.id });
+}
+function netReadyFrom(rid) {
+  if (!lobby.host || match.phase !== 'build') return;
+  (battle.readySet ||= new Set()).add(rid);
+  const humans = lobby.game.roster.filter(r => !r.bot);
+  if (humans.every(r => battle.readySet.has(r.id))) netBuildOver();
+}
+// the build phase is over (host): ask every team for its raft, then start once all are in (or after a wait)
+function netBuildOver() {
+  if (!lobby.game) return;
+  if (!lobby.host) return;                                       // guests wait for the host
+  if (match.phase !== 'build') return;
+  if (raft.mode === 'test') endTest();
+  dropLooseParts();
+  match.phase = 'collect';
+  battle.pend = { layouts: new Map([[lobby.game.team, raft.parts.map(snap)]]), until: performance.now() + 2500 };
+  lobby.room.send('collect', {});
+  netCollectTick();
+}
+function netCollectFrom(p) {
+  if (!lobby.host || !battle.pend || !p) return;
+  if (!battle.pend.layouts.has(p.team) || !battle.pend.layouts.get(p.team).length) battle.pend.layouts.set(p.team, p.parts || []);
+  netCollectTick();
+}
+function netCollectTick() {
+  const pend = battle.pend; if (!pend || !lobby.host) return;
+  const need = gameTeams().filter(humansOn);
+  if (!need.every(t => pend.layouts.has(t)) && performance.now() < pend.until) return;
+  battle.pend = null;
+  const teams = gameTeams().map((t, i, all) => {
+    let layout = humansOn(t) ? pend.layouts.get(t) : dummyLayout();
+    if (!layout || !layout.length) layout = [{ id: 1, type: 'plank', center: [0, 0.07, 0], q: [0, 0, 0, 1] }];
+    const a = Math.PI + (i / all.length) * Math.PI * 2;                     // spread round the arena
+    const ox = ARENA_C.x + Math.cos(a) * TEAM_SPAWN_R, oz = ARENA_C.z + Math.sin(a) * TEAM_SPAWN_R;
+    return { team: t, nid: i + 1, layout, origin: [ox, oz], yaw: Math.atan2(-(ARENA_C.z - oz), ARENA_C.x - ox) };
+  });
+  netSetup({ teams, crew: lobby.game.roster.map(r => ({ rid: r.id, team: r.team, bot: !!r.bot, name: r.name })) }, true);
+  spawnRoundLoot();
+  for (const t of battle.loot) if (!t.nid) t.nid = battle.net.nextLoot++;
+  lobby.room.send('bstart', { teams, crew: battle.net.crewDesc, loot: battle.loot.map(t => { const c = t.body.translation(); return [t.nid, t.type, +c.x.toFixed(3), +c.y.toFixed(3), +c.z.toFixed(3)]; }), tl: match.battleLeft, total: match.battleTotal, round: match.round });
+}
+// guests: hand our raft over when the host asks
+function netSendLayout() {
+  if (!lobby.game || lobby.host) return;
+  if (raft.mode === 'test') endTest();
+  dropLooseParts();
+  match.phase = 'collect';
+  lobby.room.send('layout', { team: lobby.game.team, parts: raft.parts.map(snap) });
+  flash('Waiting for the battle…');
+}
+
+// ---------- battle setup (both sides) ----------
+function netSetup(p, host) {
+  teardownBattle();
+  if (sel) closeMenu();
+  raft.mode = 'battle'; battle.on = true; battle.over = false; battle.overT = 0; battle.result = null;
+  match.phase = 'battle';
+  if (p.total) { match.battleTotal = p.total; match.battleLeft = p.tl; }
+  else { match.battleTotal = match.battleLeft = Number($('battleTime').value) || BATTLE_TIME; }
+  raftGroup.visible = false; comMark.visible = cobMark.visible = false; if (ghost) ghost.visible = false;
+  SWELL.target = BATTLE_SWELL;
+  battle.myTeam = lobby.game.team;
+  battle.net = { host, ships: new Map(), sailors: new Map(), loot: new Map(), proj: new Map(), acts: [], snaps: [], sendT: 0, inT: 0, nextShip: 100, nextLoot: 1, nextProj: 1, crewDesc: p.crew, offset: null, out: {}, ropes: [], last: null };
+  battle.ships = []; battle.sideMax = {};
+  for (const T of p.teams) {
+    const ship = buildShip(T.layout, new THREE.Vector3(T.origin[0], 0, T.origin[1]), T.yaw, T.team);
+    ship.nid = T.nid; battle.net.ships.set(ship.nid, ship);
+    battle.ships.push(ship);
+    battle.sideMax[T.team] = ship.maxHp;
+    if (host) splitCheck(ship, null, true);
+  }
+  battle.sideMax.you = battle.ships.filter(s => s.team === battle.myTeam).reduce((m, s) => m + s.maxHp, 0) || 1;
+  battle.sideMax.dummy = battle.ships.filter(s => s.team !== battle.myTeam).reduce((m, s) => m + s.maxHp, 0) || 1;
+  // the crew: each on their team's raft, spread over its deck
+  const placed = new Map();
+  for (const c of p.crew) {
+    const ship = battle.ships.find(s => s.team === c.team); if (!ship) continue;
+    const s = makeCrew(ship, teamColorsFor(c.team), c.rid === NET.id);
+    s.rid = c.rid; s.teamId = c.team; s.bot = c.bot; s.name = c.name;
+    const n = placed.get(ship) || 0; placed.set(ship, n + 1);
+    if (n && s.state === 'aboard') {                             // not everyone on the same spot
+      const spots = [...ship.cols].filter(([k]) => !ship.blocked.has(k)).map(([k, top]) => { const [x, z] = colCenter(Math.floor(k / 1000), k % 1000); return [x, top, z]; })
+        .sort((a, b) => Math.hypot(a[0], a[2]) - Math.hypot(b[0], b[2]));
+      const sp = spots[Math.min(spots.length - 1, n * 6)]; if (sp) s.local.set(...sp);
+    }
+    if (host && !c.bot && c.rid !== NET.id) s.remote = { mx: 0, mz: 0, held: false, vy: 0, drive: null, aim: null, t: 0 };
+    battle.net.sailors.set(c.rid, s);
+    if (c.rid === NET.id) battle.player = s;
+  }
+  battle.dummy = null;
+  if (!battle.player) battle.player = battle.sailors[0];
+  battle.wreckDone = false; battle.cutShort = false;
+  view.dist = 10; view.pitch = 0.42;
+  { const me = battle.player.ship.body.translation(), dx = ARENA_C.x - me.x, dz = ARENA_C.z - me.z; view.yaw = Math.atan2(-dx, -dz) + Math.PI; }
+  $('banner').hidden = true; $('ready').textContent = 'Ready'; battle.ready = false; battle.readySet = null;
+  hudNames(`Team ${TEAMS[battle.myTeam].name}`, 'Enemies');
+  updateUI(); updateBattleHud(true);
+  const T = TEAMS[battle.myTeam];
+  bigFlash('Battle!', `Round ${match.round} of ${match.rounds} · Team ${T.name}`);
+  lockAim();
+}
+function netGuestStart(p) {
+  if (!lobby.game || lobby.host) return;
+  netSetup(p, false);
+  if (p.round) match.round = p.round;
+  for (const L of p.loot) { const t = spawnLoot(L[1], new THREE.Vector3(L[2], L[3], L[4])); t.nid = L[0]; t.body.setGravityScale(0, true); battle.net.loot.set(t.nid, t); }
+}
+
+// ---------- host: running everyone else's sailor ----------
+function netInputFrom(p) {
+  if (!battle.net || !battle.net.host || !p) return;
+  const s = battle.net.sailors.get(p.r); if (!s || !s.remote) return;
+  const R = s.remote;
+  R.mx = p.mx || 0; R.mz = p.mz || 0; R.held = !!p.h; R.vy = p.vy || 0; R.drive = p.d || null; R.aim = p.a || null; R.t = performance.now();
+}
+function netActFrom(p) { if (battle.net && battle.net.host && p) battle.net.acts.push(p); }
+function netRemoteInput(s) {
+  const R = s.remote; if (!R) return null;
+  if (performance.now() - R.t > 1500) return { mx: 0, mz: 0 };              // lost touch: stand still
+  if (s.station && s.station.kind === 'drive') return R.drive ? { drive: { thr: clamp(R.drive[0], -0.5, 1), steer: clamp(R.drive[1], -1, 1) } } : null;
+  if (s.station && s.station.kind === 'gun') return null;
+  return { mx: clamp(R.mx, -1, 1), mz: clamp(R.mz, -1, 1) };
+}
+function netHostActs() {
+  const acts = battle.net.acts.splice(0);
+  for (const a of acts) {
+    const s = battle.net.sailors.get(a.r); if (!s || !s.remote || battle.over) continue;
+    if (a.k === 'interact') interact(s);
+    else if (a.k === 'fire') playerFire(s);
+    else if (a.k === 'shove') playerShove(s, a.y || 0);
+    else if (a.k === 'jump') s.jumpReq = true;
+    else if (a.k === 'slot') toggleSlot(s, a.i | 0);
+    else if (a.k === 'forfeit') { s.dead = true; s.fade = 0; }
+  }
+}
+// is this team out? (every raft sunk or capsized, or every sailor drowned)
+function teamOut(t) {
+  const ships = battle.ships.filter(s => s.team === t);
+  if (ships.length && !ships.some(s => s.alive)) return ships.some(s => s.why === 'capsized') ? 'capsized' : 'sank';
+  const crew = battle.sailors.filter(s => s.teamId === t);
+  if (crew.length && crew.every(s => s.dead)) return 'drowned';
+  return '';
+}
+function netSideOut(team) {
+  if (!battle.net) return '';
+  if (!battle.net.host) { const o = battle.net.out || {}; if (team === 'you') return o[battle.myTeam] || ''; if (team === 'dummy') { const e = Object.keys(o).filter(k => +k !== battle.myTeam); return e.length && e.every(k => o[k]) ? 'out' : ''; } return o[team] || ''; }
+  if (team === 'you') return teamOut(battle.myTeam);
+  if (team === 'dummy') { const e = gameTeams().filter(t => t !== battle.myTeam); return e.length && e.every(t => teamOut(t)) ? 'out' : ''; }
+  return teamOut(team);
+}
+function netHostRoundCheck() {
+  const teams = gameTeams(), alive = teams.filter(t => !teamOut(t));
+  if (!alive.length) netEndRound('Everyone is out');
+  else if (alive.length === 1 && teams.length > 1 && !battle.cutShort) {
+    battle.cutShort = true;
+    if (match.battleLeft > 20) { match.battleLeft = 20; bigFlash(`Team ${TEAMS[alive[0]].name} is the last afloat`, '20 seconds left in the round'); }
+  }
+  if (match.battleLeft <= 0) netEndRound();
+}
+function teamPts(t) { return battle.ships.filter(s => s.team === t && s.alive).reduce((p, s) => p + shipLootPts(s), 0); }
+function netEndRound(title) {
+  if (battle.over) return;
+  for (const t of battle.loot) t.holder = holderOf(t);
+  match.tscore ||= {};
+  const lines = [], pts = {};
+  for (const t of gameTeams()) {
+    const out = teamOut(t), p = out ? 0 : teamPts(t); pts[t] = p;
+    match.tscore[t] = (match.tscore[t] || 0) + p;
+    const n = `Team ${TEAMS[t].name}`;
+    lines.push(out ? `${n} ${out}.` : p ? `${n} scored ${p}: ${haulList(t)}.` : `${n} ended with nothing aboard.`);
+  }
+  const done = match.round >= match.rounds;
+  const msg = { title: title || `Round ${match.round} over`, lines, totals: match.tscore, pts, done };
+  netSnapSend(true);
+  lobby.room.send('bend', msg);
+  netShowEnd(msg);
+}
+function netShowEnd(m) {
+  battle.over = true; unlockAim(); match.phase = 'results';
+  match.tscore = m.totals; battle.matchDone = m.done;
+  const mine = m.totals[battle.myTeam] || 0, best = Math.max(0, ...Object.entries(m.totals).filter(([k]) => +k !== battle.myTeam).map(([, v]) => v));
+  match.score.you = mine; match.score.dummy = best;
+  setTimeout(() => {
+    $('bannerTitle').textContent = m.title;
+    $('bannerDetail').textContent = m.lines.join(' ');
+    $('bannerScore').textContent = 'Total: ' + Object.entries(m.totals).map(([t, v]) => `${TEAMS[t].name} ${v}`).join(' · ');
+    let final = '';
+    if (m.done) {
+      const top = Math.max(...Object.values(m.totals)), winners = Object.keys(m.totals).filter(t => m.totals[t] === top);
+      final = winners.length > 1 ? 'The match is a draw.' : `Team ${TEAMS[winners[0]].name} wins the match!`;
+    }
+    $('bannerMatch').textContent = final; $('bannerMatch').hidden = !m.done;
+    const host = lobby.host;
+    $('nextRound').textContent = host ? (m.done ? 'New match' : `Next round (${match.round + 1}/${match.rounds})`) : 'Waiting for the host…';
+    $('nextRound').disabled = !host;
+    const win = (m.pts[battle.myTeam] || 0) > Math.max(0, ...Object.entries(m.pts).filter(([k]) => +k !== battle.myTeam).map(([, v]) => v));
+    $('banner').classList.toggle('win', win); $('banner').classList.toggle('draw', false); $('banner').hidden = false;
+    updateUI();
+  }, 1000);
+}
+function netNextRound() { if (!lobby.host) return; const done = !!battle.matchDone; lobby.room.send('next', { done }); netGoNext(done); }
+function netGoNext(done) {
+  $('banner').hidden = true; $('nextRound').disabled = false;
+  if (raft.mode === 'battle') exitBattle();
+  battle.net = null; battle.myTeam = 'you';
+  if (done) { match.tscore = {}; freshMatch(lobby.game.settings); teamBegin(); bigFlash(`Round 1 of ${match.rounds}`, `Team ${TEAMS[lobby.game.team].name} · build your raft`); }
+  else { match.round++; newRound(); }
+}
+function netForfeit() { if (battle.over) return; if (lobby.host) { battle.player.dead = true; battle.player.fade = 0; } else netAct({ k: 'forfeit' }); }
+
+// ---------- host: snapshots ----------
+function netHostTick(dt) {
+  const N = battle.net; if (!N || !N.host) return;
+  N.sendT += dt * 1000;
+  if (N.sendT >= NET_SNAP_MS) { N.sendT = 0; netSnapSend(false); }
+}
+function netSnapSend(force) {
+  const N = battle.net; if (!N || !N.host || !lobby.room) return;
+  for (const sh of battle.ships) if (!sh.nid) { sh.nid = N.nextShip++; N.ships.set(sh.nid, sh); }
+  for (const t of battle.loot) if (!t.nid) { t.nid = N.nextLoot++; N.loot.set(t.nid, t); }
+  for (const pr of battle.projectiles) if (!pr.nid) pr.nid = N.nextProj++;
+  const ships = battle.ships.map(sh => {
+    const t = sh.body.translation(), r = sh.body.rotation();
+    const o = { n: sh.nid, tm: sh.team, a: sh.alive ? 1 : 0, p: r3(t), q: q4(r), st: +sh.steer.toFixed(3), th: +sh.thr.toFixed(3) };
+    o.dead = sh.parts.filter(p => !p.alive).map(p => p.id);
+    o.hp = sh.parts.filter(p => p.alive && p.hp < (p.maxHp || PARTS[p.type].hp)).map(p => [p.id, Math.round(p.hp)]);
+    o.stn = sh.stations.map(st => [st.part.id, +st.yaw.toFixed(3), +st.pitch.toFixed(3), +st.reload.toFixed(2), st.user ? st.user.rid : 0, st.range ? +st.range.toFixed(2) : 0]);
+    if (sh.fragment) o.ids = sh.parts.map(p => p.id);
+    return o;
+  });
+  const sailors = battle.sailors.map(s => {
+    const o = { r: s.rid, s: s.state, n: s.ship ? s.ship.nid : 0, y: +s.yaw.toFixed(3), wy: +(s.worldYaw || 0).toFixed(3), sp: +(s.speed || 0).toFixed(2) };
+    if (s.state === 'swim' || s.state === 'air' || s.state === 'drowned') { o.p = r3(s.pos); o.tq = q4(s.tumble); } else o.l = r3(s.local);
+    o.mv = [+s.move.x.toFixed(2), +s.move.z.toFixed(2)];
+    if (s.station) o.sn = s.station.part.id;
+    if (s.route && s.route.length) o.rt = 1;
+    if (s.carry) { o.ca = s.carry.nid; if (s.carry.drag) { o.dr = 1; o.dm = +(s.dragMode || 0).toFixed(2); } }
+    if (s.haulT && s.haulT.haul) { const h = s.haulT.haul; o.ha = [s.haulT.nid, +h.t.toFixed(3), h.heavy ? 1 : 0, h.pulls]; }
+    if (s.eq >= 0) o.eq = s.eq; o.ek = +s.eqK.toFixed(3);
+    if (s.pad && (s.pad.w > 0.001 || s.pad.active)) o.pd = [s.pad.active ? 1 : 0, +s.pad.u.toFixed(3), s.pad.side, +s.pad.w.toFixed(3), +s.pad.dir.toFixed(3)];
+    if (s.air) o.ai = 1;
+    if (s.shoveT < 1) o.so = +s.shoveT.toFixed(3);
+    if (s.stagger > 0) o.sg = +s.stagger.toFixed(2);
+    if (s.dead) o.dd = 1; if (s.fade < 1) o.fd = +s.fade.toFixed(3);
+    if (s.belt && s.belt.length) o.bl = s.belt.map(t => t.nid);
+    if (s.helm !== undefined) { o.hm = +s.helm.toFixed(3); o.hv = +(s.helmV || 0).toFixed(3); }
+    if (s.overT < OVERBOARD_TIME) o.ot = +s.overT.toFixed(2);
+    return o;
+  });
+  const loot = battle.loot.map(t => {
+    const c = t.body.translation(), r = t.body.rotation();
+    return [t.nid, t.type, +c.x.toFixed(3), +c.y.toFixed(3), +c.z.toFixed(3), +r.x.toFixed(4), +r.y.toFixed(4), +r.z.toFixed(4), +r.w.toFixed(4),
+      t.gone ? 1 : 0, t.carried ? t.carried.rid : 0, t.drag ? 1 : 0, t.belt ? t.belt.rid : 0];
+  });
+  const proj = battle.projectiles.map(pr => [pr.nid, pr.kind, pr.weapon, +pr.mesh.position.x.toFixed(2), +pr.mesh.position.y.toFixed(2), +pr.mesh.position.z.toFixed(2)]);
+  const ropes = battle.tethers.filter(tt => tt.life > 0).map(tt => { const A = toWorld(tt.a, tt.aLocal, new THREE.Vector3()), B = tetherEnd(tt, new THREE.Vector3()); return [...r3(A), ...r3(B)]; });
+  const out = {}; for (const t of gameTeams()) out[t] = teamOut(t);
+  const snapMsg = { t: Math.round(performance.now()), tl: +match.battleLeft.toFixed(2), sh: ships, sa: sailors, lo: loot, pr: proj, te: ropes, fx: battle.fx.splice(0), out, pts: Object.fromEntries(gameTeams().map(t => [t, teamPts(t)])) };
+  if (battle.wreck) snapMsg.wk = [+battle.wreck.p.x.toFixed(2), +battle.wreck.p.z.toFixed(2), +battle.wreck.t.toFixed(2)];
+  lobby.room.send('snap', snapMsg);
+}
+
+// ---------- guest: input out, snapshots in ----------
+function netAct(a) {
+  const N = battle.net; if (!N || N.host || !lobby.room) return;
+  netInputChannel().send('act', { r: NET.id, ...a });
+}
+function netInputChannel() {
+  if (!lobby.inCh) lobby.inCh = NET.client.channel('fg-in-' + lobby.roomId, NET.id);          // sent without joining: only the host listens
+  return lobby.inCh;
+}
+function netSendInput(dt) {
+  const N = battle.net, me = battle.player; if (!N || !me || battle.over) return;
+  N.inT += dt * 1000; if (N.inT < NET_INPUT_MS) return; N.inT = 0;
+  const pin = playerInput(), st = me.station;
+  const msg = { r: NET.id, h: battle.reelHeld ? 1 : 0, vy: +view.yaw.toFixed(3) };
+  if (pin && pin.mx !== undefined) { msg.mx = +pin.mx.toFixed(3); msg.mz = +pin.mz.toFixed(3); }
+  if (pin && pin.drive) msg.d = [+pin.drive.thr.toFixed(3), +pin.drive.steer.toFixed(3)];
+  if (st && st.gun) msg.a = [+st.tYaw.toFixed(4), +st.tPitch.toFixed(4), +(st.range || 0).toFixed(3)];
+  netInputChannel().send('in', msg);
+}
+function netSnapIn(p) {
+  const N = battle.net; if (!N || N.host || !p) return;
+  const now = performance.now();
+  const off = p.t - now; N.offset = N.offset === null ? off : Math.max(N.offset - 0.5, Math.min(N.offset + 2, off));   // follows the host's clock, smoothly
+  N.snaps.push(p); if (N.snaps.length > 30) N.snaps.shift();
+  // one-off effects: sounds, puffs, splashes, big messages
+  for (const f of p.fx || []) {
+    if (f[0] === 'a') playSfx(f[1], new THREE.Vector3(f[2], f[3], f[4]), f[5]);
+    else if (f[0] === 'p') puff(new THREE.Vector3(f[1], f[2], f[3]), f[4], f[5]);
+    else if (f[0] === 's') spray(new THREE.Vector3(f[1], f[2], f[3]), f[4], f[5], f[6], f[7] ?? undefined);
+    else if (f[0] === 'f') bigFlash(f[1], f[2]);
+  }
+  N.out = p.out || {}; N.pts = p.pts || {};
+  match.battleLeft = p.tl;
+}
+const _nga = new THREE.Vector3(), _ngb = new THREE.Vector3(), _ngqa = new THREE.Quaternion(), _ngqb = new THREE.Quaternion();
+const lerpArr = (a, b, k, out) => out.set(a[0] + (b[0] - a[0]) * k, a[1] + (b[1] - a[1]) * k, a[2] + (b[2] - a[2]) * k);
+function netGuestFrame(dt) {
+  const N = battle.net;
+  SWELL.amp += (SWELL.target - SWELL.amp) * (1 - Math.exp(-1.5 * dt));
+  SWELL_UNIFORM.value = SWELL.amp;
+  const me = battle.player;
+  acc += dt;
+  while (acc >= DT) {
+    const focus = me.state === 'swim' || me.state === 'air' || me.state === 'drowned' ? me.pos : me.ship.body.translation();
+    followSim(focus.x, focus.z); dNow.fill(0); simStep(); simTime += DT; acc -= DT;
+    me.shoveT += DT;
+  }
+  // the host's world, a little behind real time so there's always a snapshot either side to blend between
+  if (N.snaps.length && N.offset !== null) {
+    const rt = performance.now() + N.offset - NET_DELAY_MS;
+    let A = N.snaps[0], B = N.snaps[N.snaps.length - 1];
+    for (let i = 0; i < N.snaps.length - 1; i++) if (N.snaps[i].t <= rt && N.snaps[i + 1].t >= rt) { A = N.snaps[i]; B = N.snaps[i + 1]; break; }
+    const k = B.t > A.t ? clamp((rt - A.t) / (B.t - A.t), 0, 1) : 1;
+    netApply(A, B, k, dt);
+  }
+  // my aim at a gun: the mouse (or keys) turn my copy of the gun's target; the host follows it
+  const st = me.station;
+  if (st && st.gun && !battle.over) {
+    const pin = playerInput(), W = WEAPONS[st.weapon];
+    if (pin && pin.aim) { st.tYaw += pin.aim.yaw * 1.1 * dt; if (W.rangeAim) st.range = clamp((st.range || 18) + pin.aim.pitch * 14 * dt, W.range[0], W.range[1]); else st.tPitch = clamp(st.tPitch + pin.aim.pitch * 0.6 * dt, W.pitch[0], W.pitch[1]); }
+    st.tYaw = st.yaw + clamp(st.tYaw - st.yaw, -0.6, 0.6);
+  }
+  netSendInput(dt);
+  netGuestRopes();
+  netGuestWreck(dt);
+  battleDraw(dt, 1);
+}
+function netApply(A, B, k, dt) {
+  const N = battle.net;
+  // ships (and pieces that broke off)
+  for (const so of B.sh) {
+    let sh = N.ships.get(so.n);
+    if (!sh && so.ids) sh = netGuestFragment(so);
+    if (!sh) continue;
+    const sa = A.sh.find(x => x.n === so.n) || so;
+    lerpArr(sa.p, so.p, k, _nga); _ngqa.fromArray(sa.q).slerp(_ngqb.fromArray(so.q), k);
+    sh.body.setTranslation({ x: _nga.x, y: _nga.y, z: _nga.z }, false); sh.body.setRotation({ x: _ngqa.x, y: _ngqa.y, z: _ngqa.z, w: _ngqa.w }, false);
+    sh.prev.p.copy(_nga); sh.prev.q.copy(_ngqa);
+    sh.steer = so.st; sh.thr = so.th; sh.alive = !!so.a;
+    const dead = new Set(so.dead), hp = new Map(so.hp);
+    for (const p of sh.parts) {
+      if (p.alive && dead.has(p.id)) netGuestBreak(sh, p);
+      else if (p.alive) { const h = hp.has(p.id) ? hp.get(p.id) : (p.maxHp || PARTS[p.type].hp); if (h < p.hp - 0.5) p.hitT = 1; p.hp = h; }
+    }
+    for (const sd of so.stn) {
+      const part = sh.parts.find(p => p.id === sd[0]); if (!part || !part.station) continue;
+      const st = part.station, mine = st.user === battle.player;
+      st.yaw = sd[1]; st.pitch = sd[2]; if (st.reload < sd[3] - 0.5) st.kick = 1; st.reload = sd[3]; if (sd[5]) st.range = sd[5];
+      const u = sd[4] ? N.sailors.get(sd[4]) || null : null;
+      if (u === battle.player && !mine) { st.tYaw = st.yaw; st.tPitch = st.pitch; }        // just took the gun: aim starts where it points
+      st.user = u;
+    }
+  }
+  // loot
+  for (const lo of B.lo) {
+    let t = N.loot.get(lo[0]);
+    if (!t) { t = spawnLoot(lo[1], new THREE.Vector3(lo[2], lo[3], lo[4])); t.nid = lo[0]; t.body.setGravityScale(0, true); N.loot.set(t.nid, t); }
+    const la = A.lo.find(x => x[0] === lo[0]) || lo;
+    _nga.set(la[2] + (lo[2] - la[2]) * k, la[3] + (lo[3] - la[3]) * k, la[4] + (lo[4] - la[4]) * k);
+    _ngqa.set(la[5], la[6], la[7], la[8]).slerp(_ngqb.set(lo[5], lo[6], lo[7], lo[8]), k);
+    t.body.setTranslation({ x: _nga.x, y: _nga.y, z: _nga.z }, false); t.body.setRotation({ x: _ngqa.x, y: _ngqa.y, z: _ngqa.z, w: _ngqa.w }, false);
+    t.prev.p.copy(_nga); t.prev.q.copy(_ngqa);
+    if (lo[9] && !t.gone) t.gone = true;
+    const carrier = lo[10] ? N.sailors.get(lo[10]) || null : null;
+    t.carried = carrier; t.drag = !!lo[11];
+    const belt = lo[12] ? N.sailors.get(lo[12]) || null : null;
+    if (belt && t.belt !== belt) { t.belt = belt; t.beltK = 0; t.beltFrom = t.mesh.position.clone(); t.bp = null; }
+    else if (!belt && t.belt) { t.belt = null; t.bp = null; }
+    t.haul = null;
+  }
+  // sailors
+  for (const so of B.sa) {
+    const s = N.sailors.get(so.r); if (!s) continue;
+    const sa = A.sa.find(x => x.r === so.r) || so;
+    const ship = N.ships.get(so.n); if (ship) s.ship = ship;
+    s.state = so.s;
+    if (so.l) { const a = sa.l || so.l; lerpArr(a, so.l, k, s.local); }
+    if (so.p) { const a = sa.p || so.p; lerpArr(a, so.p, k, s.pos); if (so.tq) s.tumble.fromArray(so.tq); s.worldYaw = lerpAngle(sa.wy, so.wy, k); }
+    s.yaw = lerpAngle(sa.y, so.y, k);
+    s.speed = so.sp; s.move.set(so.mv[0], 0, so.mv[1]);
+    s.station = so.sn && s.ship ? (s.ship.parts.find(p => p.id === so.sn) || {}).station || null : null;
+    s.route = so.rt ? [s.local] : null;
+    s.carry = so.ca ? N.loot.get(so.ca) || null : null; s.dragMode = so.dm || 0;
+    if (so.ha) { const t = N.loot.get(so.ha[0]); if (t) { t.haul = { s, t: so.ha[1], heavy: !!so.ha[2], pulls: so.ha[3], ship: s.ship }; s.haulT = t; } } else s.haulT = null;
+    s.eq = so.eq ?? -1; s.eqK = so.ek ?? 0;
+    if (so.pd) { s.pad.active = !!so.pd[0]; s.pad.u = so.pd[1]; s.pad.side = so.pd[2]; s.pad.w = so.pd[3]; s.pad.dir = so.pd[4]; } else { s.pad.active = false; s.pad.w = 0; }
+    s.air = !!so.ai;
+    if (so.so !== undefined && so.so < s.shoveT - 0.05) s.shoveT = so.so;            // a new shove starts
+    if (so.so === undefined && s.shoveT < 1) s.shoveT += dt;
+    s.stagger = so.sg || 0;
+    s.dead = !!so.dd; s.fade = so.fd ?? 1;
+    s.belt = (so.bl || []).map(n => N.loot.get(n)).filter(Boolean);
+    if (so.hm !== undefined) { s.helm = so.hm; s.helmV = so.hv; } else { s.helm = undefined; s.helmV = 0; }
+    s.overT = so.ot ?? OVERBOARD_TIME;
+  }
+  // projectiles
+  const seen = new Set();
+  for (const pp of B.pr) {
+    seen.add(pp[0]);
+    let m = N.proj.get(pp[0]);
+    if (!m) { m = projMeshFor(pp[1], pp[2]); scene.add(m); N.proj.set(pp[0], m); m.position.set(pp[3], pp[4], pp[5]); }
+    const pa = A.pr.find(x => x[0] === pp[0]) || pp;
+    m.position.set(pa[3] + (pp[3] - pa[3]) * k, pa[4] + (pp[4] - pa[4]) * k, pa[5] + (pp[5] - pa[5]) * k);
+  }
+  for (const [n, m] of N.proj) if (!seen.has(n)) { scene.remove(m); N.proj.delete(n); }
+  N.ropeData = B.te; N.wk = B.wk || null;
+}
+function projMeshFor(kind, weapon) {
+  const m = kind === 'charge' ? chargeMesh() : kind === 'harpoon' ? boltMesh() : kind === 'ballast' ? lumpMesh() : new THREE.Mesh(new THREE.SphereGeometry(weapon === 'swivel' ? 0.07 : 0.14, 12, 10), toon(0x1b1f2a));
+  m.traverse(o => { o.castShadow = true; });
+  return m;
+}
+// a piece broke off the raft (guest): move its parts into a raft of their own, in the same local frame
+function netGuestFragment(so) {
+  const N = battle.net, parts = [];
+  let from = null;
+  for (const sh of battle.ships) if (sh.team === so.tm) for (const p of sh.parts) if (so.ids.includes(p.id)) { parts.push(p); from = sh; }
+  if (!from || !parts.length) return null;
+  const body = world.createRigidBody(RAPIER.RigidBodyDesc.kinematicPositionBased().setTranslation(so.p[0], so.p[1], so.p[2]));
+  const frag = { team: so.tm, nid: so.n, parts: [], group: new THREE.Group(), alive: true, capT: 0, why: '', cols: new Map(), blocked: new Set(), stations: [], maxHp: 0,
+    prev: { p: new THREE.Vector3(), q: new THREE.Quaternion() }, thr: 0, steer: 0, driveIn: { thr: 0, steer: 0 }, leaking: 0, body, fragment: true };
+  scene.add(frag.group);
+  for (const p of parts) {
+    frag.group.add(p.mesh);
+    from.parts.splice(from.parts.indexOf(p), 1); frag.parts.push(p); p.ship = frag;
+    if (p.station) { from.stations.splice(from.stations.indexOf(p.station), 1); frag.stations.push(p.station); }
+  }
+  recolumn(frag); recolumn(from);
+  battle.ships.push(frag); N.ships.set(frag.nid, frag);
+  return frag;
+}
+// a part was destroyed (guest): it shrinks away and throws a few splinters
+function netGuestBreak(ship, part) {
+  part.alive = false; part.hp = 0;
+  part.mesh.userData.dying = 1;
+  const wc = toWorld(ship, part.box.center, new THREE.Vector3()), P = PARTS[part.type];
+  for (let i = 0; i < 3; i++) {
+    const s = 0.22 + Math.random() * 0.22;
+    const m = new THREE.Mesh(new THREE.BoxGeometry(s * (part.type === 'plank' ? 1.6 : 1), part.type === 'plank' || part.type === 'plate' ? 0.1 : s, s), toon(P.color));
+    m.castShadow = true; scene.add(m);
+    const off = new THREE.Vector3((Math.random() - 0.5) * 0.6, (Math.random() - 0.5) * 0.4, (Math.random() - 0.5) * 0.6);
+    m.position.copy(wc).add(off);
+    battle.debris.push({ m, v: off.multiplyScalar(4).add(new THREE.Vector3(0, 1.5 + Math.random() * 2, 0)), w: new THREE.Vector3((Math.random() - 0.5) * 9, (Math.random() - 0.5) * 9, (Math.random() - 0.5) * 9), density: Math.min(P.density, 3), life: 9, size: s });
+  }
+  recolumn(ship);
+}
+// harpoon ropes (guest): a gently sagging line between the two ends the host reports
+function netGuestRopes() {
+  const N = battle.net, data = N.ropeData || [];
+  while (N.ropes.length < data.length) { const geo = new THREE.BufferGeometry(); geo.setAttribute('position', new THREE.Float32BufferAttribute(new Float32Array(16 * 3), 3)); const l = new THREE.Line(geo, ropeMat); l.frustumCulled = false; scene.add(l); N.ropes.push(l); }
+  N.ropes.forEach((l, i) => {
+    const d = data[i]; l.visible = !!d; if (!d) return;
+    const pos = l.geometry.attributes.position, len = Math.hypot(d[3] - d[0], d[4] - d[1], d[5] - d[2]);
+    for (let j = 0; j < 16; j++) { const u = j / 15; pos.setXYZ(j, d[0] + (d[3] - d[0]) * u, d[1] + (d[4] - d[1]) * u - Math.sin(Math.PI * u) * Math.min(0.6, len * 0.04), d[2] + (d[5] - d[2]) * u); }
+    pos.needsUpdate = true;
+  });
+}
+function netGuestWreck(dt) {
+  const N = battle.net, w = N.wk;
+  if (w && !N.flare) { N.flare = new THREE.Mesh(flareGeo, new THREE.MeshBasicMaterial({ color: 0xff5a3c, transparent: true, opacity: 0, depthWrite: false, side: THREE.DoubleSide })); N.flare.renderOrder = 4; scene.add(N.flare); }
+  if (N.flare) {
+    if (!w) { scene.remove(N.flare); N.flare = null; return; }
+    N.flare.position.set(w[0], 7, w[1]);
+    N.flare.material.opacity = Math.min(0.45, w[2] * 0.3) * (w[2] > 14 ? Math.max(0, 1 - (w[2] - 14) / 2) : 1);
+    N.flare.scale.x = N.flare.scale.z = 1 + 0.08 * Math.sin(w[2] * 5);
+    battle.wreck = { p: new THREE.Vector3(w[0], 0, w[1]), t: w[2], flare: N.flare, spawned: true, guest: true };
+  } else if (battle.wreck && battle.wreck.guest) battle.wreck = null;
+}
+function netCleanup() {
+  const N = battle.net; if (!N) return;
+  for (const m of N.proj.values()) scene.remove(m);
+  for (const l of N.ropes) scene.remove(l);
+  if (N.flare) scene.remove(N.flare);
+}
 
 </script>
