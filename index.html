@@ -176,7 +176,7 @@
   .scoreboard .sb-side { display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 1px; padding: 4px 14px 5px; min-width: 56px; background: var(--tc, #1e6fd9); color: #fff; }
   .scoreboard > .sb-side { border-radius: 14px; box-shadow: 0 4px 0 rgba(11,42,74,.35); }        /* every enemy past the first: a bubble of its own */
   .scoreboard .sb-side i { font-style: normal; font-size: .64rem; font-weight: 700; letter-spacing: .02em; opacity: .92; max-width: 140px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }      /* who's on that side */
-  .scoreboard .sb-side b { font-size: 1.6rem; line-height: 1; transition: transform .2s ease; }
+  .scoreboard .sb-side b { font-size: 1.6rem; line-height: 1; transition: transform .2s ease; text-shadow: 0 2px 0 rgba(11,42,74,.55); }
   .scoreboard .sb-side b.up { transform: scale(1.25); }
   .scoreboard .sb-round { display: flex; align-items: center; padding: 0 12px; font-size: .75rem; font-weight: 700; letter-spacing: .05em; text-transform: uppercase; white-space: nowrap; }
   body.in-menu .scoreboard { display: none; }
@@ -390,7 +390,7 @@
 <div class="xhair" id="xhair" hidden aria-hidden="true"></div>
 <div class="countdown" id="countdown" aria-live="assertive" hidden></div>
 <div class="top">
-  <div class="brand"><h1>FLOAT GOAT</h1><span id="verTag">v0.41</span></div>
+  <div class="brand"><h1>FLOAT GOAT</h1><span id="verTag">v0.42</span></div>
   <div class="scoreboard" id="scoreboard" aria-label="Score"></div>
   <div class="pill phasep" title="Phase and time left"><span id="phase">Build</span><span id="timer">3:00</span></div>
 
@@ -558,7 +558,7 @@ const RAPIER_URL = 'https://cdn.jsdelivr.net/npm/@dimforge/rapier3d-compat@0.14.
 
 // the demo copy (shared privately) has testing controls; the live site (GitHub Pages) never shows them
 const DEMO = typeof location === 'undefined' || !/github\.io$/i.test(location.hostname);
-const DEMO_BUILD = 8;        // demo builds between ships: shown as "v0.39 · demo 3"; the version itself only moves when shipping
+const DEMO_BUILD = 1;        // demo builds between ships: shown as "v0.39 · demo 3"; the version itself only moves when shipping
 function fail(msg) {
   const d = document.createElement('div');
   d.className = 'err'; d.textContent = msg; document.body.appendChild(d);
@@ -8374,6 +8374,7 @@ const FG_LOG = [
   ['0.39', 'Seven material tiers, ramps, pontoons, railing, keel fin and climbing net; Rusty/Standard/Racing motors; treasure tows through gaps; fight music; fade into the arena with a 3-2-1-FLOAT countdown and back to the harbour with BUILD; harpoon sounds; footsteps that sound like the deck you\'re on; mouse wheel scrolls the parts tray; one build bar along the parts tray with a big gold counter and a ? for controls; match scoreboard; patch notes'],
   ['0.40', 'Play vs bots lobby (bots on any team); flintlocks with real shots, aiming, reload animation and crosshair; hand harpoons (rusty, standard, hunting): aim and throw, the rope hauls in; rusty/normal/gold weapons; small, medium and large motors in rusty, standard and racing; floating damage numbers and parts that wear down in stages; collisions by weight and speed (styrofoam does no impact damage); new treasure (goblet, pearl, spice crate), heavier is worth more, and better treasure turns up as the match goes on; fishing: aim with a landing ring, hold to reel, snags pouches on the way in; store sign with selling and undo; Space lets go of heavy treasure; capsized rafts stay usable; bots build like players and give up on treasure too heavy for them; defaults 3 min build, 5 min battle, 10 rounds; fixed gold going negative'],
   ['0.41', 'Bots shoot their flintlocks and keep busy; smaller treasure field with rafts starting further apart and more treasure each round; fights get longer through the match (1:45 up to 5:00); hold left click to reel harpoons in, R lets go, with a controls card; a missed harpoon is pulled straight back; treasure on a line is pulled on its own and can be torn out of hands; new scoreboard with every team and its players; main menu music, with songs fading into each other; grey backdrop for white parts in the tray'],
+  ['0.42', 'Scoreboard numbers get a drop shadow so they read at a glance'],
 ];
 
 // =====================================================================================
