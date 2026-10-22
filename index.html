@@ -66,7 +66,7 @@
   .partmenu .pm-row .btn { padding: 6px 10px; font-size: .85rem; }
   .partmenu .pm-remove { background: var(--bad); color: #fff; box-shadow: 0 3px 0 #a3203a; }
 
-  .readout { position: fixed; z-index: 2; top: calc(env(safe-area-inset-top, 0px) + 54px); left: max(16px, env(safe-area-inset-left, 0px));
+  .readout { position: fixed; z-index: 2; top: calc(var(--topH, 46px) + 8px); left: max(16px, env(safe-area-inset-left, 0px));
     width: min(300px, calc(100vw - 32px)); background: var(--panel); border-radius: 14px; padding: 10px 12px; box-shadow: 0 4px 0 rgba(11,42,74,.15); font-size: .86rem; }
   .readout .row { display: grid; grid-template-columns: 74px auto 1fr; gap: 8px; align-items: baseline; padding: 3px 0; }
   .readout .row + .row { border-top: 1px solid rgba(11,42,74,.08); }
@@ -107,10 +107,18 @@
 
   .snapctl select:disabled { opacity: .45; }
   body.testing .snapctl { display: none; }
-  .btn.primary { background: var(--sun); box-shadow: 0 4px 0 #d9a400; margin-left: auto; font-size: 1rem; padding: 10px 18px; }
+  .btn.primary { background: var(--sun); box-shadow: 0 4px 0 #d9a400; font-size: 1rem; padding: 10px 18px; }
   .tray { display: flex; gap: 14px; overflow-x: auto; pointer-events: auto; padding: 10px 12px 10px; scrollbar-width: thin;
     background: rgba(11,42,74,.35); border-radius: 18px; max-height: 38vh; }
   .tgroup { flex: 0 0 auto; display: grid; gap: 6px; align-content: start; }
+  .tgroup.tier { grid-template-columns: auto auto; align-items: start; column-gap: 8px; }
+  .tgroup.tier .tcards { grid-row: 1; grid-column: 2; }
+  .tgroup.tier.collapsed .tcards { display: none; }
+  .tier-h { grid-row: 1; grid-column: 1; writing-mode: vertical-rl; transform: rotate(180deg); display: flex; align-items: center; gap: 6px; border: 0; border-radius: 10px; padding: 10px 6px; font: 700 .8rem var(--ui); letter-spacing: .06em; text-transform: uppercase; color: #fff; background: rgba(11,42,74,.45); cursor: pointer; align-self: stretch; }
+  .tier-h i { width: 12px; height: 12px; border-radius: 3px; box-shadow: inset 0 0 0 1px rgba(0,0,0,.25); }
+  .tier-h b { font-size: .7rem; opacity: .8; }
+  .tier-h[aria-expanded="true"] { background: rgba(11,42,74,.7); }
+  .tier-h:focus-visible { outline: 2px solid #fff; outline-offset: 2px; }
   .tgroup h3 { margin: 0 2px; color: #fff; font-size: .78rem; font-weight: 700; letter-spacing: .06em; text-transform: uppercase; text-shadow: 0 1px 0 rgba(11,42,74,.5); }
   .tcards { display: grid; grid-auto-flow: column; grid-template-rows: repeat(2, auto); gap: 8px; }
   .card { display: grid; grid-template-columns: auto auto; grid-template-rows: auto auto auto; column-gap: 8px; row-gap: 1px; align-items: center; width: 148px;
@@ -120,7 +128,35 @@
   .card .cost { font-weight: 700; font-size: .85rem; color: #b07a00; justify-self: end; }
   .card .st { grid-column: 1 / 3; font-size: .72rem; opacity: .8; line-height: 1.25; }
   body.tray-min .tray { display: none; }
-  .tray-toggle { pointer-events: auto; justify-self: start; }
+  .tray-toggle { pointer-events: auto; }
+  /* the build bar: one row along the top of the parts tray */
+  .tools { position: relative; }
+  .helpwrap { display: inline-flex; }
+  .help { width: 34px; height: 34px; border-radius: 50%; border: 2px solid #fff; background: rgba(11,42,74,.55); color: #fff; font: 700 1rem var(--ui); cursor: pointer; box-shadow: 0 3px 0 rgba(11,42,74,.22); }
+  .help[aria-expanded="true"] { background: var(--ink); }
+  .help:focus-visible { outline: 2px solid var(--sun); outline-offset: 2px; }
+  .helppop { position: absolute; left: 0; bottom: calc(100% + 10px); width: min(420px, calc(100vw - 32px)); background: var(--panel); color: var(--ink); border-radius: 14px; padding: 10px 14px; font-size: .85rem; font-weight: 600; line-height: 1.45; box-shadow: 0 6px 0 rgba(11,42,74,.22); z-index: 6; }
+  .helppop::after { content: ""; position: absolute; left: 118px; top: 100%; border: 8px solid transparent; border-top-color: var(--panel); }
+  /* gold: big and warm, right by the buttons that spend it */
+  .goldbig { pointer-events: auto; margin-left: auto; display: inline-flex; align-items: center; gap: 8px; padding: 6px 16px 6px 8px; border-radius: 999px;
+    background: linear-gradient(#ffe27a, #ffc93c); box-shadow: 0 4px 0 #c98a00, inset 0 2px 0 rgba(255,255,255,.6); color: #5a3a00; font-weight: 700; font-size: 1.5rem; font-variant-numeric: tabular-nums; line-height: 1; }
+  .goldbig .coin { width: 26px; height: 26px; border-radius: 50%; background: radial-gradient(circle at 35% 35%, #fff6c4, #f5b400 55%, #b07a00); box-shadow: inset 0 0 0 2px rgba(122,82,0,.45); }
+  .goldbig.bump { animation: gbump .45s cubic-bezier(.2,1.6,.4,1); }
+  .goldbig.spend { animation: gspend .35s ease-out; }
+  @keyframes gbump { 0% { transform: scale(1); } 40% { transform: scale(1.18); } 100% { transform: scale(1); } }
+  @keyframes gspend { 0% { transform: translateY(0); } 40% { transform: translateY(3px) scale(.96); } 100% { transform: none; } }
+  .btn.primary + .btn.battle-go { margin-left: 0; }
+  /* the match score: its own board, top middle */
+  .scoreboard { position: fixed; z-index: 3; top: calc(var(--topH, 46px) + 8px); left: 50%; transform: translateX(-50%); display: flex; align-items: stretch; gap: 0; pointer-events: none;
+    background: var(--ink); color: #fff; border-radius: 14px; box-shadow: 0 4px 0 rgba(11,42,74,.35); overflow: hidden; font-variant-numeric: tabular-nums; }
+  .scoreboard .sb-side { display: flex; align-items: center; gap: 8px; padding: 6px 14px; }
+  .scoreboard .sb-side i { font-style: normal; font-size: .72rem; font-weight: 700; letter-spacing: .08em; text-transform: uppercase; opacity: .85; }
+  .scoreboard .sb-side b { font-size: 1.6rem; line-height: 1; }
+  .scoreboard .you { background: #1e6fd9; } .scoreboard .them { background: var(--coral); }
+  .scoreboard .sb-round { display: flex; align-items: center; padding: 0 12px; font-size: .75rem; font-weight: 700; letter-spacing: .05em; text-transform: uppercase; white-space: nowrap; }
+  body.battle .scoreboard, body.in-menu .scoreboard { display: none; }
+  @media (max-width: 640px) { .scoreboard { position: static; transform: none; } .readout { top: calc(var(--topH, 46px) + 8px); } .scoreboard .sb-side { padding: 4px 10px; } .scoreboard .sb-side b { font-size: 1.25rem; } .scoreboard .sb-round { padding: 0 8px; font-size: .68rem; } }
+  @media (prefers-reduced-motion: reduce) { .goldbig.bump, .goldbig.spend { animation: none; } }
   @media (max-width: 560px) { .card { width: 128px; } .card .thumb { width: 104px; height: 73px; } .tcards { grid-template-rows: auto; } }
   .card[aria-pressed="true"] { outline: 3px solid var(--coral); }
   .card:disabled { opacity: .45; cursor: not-allowed; }
@@ -226,6 +262,23 @@
     animation: lbob 2.8s ease-in-out infinite; animation-delay: calc(var(--i) * -.31s); transform-origin: 50% 80%; }
   .logo .lrow.goat span { color: #fff; text-shadow: 0 -4px 0 #ffffff, 4px 0 0 var(--ink), -4px 0 0 var(--ink), 0 4px 0 var(--ink), 0 -4px 0 var(--ink), 3px 3px 0 var(--ink), -3px 3px 0 var(--ink), 3px -3px 0 var(--ink), -3px -3px 0 var(--ink), 0 10px 0 var(--ink), 0 14px 12px rgba(0,0,0,.25); }
   .logo .lrow.goat span:nth-child(2n) { color: var(--coral); }
+  /* ---- into the fight: fade, then 3 2 1 FLOAT in the logo's lettering ---- */
+  .fadeov { position: fixed; inset: 0; background: #06223a; opacity: 0; pointer-events: none; transition: opacity .55s ease; z-index: 40; }
+  .fadeov.on { opacity: 1; }
+  .countdown { position: fixed; left: 50%; top: 42%; transform: translate(-50%, -50%); z-index: 41; pointer-events: none; font-weight: 700; line-height: 1; }
+  .countdown span { display: inline-block; }
+  .countdown .cdn, .countdown .cdw > span { color: #6fdcff;
+    text-shadow: 0 -5px 0 #d8f7ff, 5px 0 0 var(--ink), -5px 0 0 var(--ink), 0 5px 0 var(--ink), 0 -5px 0 var(--ink), 4px 4px 0 var(--ink), -4px 4px 0 var(--ink), 4px -4px 0 var(--ink), -4px -4px 0 var(--ink), 0 12px 0 var(--ink), 0 18px 16px rgba(0,0,0,.3); }
+  .countdown .cdn { font-size: clamp(90px, 28vh, 260px); }
+  .countdown.num.on .cdn { animation: cdpop .8s cubic-bezier(.2,1.4,.4,1) both; }
+  .countdown .cdsub { display: block; text-align: center; margin-top: 18px; color: #fff; font-size: clamp(16px, 2.6vh, 24px); font-weight: 700; text-shadow: 0 2px 0 var(--ink), 0 0 10px rgba(11,42,74,.5); }
+  .countdown.go.on .cdsub { animation: cdsub 1.6s ease both; }
+  @keyframes cdsub { 0% { opacity: 0; transform: translateY(8px); } 20%, 75% { opacity: 1; transform: none; } 100% { opacity: 0; } }
+  .countdown .cdw { display: flex; gap: .02em; font-size: clamp(60px, min(18vw, 16vh), 190px); }
+  .countdown.go.on .cdw > span { animation: cdgo 1.2s cubic-bezier(.2,1.5,.4,1) both; animation-delay: calc(var(--i) * .05s); }
+  @keyframes cdpop { 0% { opacity: 0; transform: scale(2.4) rotate(-8deg); } 25% { opacity: 1; transform: scale(1) rotate(0); } 75% { opacity: 1; transform: scale(1.06); } 100% { opacity: 0; transform: scale(.7); } }
+  @keyframes cdgo { 0% { opacity: 0; transform: translateY(40px) scale(.4) rotate(-10deg); } 20% { opacity: 1; transform: translateY(-14px) scale(1.15) rotate(4deg); } 35% { transform: translateY(0) scale(1) rotate(-2deg); } 75% { opacity: 1; transform: translateY(-6px) scale(1.04) rotate(2deg); } 100% { opacity: 0; transform: translateY(-30px) scale(1.3); } }
+  @media (prefers-reduced-motion: reduce) { .countdown.on .cdn, .countdown.on .cdw > span { animation-duration: .01s; } .fadeov { transition-duration: .01s !important; } }
   @keyframes lbob { 0%, 100% { transform: translateY(0) rotate(-3deg); } 50% { transform: translateY(-9px) rotate(3deg); } }
   @media (prefers-reduced-motion: reduce) { .logo .lrow span { animation: none; } }
   .mpanel { grid-row: 2; width: min(380px, 100%); background: var(--panel); border-radius: 22px; padding: 18px; box-shadow: 0 6px 0 rgba(11,42,74,.25); display: flex; flex-direction: column; gap: 10px; box-sizing: border-box; }
@@ -242,6 +295,15 @@
   .mvol label { display: grid; grid-template-columns: 6.2em 1fr; gap: 8px; align-items: center; font-weight: 600; font-size: .9rem; }
   .mvol input[type=range] { width: 100%; margin: 0; accent-color: #1f6fb2; cursor: pointer; }
   .mnote { margin: 0; font-size: .88rem; color: rgba(11,42,74,.75); min-height: 1.2em; }
+  .mlog { margin-left: 10px; border: 0; border-radius: 999px; padding: 4px 10px; font: 600 .78rem var(--ui); color: var(--ink); background: rgba(255,255,255,.85); cursor: pointer; }
+  .mlog:hover { background: #fff; }
+  .mpanel.logp { background: #f4f9ff; position: fixed; left: 50%; top: 50%; transform: translate(-50%, -50%); width: min(560px, calc(100vw - 32px)); max-height: min(70vh, 640px); display: flex; flex-direction: column; gap: 10px; z-index: 30; }
+  .logp[hidden] { display: none !important; }
+  .loghead { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
+  .loghead h2 { margin: 0; }
+  .loglist { list-style: none; margin: 0; padding: 0 4px 0 0; overflow-y: auto; display: grid; gap: 8px; }
+  .loglist li { display: grid; grid-template-columns: 52px 1fr; gap: 10px; align-items: baseline; font-size: .9rem; line-height: 1.35; }
+  .loglist b { font-variant-numeric: tabular-nums; color: #1f6fb2; }
   .mver { position: fixed; left: max(16px, env(safe-area-inset-left, 0px)); bottom: calc(env(safe-area-inset-bottom, 0px) + 12px); margin: 0; color: #fff; font-weight: 600; font-size: .8rem; text-shadow: 0 1px 0 rgba(11,42,74,.5); }
   .llist { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 8px; max-height: 46vh; overflow-y: auto; }
   .llist button { width: 100%; text-align: left; display: flex; justify-content: space-between; align-items: center; gap: 8px; }
@@ -268,19 +330,24 @@
 </style>
 
 <canvas id="game" aria-label="3D raft building view on the water"></canvas>
+<div class="fadeov" id="fadeOv" aria-hidden="true"></div>
+<div class="countdown" id="countdown" aria-live="assertive" hidden></div>
 <div class="top">
-  <div class="brand"><h1>FLOAT GOAT</h1><span>v1.12</span></div>
+  <div class="brand"><h1>FLOAT GOAT</h1><span id="verTag">v0.39</span></div>
+  <div class="scoreboard" id="scoreboard" aria-label="Match score">
+    <span class="sb-side you"><i>You</i><b id="scoreYou">0</b></span>
+    <span class="sb-round" id="round">Round 1/3</span>
+    <span class="sb-side them"><b id="scoreThem">0</b><i id="scoreThemName">Them</i></span>
+  </div>
   <div class="pill phasep" title="Phase and time left"><span id="phase">Build</span><span id="timer">3:00</span></div>
-  <div class="pill" id="round">Round 1/3</div>
-  <div class="pill" title="Treasure points: you – dummy">★ <span id="score">0 – 0</span></div>
-  <div class="pill" title="Gold"><span class="coin"></span><span id="gold">1000</span></div>
+
   <div class="pill vol" title="Volume">
     <label for="musicVol" title="Music volume">♪</label><input type="range" id="musicVol" min="0" max="1" step="0.01" value="0.5" aria-label="Music volume">
     <label for="sfxVol" title="Sound volume">🔊</label><input type="range" id="sfxVol" min="0" max="1" step="0.01" value="0.5" aria-label="Sound volume">
   </div>
-  <div class="pill vol" title="Wave height (demo)"><label for="waveLvl">🌊</label><input type="range" id="waveLvl" min="0" max="4" step="0.05" value="0.55" aria-label="Wave height"><span id="waveVal">0.55</span></div>
-  <button class="pill" id="addGold" title="Demo: add gold">+500g</button>
-  <button class="pill" id="balBtn" aria-pressed="true" title="Demo: sailors balancing on the deck">Balance on</button>
+  <div class="pill vol demo" title="Wave height (demo)"><label for="waveLvl">🌊</label><input type="range" id="waveLvl" min="0" max="4" step="0.05" value="0.55" aria-label="Wave height"><span id="waveVal">0.55</span></div>
+  <button class="pill demo" id="addGold" title="Demo: add gold">+500g</button>
+  <button class="pill demo" id="balBtn" aria-pressed="true" title="Demo: sailors balancing on the deck">Balance on</button>
   <button class="pill" id="settingsBtn" aria-label="Host settings">⚙</button>
 </div>
 <section class="store" id="store" hidden aria-label="Item store">
@@ -345,17 +412,19 @@
 <div class="stick x" id="stickR"><div class="knob" id="knobR"></div></div>
 <div class="bottom">
   <div class="tools">
+    <button class="btn tray-toggle" id="trayToggle" aria-expanded="true" aria-controls="tray">Hide parts</button>
+    <span class="helpwrap"><button class="help" id="helpBtn" type="button" aria-expanded="false" aria-controls="helpPop" aria-label="Building controls">?</button>
+      <span class="helppop" id="helpPop" role="tooltip" hidden><span id="trayHint"></span></span></span>
     <button class="btn" id="remove" aria-pressed="false">Remove</button>
     <button class="btn" id="undo">Undo</button>
     <button class="btn" id="clear">Clear</button>
     <span class="snapctl"><button class="btn" id="snapOn" aria-pressed="true" title="Grid snapping (G)">Snap</button><span class="sz" id="snapSize" role="group" aria-label="Grid size in blocks"><button data-s="0.125" title="⅛ block">⅛</button><button data-s="0.25" title="¼ block">¼</button><button data-s="0.5" title="½ block">½</button><button data-s="1" title="1 block">1</button></span></span>
     <div class="testbar"><input type="range" id="swell" min="0" max="1.6" step="0.05" value="1" hidden><button class="btn" id="rock">Rock it</button><span class="hintk">WASD drives the motor</span></div>
     <button class="btn store-go" id="storeBtn" aria-expanded="false" aria-controls="store">Store</button>
+    <div class="goldbig" title="Gold"><span class="coin"></span><span id="gold">1000</span></div>
     <button class="btn primary" id="test">Test in water</button>
     <button class="btn battle-go" id="ready">Ready</button>
   </div>
-  <p class="trayhint" id="trayHint"></p>
-  <button class="btn tray-toggle" id="trayToggle" aria-expanded="true" aria-controls="tray">Hide parts</button>
   <div class="tray" id="tray" role="group" aria-label="Parts"></div>
 </div>
 
@@ -396,7 +465,11 @@
     <p class="mnote" id="roomNote"></p>
     <div class="rbtns"><button class="mbtn" id="mLeave">Leave</button><button class="mbtn go" id="mStart">Start</button></div>
   </section>
-  <p class="mver" id="mVer"></p>
+  <p class="mver"><span id="mVer"></span><button class="mlog" id="mLogBtn" type="button">Patch notes</button></p>
+  <section class="mpanel logp" id="mLog" hidden aria-labelledby="mLogT">
+    <div class="loghead"><h2 id="mLogT">Patch notes</h2><button class="mbtn" id="mLogClose" type="button">Close</button></div>
+    <ol class="loglist" id="logList"></ol>
+  </section>
 </div>
 
 <script type="module">
@@ -404,6 +477,9 @@
 const THREE_URL = 'https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.js';
 const RAPIER_URL = 'https://cdn.jsdelivr.net/npm/@dimforge/rapier3d-compat@0.14.0/rapier.es.js';
 
+// the demo copy (shared privately) has testing controls; the live site (GitHub Pages) never shows them
+const DEMO = typeof location === 'undefined' || !/github\.io$/i.test(location.hostname);
+const DEMO_BUILD = 5;        // demo builds between ships: shown as "v0.39 · demo 3"; the version itself only moves when shipping
 function fail(msg) {
   const d = document.createElement('div');
   d.className = 'err'; d.textContent = msg; document.body.appendChild(d);
@@ -1075,12 +1151,25 @@ const SFX = {
   punch: ['sfx/punch/punch_01.mp3', 'sfx/punch/punch_01_a.mp3', 'sfx/punch/punch_01_b.mp3', 'sfx/punch/punch_01_c.mp3', 'sfx/punch/punch_02.mp3', 'sfx/punch/punch_02_a.mp3', 'sfx/punch/punch_02_b.mp3', 'sfx/punch/punch_02_c.mp3', 'sfx/punch/punch_03.mp3', 'sfx/punch/punch_03_a.mp3', 'sfx/punch/punch_03_b.mp3', 'sfx/punch/punch_03_c.mp3', 'sfx/punch/punch_04.mp3', 'sfx/punch/punch_04_a.mp3', 'sfx/punch/punch_04_b.mp3', 'sfx/punch/punch_04_c.mp3'],   // a shove landing on someone
   swivelFire: ['sfx/swivel_fire/swivel_01.mp3', 'sfx/swivel_fire/swivel_01_a.mp3', 'sfx/swivel_fire/swivel_01_b.mp3', 'sfx/swivel_fire/swivel_01_c.mp3'],
   ballastFire: ['sfx/ballast_fire/ballast_01.mp3', 'sfx/ballast_fire/ballast_01_a.mp3', 'sfx/ballast_fire/ballast_01_b.mp3', 'sfx/ballast_fire/ballast_01_c.mp3'],
+  harpoonFire: ['sfx/harpoon/harpoon_wobble_01.mp3', 'sfx/harpoon/harpoon_wobble_01_a.mp3', 'sfx/harpoon/harpoon_wobble_01_b.mp3', 'sfx/harpoon/harpoon_wobble_01_c.mp3'],   // the bolt leaving the gun (his recording)
+  harpoonHit: ['sfx/harpoon/harpoon_hit_01.mp3', 'sfx/harpoon/harpoon_hit_01_a.mp3', 'sfx/harpoon/harpoon_hit_01_b.mp3', 'sfx/harpoon/harpoon_hit_01_c.mp3', 'sfx/harpoon/harpoon_hit_02.mp3', 'sfx/harpoon/harpoon_hit_02_a.mp3', 'sfx/harpoon/harpoon_hit_02_b.mp3', 'sfx/harpoon/harpoon_hit_02_c.mp3'],   // the head biting into a raft or a treasure
+  harpoonWater: ['sfx/harpoon/harpoon_water_01.mp3', 'sfx/harpoon/harpoon_water_01_a.mp3', 'sfx/harpoon/harpoon_water_01_b.mp3', 'sfx/harpoon/harpoon_water_01_c.mp3', 'sfx/harpoon/harpoon_water_02.mp3', 'sfx/harpoon/harpoon_water_02_a.mp3', 'sfx/harpoon/harpoon_water_02_b.mp3', 'sfx/harpoon/harpoon_water_02_c.mp3'],   // a miss plunging into the sea
+  harpoonReel: ['sfx/harpoon/harpoon_reel_01.mp3', 'sfx/harpoon/harpoon_reel_01_a.mp3', 'sfx/harpoon/harpoon_reel_01_b.mp3', 'sfx/harpoon/harpoon_reel_01_c.mp3'],   // the winch ratchet while reeling in
+  harpoonSnap: ['sfx/harpoon/harpoon_snap_01.mp3', 'sfx/harpoon/harpoon_snap_01_a.mp3', 'sfx/harpoon/harpoon_snap_01_b.mp3', 'sfx/harpoon/harpoon_snap_01_c.mp3', 'sfx/harpoon/harpoon_snap_02.mp3', 'sfx/harpoon/harpoon_snap_02_a.mp3', 'sfx/harpoon/harpoon_snap_02_b.mp3', 'sfx/harpoon/harpoon_snap_02_c.mp3'],   // the rope parting
+  // footsteps, one set per deck material
+  step_wood: ['sfx/steps/step_wood_01.mp3', 'sfx/steps/step_wood_02.mp3', 'sfx/steps/step_wood_03.mp3', 'sfx/steps/step_wood_04.mp3'],
+  step_bamboo: ['sfx/steps/step_bamboo_01.mp3', 'sfx/steps/step_bamboo_02.mp3', 'sfx/steps/step_bamboo_03.mp3', 'sfx/steps/step_bamboo_04.mp3'],
+  step_plastic: ['sfx/steps/step_plastic_01.mp3', 'sfx/steps/step_plastic_02.mp3', 'sfx/steps/step_plastic_03.mp3', 'sfx/steps/step_plastic_04.mp3'],
+  step_styro: ['sfx/steps/step_styro_01.mp3', 'sfx/steps/step_styro_02.mp3', 'sfx/steps/step_styro_03.mp3', 'sfx/steps/step_styro_04.mp3'],
+  step_scrap: ['sfx/steps/step_scrap_01.mp3', 'sfx/steps/step_scrap_02.mp3', 'sfx/steps/step_scrap_03.mp3', 'sfx/steps/step_scrap_04.mp3'],
+  step_glass: ['sfx/steps/step_glass_01.mp3', 'sfx/steps/step_glass_02.mp3', 'sfx/steps/step_glass_03.mp3', 'sfx/steps/step_glass_04.mp3'],
+  step_steel: ['sfx/steps/step_steel_01.mp3', 'sfx/steps/step_steel_02.mp3', 'sfx/steps/step_steel_03.mp3', 'sfx/steps/step_steel_04.mp3'],
   drown: ['sfx/drown/drown_01.mp3', 'sfx/drown/drown_01_a.mp3', 'sfx/drown/drown_01_b.mp3', 'sfx/drown/drown_01_c.mp3', 'sfx/drown/drown_02.mp3', 'sfx/drown/drown_02_a.mp3', 'sfx/drown/drown_02_b.mp3', 'sfx/drown/drown_02_c.mp3', 'sfx/drown/drown_03.mp3', 'sfx/drown/drown_03_a.mp3', 'sfx/drown/drown_03_b.mp3', 'sfx/drown/drown_03_c.mp3'],   // a scream fading into bubbles
 };
-const MUSIC_URL = 'music/row_hard_mateys.mp3';
+const MUSIC = { build: 'music/row_hard_mateys.mp3', fight: 'music/cutlass_clash.mp3' };   // menu and building / battles
 // sliders run 0..1; halfway is the mix we picked (music 0.35, effects 0.9)
 const musicLevel = v => Math.min(1, 0.7 * v), sfxLevel = v => 1.8 * v;
-const audio = { ctx: null, out: null, buffers: new Map(), deck: {}, last: {}, started: false, music: null, musicVol: 0.5, sfxVol: 0.5 };
+const audio = { want: 'build', players: {}, ctx: null, out: null, buffers: new Map(), deck: {}, last: {}, started: false, music: null, musicVol: 0.5, sfxVol: 0.5 };
 try {
   const m = parseFloat(localStorage.getItem('floatgoat.musicVol')), f = parseFloat(localStorage.getItem('floatgoat.sfxVol'));
   if (m >= 0 && m <= 1) audio.musicVol = m; if (f >= 0 && f <= 1) audio.sfxVol = f;
@@ -1098,7 +1187,7 @@ function audioStart() {
       for (const list of Object.values(SFX)) for (const url of list) loadSound(url);
     }
   } catch (_) { audio.ctx = null; }
-  try { audio.music = new Audio(MUSIC_URL); audio.music.loop = true; audio.music.volume = 0; if (audio.musicVol > 0) musicFadeTo(musicLevel(audio.musicVol)); } catch (_) { audio.music = null; }
+  try { audio.music = musicEl(audio.want); if (audio.musicVol > 0) musicFadeTo(musicLevel(audio.musicVol)); } catch (_) { audio.music = null; }
 }
 function loadSound(url) {
   if (audio.buffers.has(url) || !audio.ctx) return;
@@ -1106,23 +1195,38 @@ function loadSound(url) {
   fetch(url).then(r => r.arrayBuffer()).then(b => audio.ctx.decodeAudioData(b)).then(buf => audio.buffers.set(url, buf)).catch(() => {});
 }
 // music eases in and out rather than starting or stopping dead
-let musicFade = null;
-function musicFadeTo(v) {
-  const a = audio.music; if (!a) return;
+function musicEl(name) {
+  if (!audio.players[name]) { const a = new Audio(MUSIC[name]); a.loop = true; a.volume = 0; audio.players[name] = a; }
+  return audio.players[name];
+}
+function fadeEl(a, v, step = 0.02) {
+  if (!a) return;
   if (v > 0 && a.paused) { const p = a.play(); if (p && p.catch) p.catch(() => {}); }
-  clearInterval(musicFade);
-  musicFade = setInterval(() => {
+  clearInterval(a._fade);
+  a._fade = setInterval(() => {
     const d = v - a.volume;
-    if (Math.abs(d) < 0.02) { a.volume = v; clearInterval(musicFade); if (v === 0) a.pause(); return; }
-    a.volume = Math.max(0, Math.min(1, a.volume + Math.sign(d) * 0.02));
+    if (Math.abs(d) < step) { a.volume = v; clearInterval(a._fade); if (v === 0) a.pause(); return; }
+    a.volume = Math.max(0, Math.min(1, a.volume + Math.sign(d) * step));
   }, 40);
 }
+function musicFadeTo(v) { fadeEl(audio.music, v); }
+// switch songs: the old one fades out, the new one starts from the top and fades in
+function musicTrack(name) {
+  audio.want = name;
+  if (!audio.started) return;
+  let next; try { next = musicEl(name); } catch (_) { return; }
+  if (audio.music === next && !next.paused) return;
+  if (audio.music && audio.music !== next) fadeEl(audio.music, 0, 0.035);
+  audio.music = next; next.currentTime = 0;
+  if (audio.musicVol > 0) fadeEl(next, musicLevel(audio.musicVol), 0.03);
+}
+function musicOut() { if (audio.music) fadeEl(audio.music, 0, 0.035); }
 // volume sliders: music follows the slider directly (no fade while dragging); 0 pauses it
 function setMusicVol(v) {
   audio.musicVol = v;
   try { localStorage.setItem('floatgoat.musicVol', String(v)); } catch (_) {}
   const a = audio.music; if (!a) return;
-  clearInterval(musicFade);
+  clearInterval(a._fade);
   if (v <= 0) { a.volume = 0; a.pause(); return; }
   a.volume = musicLevel(v);
   if (a.paused) { const p = a.play(); if (p && p.catch) p.catch(() => {}); }
@@ -1153,8 +1257,8 @@ function nextFromDeck(name) {
 }
 // play an effect; at a world position it's quieter far away and comes from that side
 const _sp = new THREE.Vector3(), _sr = new THREE.Vector3();
-function playSfx(name, worldPos, vol = 1) {
-  if (battle.net && battle.net.host && worldPos) battle.fx.push(['a', name, +worldPos.x.toFixed(2), +worldPos.y.toFixed(2), +worldPos.z.toFixed(2), vol]);   // the guests hear it too
+function playSfx(name, worldPos, vol = 1, local = false) {
+  if (!local && battle.net && battle.net.host && worldPos) battle.fx.push(['a', name, +worldPos.x.toFixed(2), +worldPos.y.toFixed(2), +worldPos.z.toFixed(2), vol]);   // the guests hear it too
   const ctx = audio.ctx; if (!ctx) return;
   const url = nextFromDeck(name); const buf = url && audio.buffers.get(url); if (!buf) return;
   let gain = vol, pan = 0;
@@ -1193,7 +1297,7 @@ const fmtSpeed = mps => imp() ? `${(mps * 2.23694).toFixed(1)} mph` : `${mps.toF
 const fmtPower = kNt => imp() ? `${Math.round(kNt * 204)} lbf per ton` : `${kNt.toFixed(1)} kN per tonne`;
 const fmtDesc = d => d.replace(/\{(\d+)\}/g, (_, kg) => fmtMass(Number(kg)));
 const TEST_SWELL = 0.6;
-function waveLevel() { const e = document.getElementById('waveLvl'); return e ? Number(e.value) : 0.55; }
+function waveLevel() { const e = document.getElementById('waveLvl'); return DEMO && e ? Number(e.value) : 0.55; }
 
 // part catalogue. density is relative to water; vol is the real displacement (m^3)
 const PARTS = {
@@ -1201,11 +1305,11 @@ const PARTS = {
   plank:  { name: 'Planks',        cost: 15,  hp: 40,  density: 0.6,  size: [1, 0.14, 1],      color: 0xd99a5b },
   halfplank: { name: 'Half planks', cost: 8,   hp: 25,  density: 0.6,  size: [1, 0.14, 0.5],    color: 0xd99a5b },
   crate:  { name: 'Crate',         cost: 30,  hp: 80,  density: 0.5,  size: [0.9, 0.9, 0.9],   color: 0xd4a15f },
-  foam:   { name: 'Foam block',    cost: 50,  hp: 25,  density: 0.05, size: [0.9, 0.9, 0.9],   color: 0xffc93c },
-  plate:  { name: 'Metal plate',   cost: 60,  hp: 200, density: 7.8,  size: [1, 0.08, 1],      color: 0x9aa5b4 },
-  engine:   { name: 'Weak motor', cost: 150, hp: 50,  density: 2,    size: [0.5, 0.7, 0.4],  vol: 0.03, color: 0xff4f4f, thrust: 2.0, scale: 1,    station: 'drive' },
-  motor:    { name: 'Motor',      cost: 260, hp: 70,  density: 2.33, size: [0.6, 0.85, 0.5], vol: 0.06, color: 0x1e88ff, thrust: 4.5, scale: 1.2,  station: 'drive' },
-  bigmotor: { name: 'Big motor',  cost: 400, hp: 100, density: 2.6,  size: [0.75, 1.0, 0.6], vol: 0.1,  color: 0x2b2f3a, thrust: 8.0, scale: 1.45, station: 'drive' },
+  foam:   { name: 'Foam block',      cost: 50,  hp: 25,  density: 0.05, size: [0.9, 0.9, 0.9],   color: 0xffc93c },
+  plate:  { name: 'Steel plate',   cost: 60,  hp: 200, density: 7.8,  size: [1, 0.08, 1],      color: 0x9aa5b4 },
+  engine:   { name: 'Rusty motor', cost: 150, hp: 50,  density: 2,    size: [0.5, 0.7, 0.4],  vol: 0.03, color: 0xff4f4f, thrust: 2.0, scale: 1,    station: 'drive' },
+  motor:    { name: 'Standard motor',      cost: 260, hp: 70,  density: 2.33, size: [0.6, 0.85, 0.5], vol: 0.06, color: 0x1e88ff, thrust: 4.5, scale: 1.2,  station: 'drive' },
+  bigmotor: { name: 'Racing motor',  cost: 400, hp: 100, density: 2.6,  size: [0.75, 1.0, 0.6], vol: 0.1,  color: 0x2b2f3a, thrust: 8.0, scale: 1.45, station: 'drive' },
   cannon:  { name: 'Cannon',         cost: 900, hp: 90,  density: 6,    size: [0.8, 0.55, 0.8], vol: 0.03,  color: 0x2b2f3a, station: 'gun', weapon: 'cannon',  desc: '40 dmg + splash · 2.2 s' },
   swivel:  { name: 'Swivel gun',     cost: 250,  hp: 50,  density: 5,    size: [0.5, 0.45, 0.5], vol: 0.012, color: 0xc9a227, station: 'gun', weapon: 'swivel',  desc: '12 dmg · fires every 0.7 s' },
   mortar:  { name: 'Depth charge mortar', cost: 550, hp: 70, density: 4.7, size: [0.7, 0.5, 0.7], vol: 0.03, color: 0x2f6b4f, station: 'gun', weapon: 'mortar', desc: 'Sinks, blasts from below · 4 s' },
@@ -1213,11 +1317,117 @@ const PARTS = {
   ballast: { name: 'Ballast bomb',   cost: 400, hp: 50,  density: 3.7,  size: [0.6, 0.5, 0.6],  vol: 0.03,  color: 0xff9f1c, station: 'gun', weapon: 'ballast', desc: 'Sticks on, adds {250} · 5 s' },
   ram:     { name: 'Ram spike',      cost: 90,  hp: 120, density: 5,    size: [0.9, 0.4, 0.4],  vol: 0.02,  color: 0x9aa5b4, weapon: 'ram', side: true,         desc: 'Mount on a side · hurts by ramming' },
 };
+// ---- material tiers: every hull shape comes in seven materials. Price is the only gate. ----
+// dens: solid density (water = 1); hollow: density of a sealed float (pontoons); hp/cost scale the wood figures
+const TIERS = [
+  { id: 'styro',   name: 'Styrofoam',  dens: 0.05, hollow: 0.04, hp: 0.4,  cost: 0.45, col: [0xf4f1e6, 0xe4dfcf, 0xc9c2ad] },
+  { id: 'scrap',   name: 'Scrap',      dens: 0.95, hollow: 0.25, hp: 0.9,  cost: 0.5,  col: [0x8a6a50, 0x6b7378, 0x8c3b2a] },
+  { id: 'plastic', name: 'Plastic',    dens: 0.35, hollow: 0.07, hp: 0.6,  cost: 0.7,  col: [0x2f7fd8, 0x2a6fbd, 0xf2f2f2] },
+  { id: 'bamboo',  name: 'Bamboo',     dens: 0.4,  hollow: 0.12, hp: 0.85, cost: 0.85, col: [0xd2bd62, 0xbca853, 0x8f7b32] },
+  { id: 'wood',    name: 'Wood',       dens: 0.6,  hollow: 0.18, hp: 1,    cost: 1,    col: [0xd99a5b, 0xc4864a, 0x8a5a2b] },
+  { id: 'glass',   name: 'Fiberglass', dens: 0.45, hollow: 0.1,  hp: 1.8,  cost: 1.8,  col: [0xdcefe9, 0xc6e2da, 0x1f7a8c] },
+  { id: 'steel',   name: 'Steel',      dens: 2.6,  hollow: 0.3,  hp: 4,    cost: 3,    col: [0x9aa5b4, 0x87919f, 0x5d6673] },
+];
+const TIER = Object.fromEntries(TIERS.map(t => [t.id, t]));
+// shapes; wood keeps the original part names (plank, halfplank, crate), styrofoam's block is the foam block,
+// steel also has the thin plate
+const SHAPES = {
+  plank:     { name: 'Planks',      size: [1, 0.14, 1],    hp: 40, cost: 15, legacy: { wood: 'plank' } },
+  halfplank: { name: 'Half planks', size: [1, 0.14, 0.5],  hp: 25, cost: 8,  legacy: { wood: 'halfplank' } },
+  block:     { name: 'Block',       size: [0.9, 0.9, 0.9], hp: 80, cost: 30, legacy: { wood: 'crate', styro: 'foam' } },
+  ramp1:     { name: 'Low step',    size: [1, 0.25, 1],    hp: 30, cost: 10, ramp: true, volK: 0.55 },
+  ramp2:     { name: 'Wedge',       size: [1, 0.5, 1],     hp: 45, cost: 18, ramp: true, volK: 0.52 },
+  ramp3:     { name: 'Long ramp',   size: [2, 0.5, 1],     hp: 60, cost: 30, ramp: true, volK: 0.52 },
+  ramp4:     { name: 'Deck ramp',   size: [2, 1, 1],       hp: 80, cost: 45, ramp: true, volK: 0.51 },
+  pontoon:   { name: 'Pontoon',     size: [2, 0.6, 0.7],   hp: 90, cost: 40, hollow: true, volK: 0.8 },
+  railing:   { name: 'Railing',     size: [1, 0.6, 0.1],   hp: 30, cost: 10, volK: 0.25 },
+  keel:      { name: 'Keel fin',    size: [1, 0.6, 0.06],  hp: 50, cost: 22, keel: true, volK: 0.75 },
+};
+const PONTOON_NAMES = { styro: 'Foam float', scrap: 'Oil drums', plastic: 'Inflatable tube', bamboo: 'Bamboo bundle', wood: 'Timber float', glass: 'Fiberglass hull', steel: 'Steel pontoon' };
+const TIER_PARTS = {};            // tier id -> part keys, in tray order
+for (const T of TIERS) {
+  TIER_PARTS[T.id] = [];
+  for (const sk in SHAPES) {
+    const S = SHAPES[sk], legacy = S.legacy && S.legacy[T.id];
+    if (legacy) { Object.assign(PARTS[legacy], { tier: T.id, shape: sk, short: legacy === 'foam' ? 'Foam block' : S.name }); TIER_PARTS[T.id].push(legacy); continue; }
+    const k = `${sk}_${T.id}`, sz = S.size;
+    const short = sk === 'pontoon' ? PONTOON_NAMES[T.id] : S.name;
+    PARTS[k] = { name: sk === 'pontoon' ? short : `${T.name} ${S.name.toLowerCase()}`, short, tier: T.id, shape: sk,
+      cost: Math.max(2, Math.round(S.cost * T.cost)), hp: Math.round(S.hp * T.hp), density: S.hollow ? T.hollow : T.dens,
+      size: sz.slice(), vol: sz[0] * sz[1] * sz[2] * (S.volK || 1), color: T.col[0], ramp: !!S.ramp, keel: !!S.keel };
+    TIER_PARTS[T.id].push(k);
+  }
+  if (T.id === 'steel') { PARTS.plate.tier = 'steel'; PARTS.plate.short = 'Steel plate'; TIER_PARTS.steel.push('plate'); }
+  if (T.id === 'wood') { PARTS.barrel.tier = 'wood'; PARTS.barrel.short = 'Barrel'; TIER_PARTS.wood.push('barrel'); }
+}
+// a climbing net to hang over the side: swimmers on your team climb straight up it
+PARTS.net = { name: 'Climbing net', cost: 15, hp: 25, density: 0.3, size: [0.1, 1.1, 1], vol: 0.02, color: 0xd9c08a, side: true, net: true, desc: 'Hang it over a side · climb straight up from the water' };
 for (const k in PARTS) { const P = PARTS[k]; if (!P.vol) P.vol = P.size[0] * P.size[1] * P.size[2]; P.mass = P.vol * P.density; }
 
 // ---------- part meshes ----------
+// the tiered shapes: each material has its own look
+function tierMesh(type, ghost) {
+  const P = PARTS[type], T = TIER[P.tier], [c0, c1, c2] = T.col, g = new THREE.Group(), [sx, sy, sz] = P.size;
+  const M = c => { const m = toon(c, T.id === 'steel' || T.id === 'glass' ? {} : {}); if (ghost) { m.transparent = true; m.opacity = 0.72; } return m; };
+  const add = (geo, c, x = 0, y = 0, z = 0) => { const m = new THREE.Mesh(geo, M(c)); m.position.set(x, y, z); m.castShadow = !ghost; m.receiveShadow = !ghost; g.add(m); return m; };
+  const rivets = (w, d, y) => { for (const x of [-w / 2 + 0.08, w / 2 - 0.08]) for (const z of [-d / 2 + 0.08, d / 2 - 0.08]) add(new THREE.SphereGeometry(0.03, 6, 5), c2, x, y, z); };
+  const slab = (w, h, d) => {          // a flat piece (plank, half plank) in this material
+    if (T.id === 'bamboo') { const n = Math.max(2, Math.round(d / 0.125)); for (let i = 0; i < n; i++) { add(new THREE.CylinderGeometry(h / 2, h / 2, w, 8).rotateZ(Math.PI / 2), i % 2 ? c0 : c1, 0, 0, -d / 2 + d / n * (i + 0.5)); } for (const x of [-w / 2 + 0.1, w / 2 - 0.1]) add(new THREE.BoxGeometry(0.04, h * 1.08, d), c2, x, 0, 0); return; }
+    if (T.id === 'scrap') { const n = Math.max(2, Math.round(d / 0.25)), cs = [c0, c1, c2, 0x5d6673]; for (let i = 0; i < n; i++) add(new THREE.BoxGeometry(w * (0.9 + 0.1 * ((i * 7) % 3) / 2), h * (0.85 + 0.15 * (i % 2)), d / n - 0.02), cs[(i * 5) % 4], (i % 2 ? 0.04 : -0.03), 0, -d / 2 + d / n * (i + 0.5)); return; }
+    if (T.id === 'wood') { const n = Math.max(2, Math.round(d / 0.25)); for (let i = 0; i < n; i++) add(new THREE.BoxGeometry(w, h - 0.02, d / n - 0.02), i % 2 ? c0 : c1, 0, 0, -d / 2 + d / n * (i + 0.5)); for (const x of [-w * 0.4, w * 0.4]) add(new THREE.BoxGeometry(0.1, 0.03, d - 0.02), c2, x, h / 2, 0); return; }
+    add(new THREE.BoxGeometry(w, h, d), c0);
+    if (T.id === 'styro') { for (let i = 0; i < 5; i++) add(new THREE.SphereGeometry(0.04, 5, 4), c1, -w / 2 + w * ((i * 37) % 10) / 10 + 0.05, h / 2, -d / 2 + d * ((i * 53) % 10) / 10 + 0.05); }
+    if (T.id === 'plastic') { for (let i = 1; i < 4; i++) add(new THREE.BoxGeometry(w - 0.06, 0.02, 0.03), c1, 0, h / 2 + 0.005, -d / 2 + d * i / 4); }
+    if (T.id === 'glass') add(new THREE.BoxGeometry(w + 0.004, 0.03, d + 0.004), c2, 0, -h / 2 + 0.03, 0);
+    if (T.id === 'steel') rivets(w, d, h / 2 + 0.01);
+  };
+  const sh = P.shape;
+  if (sh === 'plank' || sh === 'halfplank') slab(sx, sy, sz);
+  else if (sh === 'block') {
+    if (T.id === 'bamboo') { for (let i = 0; i < 4; i++) for (let j = 0; j < 4; j++) add(new THREE.CylinderGeometry(sx / 8, sx / 8, sy, 8), (i + j) % 2 ? c0 : c1, -sx / 2 + sx / 8 * (2 * i + 1), 0, -sz / 2 + sz / 8 * (2 * j + 1)); add(new THREE.TorusGeometry(sx * 0.62, 0.025, 4, 4).rotateX(Math.PI / 2).rotateY(Math.PI / 4), c2, 0, sy * 0.25, 0); }
+    else { add(new THREE.BoxGeometry(sx, sy, sz), c0); for (const y of [-sy / 2 + 0.06, sy / 2 - 0.06]) add(new THREE.BoxGeometry(sx + 0.02, 0.06, sz + 0.02), T.id === 'scrap' ? 0x8c3b2a : c2, 0, y, 0); if (T.id === 'steel') { rivets(sx, sz, sy / 2 + 0.01); } }
+  } else if (P.ramp) {
+    const s = new THREE.Shape(); s.moveTo(-sx / 2, -sy / 2); s.lineTo(sx / 2, -sy / 2); s.lineTo(sx / 2, sy / 2); s.lineTo(-sx / 2, -sy / 2 + 0.03); s.lineTo(-sx / 2, -sy / 2);
+    const geo = new THREE.ExtrudeGeometry(s, { depth: sz, bevelEnabled: false }); geo.translate(0, 0, -sz / 2);
+    add(geo, c0);
+    // a few cleats across the slope so it reads as a ramp, and gives grip
+    const ang = Math.atan2(sy - 0.03, sx), n = Math.max(2, Math.round(sx / 0.35));
+    for (let i = 1; i < n; i++) { const u = i / n, c = add(new THREE.BoxGeometry(0.05, 0.03, sz - 0.08), c2, -sx / 2 + sx * u, -sy / 2 + 0.03 + (sy - 0.03) * u + 0.015, 0); c.rotation.z = ang; }
+  } else if (sh === 'pontoon') {
+    const r = sy / 2, L = sx, wz = sz / sy;
+    const tube = (len, rr, c, x = 0) => { const m = add(new THREE.CylinderGeometry(rr, rr, len, 14).rotateZ(Math.PI / 2), c, x); m.scale.z = wz; return m; };
+    const band = (x, c) => { const m = add(new THREE.TorusGeometry(r + 0.01, 0.022, 4, 16).rotateY(Math.PI / 2), c, x); m.scale.set(1, 1, wz); };
+    if (T.id === 'styro') { add(new THREE.BoxGeometry(L, sy, sz, 4, 2, 2), c0); add(new THREE.BoxGeometry(0.2, 0.14, 0.18), c1, L * 0.38, sy * 0.3, sz * 0.3); for (const x of [-L * 0.25, L * 0.25]) add(new THREE.BoxGeometry(0.03, sy + 0.02, sz + 0.02), 0xd9c08a, x); }
+    else if (T.id === 'scrap') { for (const [x, c] of [[-L / 4, 0x8c3b2a], [L / 4, 0x3f6a4c]]) { tube(L / 2 - 0.04, r, c, x); band(x - L / 8, 0x333a3e); band(x + L / 8, 0x333a3e); } band(0, 0xd9c08a); }
+    else if (T.id === 'plastic') { const m = add(new THREE.CapsuleGeometry(r, L - 2 * r, 6, 14).rotateZ(Math.PI / 2), c0); m.scale.z = wz; band(L * 0.3, 0xffd23f); add(new THREE.CylinderGeometry(0.04, 0.04, 0.08, 8), 0xf2f2f2, -L * 0.25, r + 0.02, 0); }
+    else if (T.id === 'bamboo') { for (const [y, z] of [[-0.3, -0.33], [-0.3, 0], [-0.3, 0.33], [0.3, -0.17], [0.3, 0.17]]) { add(new THREE.CylinderGeometry(sy * 0.22, sy * 0.22, L, 8).rotateZ(Math.PI / 2), c0, 0, y * sy, z * sz); } for (const x of [-L * 0.36, L * 0.36]) band(x, 0xd9c08a); }
+    else if (T.id === 'wood') { add(new THREE.BoxGeometry(L, sy, sz), c0); for (const y of [-sy * 0.17, sy * 0.17]) add(new THREE.BoxGeometry(L + 0.01, 0.02, sz + 0.01), 0x2a2420, 0, y); for (const x of [-L / 2, L / 2]) add(new THREE.BoxGeometry(0.02, sy + 0.01, sz + 0.01), 0x2a2420, x); }
+    else if (T.id === 'glass') { tube(L * 0.7, r, c0); for (const sx2 of [-1, 1]) { const c = add(new THREE.SphereGeometry(r, 14, 10), c0, sx2 * L * 0.35); c.scale.set(sx2 > 0 ? 1.8 : 1.1, 1, wz); } add(new THREE.BoxGeometry(L * 0.66, 0.03, sz * 0.96), c2, 0, -r * 0.2); }
+    else { tube(L * 0.8, r, c0); for (const sx2 of [-1, 1]) { const c = add(new THREE.ConeGeometry(r, L * 0.1, 10).rotateZ(-sx2 * Math.PI / 2), c0, sx2 * L * 0.45); c.scale.y = 1; c.scale.z = wz; } for (const x of [-0.6, -0.2, 0.2, 0.6]) band(x * L / 2, c2); }
+  } else if (sh === 'railing') {
+    const post = T.id === 'bamboo' ? x => add(new THREE.CylinderGeometry(0.035, 0.035, sy, 8), c0, x, 0, 0) : x => add(new THREE.BoxGeometry(0.07, sy, 0.07), c2 === 0xf2f2f2 ? c1 : c0, x, 0, 0);
+    for (const x of [-sx / 2 + 0.04, 0, sx / 2 - 0.04]) post(x);
+    const rail = (y, t) => T.id === 'bamboo' ? add(new THREE.CylinderGeometry(t / 2, t / 2, sx, 8).rotateZ(Math.PI / 2), c1, 0, y, 0) : add(new THREE.BoxGeometry(sx, t, sz * 0.9), T.id === 'steel' || T.id === 'glass' ? c2 : c1, 0, y, 0);
+    rail(sy / 2 - 0.04, 0.07); rail(0, 0.04);
+  } else if (sh === 'keel') {
+    const s = new THREE.Shape(); s.moveTo(-sx / 2, sy / 2); s.lineTo(sx / 2, sy / 2); s.lineTo(sx * 0.25, -sy / 2); s.lineTo(-sx * 0.35, -sy / 2 + 0.05); s.lineTo(-sx / 2, sy / 2);
+    const geo = new THREE.ExtrudeGeometry(s, { depth: sz, bevelEnabled: false }); geo.translate(0, 0, -sz / 2);
+    add(geo, c0); add(new THREE.BoxGeometry(sx, 0.04, sz + 0.03), c2, 0, sy / 2 - 0.02, 0);
+  }
+  return g;
+}
 function partMesh(type, ghost) {
   const P = PARTS[type], g = new THREE.Group();
+  if (P.shape && /_/.test(type)) return tierMesh(type, ghost);
+  if (type === 'net') {
+    const ropeM = toon(0xd9c08a); if (ghost) { ropeM.transparent = true; ropeM.opacity = 0.72; }
+    const [, h, w] = P.size;
+    const bar = new THREE.Mesh(new THREE.BoxGeometry(0.08, 0.08, w), ghost ? Object.assign(toon(0x8a5a2b), { transparent: true, opacity: 0.72 }) : toon(0x8a5a2b)); bar.position.y = h / 2 - 0.04; g.add(bar);
+    const cols = 6, rows = 7, seg = (a, b) => { const d = b.clone().sub(a), c = new THREE.Mesh(new THREE.CylinderGeometry(0.012, 0.012, d.length(), 4), ropeM); c.position.copy(a).addScaledVector(d, 0.5); c.quaternion.setFromUnitVectors(new THREE.Vector3(0, 1, 0), d.normalize()); c.castShadow = !ghost; g.add(c); };
+    const pt = (i, j) => new THREE.Vector3(0.02 * Math.sin(Math.PI * j / (rows - 1)), h / 2 - 0.06 - (h - 0.1) * j / (rows - 1), -w / 2 + 0.05 + (w - 0.1) * i / (cols - 1));
+    for (let i = 0; i < cols; i++) for (let j = 0; j < rows; j++) { if (j < rows - 1) seg(pt(i, j), pt(i, j + 1)); if (i < cols - 1) seg(pt(i, j), pt(i + 1, j)); }
+    return g;
+  }
   const M = c => { if (!ghost) return toon(c); const m = toon(c); m.transparent = true; m.opacity = 0.72; m.depthWrite = true; return m; };
   const add = (geo, c, x = 0, y = 0, z = 0) => { const m = new THREE.Mesh(geo, M(c)); m.position.set(x, y, z); m.castShadow = !ghost; m.receiveShadow = !ghost; g.add(m); return m; };
   if (type === 'barrel') {
@@ -1403,6 +1613,16 @@ function boxTopAt(b, x, z) {
   const n = new THREE.Vector3(axis === 0 ? 1 : 0, axis === 1 ? 1 : 0, axis === 2 ? 1 : 0).applyQuaternion(b.q);
   return { y: 50 - t0, ny: Math.abs(n.y) };
 }
+// a ramp's walking surface: low at the box's -x end, high at +x (only while it sits upright; tipped over, its box)
+function rampTopAt(b, x, z) {
+  const ax = boxAxes(b);
+  if (Math.abs(ax[1].y) < 0.95) return boxTopAt(b, x, z);
+  const dx = x - b.center.x, dz = z - b.center.z, lx = dx * ax[0].x + dz * ax[0].z, lz = dx * ax[2].x + dz * ax[2].z;
+  const L = b.size[0], R = b.size[1];
+  if (Math.abs(lx) > L / 2 || Math.abs(lz) > b.size[2] / 2) return null;
+  const h = Math.max(0.03, (R - 0.03) * (lx + L / 2) / L + 0.03);
+  return { y: b.center.y + Math.sign(ax[1].y) * (-R / 2 + h), ny: Math.cos(Math.atan2(R, L)) };
+}
 // one face of a box: outward normal, the two in-face axes with their half sizes
 function boxFace(b, k, s) {
   const ax = boxAxes(b), n = ax[k].clone().multiplyScalar(s), o = [0, 1, 2].filter(i => i !== k);
@@ -1443,7 +1663,7 @@ function columnsOf(parts) {
     if (p.alive === false || PARTS[p.type].side) continue;
     const a = p.aabb || boxAabb(p.box), [i0, j0] = colOf(a.min.x + 0.02, a.min.z + 0.02), [i1, j1] = colOf(a.max.x - 0.02, a.max.z - 0.02);
     for (let i = i0; i <= i1; i++) for (let j = j0; j <= j1; j++) {
-      const [x, z] = colCenter(i, j), hit = boxTopAt(p.box, x, z);
+      const [x, z] = colCenter(i, j), hit = PARTS[p.type].ramp ? rampTopAt(p.box, x, z) : boxTopAt(p.box, x, z);
       if (!hit) continue;
       const k = colKey(i, j);
       if (PARTS[p.type].station) { blocked.add(k); obst.set(k, Math.max(obst.get(k) ?? -Infinity, a.max.y)); continue; }
@@ -1930,8 +2150,9 @@ function placement(type, t, q, rot) {
   } else if (P.side) {
     const flatN = new THREE.Vector3(n.x, 0, n.z);
     const c = anchor.clone().addScaledVector(flatN.lengthSq() > 1e-6 ? flatN.clone().normalize() : UP, P.size[0] / 2 - 0.04);
+    if (P.net && onto) c.y = onto.aabb.max.y + 0.06 - P.size[1] / 2;          // hangs from the deck edge
     res.box = makeBox(type, c, qYaw(Math.atan2(-n.z, n.x)));
-    if (!onto || Math.abs(n.y) > 0.3 || PARTS[onto.type].station || PARTS[onto.type].side) res.why = 'Mount a ram on the side of a hull part';
+    if (!onto || Math.abs(n.y) > 0.3 || PARTS[onto.type].station || PARTS[onto.type].side) res.why = P.net ? 'Hang the net on the side of a hull part' : 'Mount a ram on the side of a hull part';
   } else {
     // the face of the new part that meets the surface: the one facing most against it
     const tmp = makeBox(type, new THREE.Vector3(), q);
@@ -2712,6 +2933,7 @@ function setPhase(ph) {
   if (sel) closeMenu();
   if (carry) dropCarry(true);     // whatever was in hand goes back where it was
   match.phase = ph; raft.history = [];
+  if (ph === 'build' && typeof musicTrack === 'function') musicTrack('build');
   if (ph === 'build') { timer.total = timer.left = Number($('buildTime').value); }
   if (ph === 'build') {
     if (selected && !phaseAllows(selected)) selected = null;
@@ -2725,7 +2947,8 @@ function nextPhase() {
     if (raft.mode === 'test') endTest();
     const dropped = dropLooseParts();
     if (dropped) setTimeout(() => flash(`${dropped.n} loose part${dropped.n > 1 ? 's' : ''} removed, +${dropped.g}g`), 1800);
-    match.phase = 'battle'; match.battleTotal = match.battleLeft = Number($('battleTime').value) || BATTLE_TIME; startBattle(); bigFlash('Battle!', `Round ${match.round} of ${match.rounds}`);
+    match.phase = 'battle'; match.battleTotal = match.battleLeft = Number($('battleTime').value) || BATTLE_TIME;
+    battleIntro(() => startBattle());
   }
 }
 function newRound() {
@@ -2734,7 +2957,8 @@ function newRound() {
   if (match.round <= 1) raft.gold = START_GOLD - layoutCost();
   else raft.gold += ROUND_GOLD;
   setPhase('build');
-  bigFlash(`Round ${match.round} of ${match.rounds}`, match.round > 1 ? `+${ROUND_GOLD}g · Build your raft` : 'Build your raft');
+  const sub = `Round ${match.round} of ${match.rounds}` + (match.round > 1 ? ` · +${ROUND_GOLD}g` : '');
+  if (typeof showWord === 'function' && !(typeof __FG_TEST !== 'undefined' && __FG_TEST)) showWord('BUILD', sub); else bigFlash(`Round ${match.round} of ${match.rounds}`, match.round > 1 ? `+${ROUND_GOLD}g · Build your raft` : 'Build your raft');
 }
 function restartMatch() {
   if (raft.mode === 'battle') exitBattle(); else if (raft.mode === 'test') endTest();
@@ -2750,29 +2974,49 @@ function bigFlash(title, sub) {
 // ---------- UI ----------
 const $ = id => document.getElementById(id);
 // the parts menu: grouped cards, each with a little turning model of the part
-const TRAY_GROUPS = [['Hull', ['barrel', 'plank', 'halfplank', 'crate', 'foam']], ['Armour', ['plate', 'ram']], ['Motors', ['engine', 'motor', 'bigmotor']], ['Weapons', ['cannon', 'swivel', 'mortar', 'harpoon', 'ballast']]];
+const TRAY_GROUPS = [...TIERS.map(T => [T.name, TIER_PARTS[T.id], T.id]), ['Fittings', ['net', 'ram']], ['Motors', ['engine', 'motor', 'bigmotor']], ['Weapons', ['cannon', 'swivel', 'mortar', 'harpoon', 'ballast']]];
+// which material sections are open (Wood to start with); remembered per viewer
+let trayOpen = new Set(['wood']);
+try { const v = JSON.parse(localStorage.getItem('floatgoat.trayOpen') || 'null'); if (Array.isArray(v)) trayOpen = new Set(v); } catch (_) {}
 const thumbs = [];
 function buildTray() {
   const tray = $('tray');
   const listed = new Set(TRAY_GROUPS.flatMap(g => g[1]));
   const groups = [...TRAY_GROUPS, ['Other', Object.keys(PARTS).filter(k => !listed.has(k))]];
-  for (const [title, keys] of groups) {
+  for (const [title, keys, tierId] of groups) {
     if (!keys.length) continue;
     const sec = document.createElement('section'); sec.className = 'tgroup';
-    sec.innerHTML = `<h3>${title}</h3><div class="tcards"></div>`;
+    if (tierId) {
+      // a material: a header that folds its parts away
+      const T = TIER[tierId], open = trayOpen.has(tierId);
+      sec.classList.add('tier'); sec.classList.toggle('collapsed', !open);
+      sec.innerHTML = `<button class="tier-h" type="button" aria-expanded="${open}" id="tier-${tierId}"><i style="background:#${T.col[0].toString(16).padStart(6, '0')}"></i><span>${title}</span><b>${keys.length}</b></button><div class="tcards"></div>`;
+      sec.querySelector('.tier-h').addEventListener('click', e => {
+        const now = !sec.classList.toggle('collapsed'); e.currentTarget.setAttribute('aria-expanded', String(now));
+        if (now) trayOpen.add(tierId); else trayOpen.delete(tierId);
+        try { localStorage.setItem('floatgoat.trayOpen', JSON.stringify([...trayOpen])); } catch (_) {}
+      });
+    } else sec.innerHTML = `<h3>${title}</h3><div class="tcards"></div>`;
     const row = sec.querySelector('.tcards');
     for (const k of keys) {
       const P = PARTS[k], b = document.createElement('button');
       b.className = 'card'; b.id = 'part-' + k; b.dataset.part = k;
       b.innerHTML = `<canvas class="thumb" width="1" height="1" aria-hidden="true"></canvas>
-        <span class="nm">${P.name}</span><span class="cost">${P.cost}g</span>
+        <span class="nm">${P.short || P.name}</span><span class="cost">${P.cost}g</span>
         <span class="st" id="st-${k}"></span>`;
       b.addEventListener('click', () => { if (sel) closeMenu(); selected = k; tool = 'place'; updateUI(); });
       row.appendChild(b);
-      thumbs.push({ k, canvas: b.querySelector('canvas'), card: b, phase: thumbs.length * 0.7 });
+      thumbs.push({ k, canvas: b.querySelector('canvas'), card: b, sec, phase: thumbs.length * 0.7 });
     }
     tray.appendChild(sec);
   }
+  // the ? opens the building controls; a click anywhere else (or Esc) closes them
+  const help = open => { $('helpPop').hidden = !open; $('helpBtn').setAttribute('aria-expanded', String(open)); };
+  $('helpBtn').addEventListener('click', e => { e.stopPropagation(); help($('helpPop').hidden); });
+  addEventListener('pointerdown', e => { if (!$('helpPop').hidden && !(e.target && e.target.closest && e.target.closest('.helpwrap'))) help(false); });
+  addEventListener('keydown', e => { if (e.code === 'Escape' && !$('helpPop').hidden) help(false); });
+  // the mouse wheel scrolls the parts sideways: down goes right, up goes left
+  tray.addEventListener('wheel', e => { if (Math.abs(e.deltaY) > Math.abs(e.deltaX)) { e.preventDefault(); tray.scrollLeft += e.deltaY * (e.deltaMode === 1 ? 32 : 1); } }, { passive: false });
   $('trayToggle').addEventListener('click', () => {
     const open = document.body.classList.toggle('tray-min');
     $('trayToggle').setAttribute('aria-expanded', String(!open));
@@ -2811,7 +3055,7 @@ function drawThumbs(dt) {
   }
   if ((thumbFrame++ & 1) === 1) return;                 // drawing every other frame is plenty
   for (const t of thumbs) {
-    if (!t.ctx || t.card.hidden) continue;
+    if (!t.ctx || t.card.hidden || (t.sec && t.sec.classList && t.sec.classList.contains('collapsed'))) continue;   // folded away: not drawn
     thumbScene.add(t.obj);
     t.obj.rotation.y = t.ang;
     // the light turns with the model, so each face keeps its shade as it spins (flat toon shading would
@@ -2830,17 +3074,18 @@ function flash(msg) { const f = $('flash'); f.textContent = msg; f.classList.add
 function fmtTime(s) { s = Math.max(0, Math.ceil(s)); return `${Math.floor(s / 60)}:${String(s % 60).padStart(2, '0')}`; }
 const dirWord = (deg, pos, neg) => Math.abs(deg) < 1 ? 'level' : `${Math.abs(deg).toFixed(0)}° ${deg > 0 ? pos : neg}`;
 function updateUI() {
-  $('gold').textContent = raft.gold;
+  { const g = $('gold'), was = Number(g.textContent); g.textContent = raft.gold;
+    if (was !== raft.gold && g.parentElement && g.parentElement.classList) { const b = g.parentElement; b.classList.remove('bump', 'spend'); void b.offsetWidth; b.classList.add(raft.gold > was ? 'bump' : 'spend'); } }
   for (const k in PARTS) { const b = $('part-' + k); b.setAttribute('aria-pressed', String(tool === 'place' && selected === k)); b.hidden = !phaseAllows(k); b.disabled = raft.gold < PARTS[k].cost; }
   if (match.phase !== 'build' || raft.mode === 'battle') $('store').hidden = true; else drawStore();   // the store is only open while building
   const labels = { build: 'Build', battle: 'Battle', results: 'Round over', collect: 'Battle', menu: '' };
   $('phase').textContent = labels[match.phase];
   $('round').textContent = `Round ${match.round}/${match.rounds}`;
-  $('score').textContent = `${match.score.you} – ${match.score.dummy}`;
+  $('scoreYou').textContent = String(match.score.you); $('scoreThem').textContent = String(match.score.dummy);
   $('ready').textContent = 'Ready: fight';
   $('ready').hidden = match.phase !== 'build';
   $('clear').textContent = 'Clear';
-  $('trayHint').textContent = 'Q / E turn · R flips · drag a placed part to move it · right-drag turns the camera, right-click empties your hand · WASD / Space / C fly, middle- or Shift-drag pans, F re-centres';
+  $('trayHint').innerHTML = 'Q / E turn · R flips · drag a placed part to move it<br>Ctrl-drag lays a row · Shift-drag fills a block<br>Right-drag turns the camera · right-click empties your hand<br>WASD / Space / C fly · middle-drag pans · F re-centres';
   $('remove').setAttribute('aria-pressed', String(tool === 'remove'));
   $('test').textContent = raft.mode === 'test' ? 'Back to build' : 'Test in water';
   document.body.classList.toggle('testing', raft.mode === 'test');
@@ -2871,11 +3116,12 @@ $('clear').addEventListener('click', () => {
 $('test').addEventListener('click', () => raft.mode === 'test' ? endTest() : startTest());
 $('rock').addEventListener('click', rockIt);
 // demo: the wave height slider in the top bar (tests and battles; building stays calm), and free gold
-$('waveLvl').addEventListener('input', () => {
+if (DEMO) $('waveLvl').addEventListener('input', () => {
   $('waveVal').textContent = waveLevel().toFixed(2);
   if (raft.mode === 'test' || (raft.mode === 'battle' && !(battle.net && !battle.net.host))) SWELL.target = waveLevel();
 });
-$('addGold').addEventListener('click', () => { raft.gold += 500; if (typeof teamGold === 'function') teamGold(500); updateUI(); flash('+500g'); });
+if (!DEMO) for (const el of document.querySelectorAll('.demo')) el.remove();      // testing controls: demo copy only
+if (DEMO) $('addGold').addEventListener('click', () => { raft.gold += 500; if (typeof teamGold === 'function') teamGold(500); updateUI(); flash('+500g'); });
 
 let showWaterline = false;
 $('waterlineOn').addEventListener('change', e => { showWaterline = e.target.checked; });
@@ -3062,6 +3308,9 @@ function readInput() {
 }
 
 // ---------- loop ----------
+// the top bar wraps onto more lines on a narrow screen: things placed under it follow its real height
+function topBarHeight() { const t = document.querySelector('.top'); if (t && t.offsetHeight) document.documentElement.style.setProperty('--topH', t.offsetHeight + 'px'); }
+try { new ResizeObserver(topBarHeight).observe(document.querySelector('.top')); } catch (_) {}
 function resize() { const w = innerWidth, h = innerHeight; renderer.setSize(w, h, false); camera.aspect = w / h; camera.updateProjectionMatrix(); }
 addEventListener('resize', resize); resize();
 let simTime = 0, acc = 0, last = performance.now();
@@ -3300,6 +3549,12 @@ function buildShip(layout, origin, yaw, team) {
 }
 function partCollider(part, body) {
   const { center, size, q } = part.box, P = PARTS[part.type];
+  if (P.ramp && RAPIER.ColliderDesc.convexHull) {
+    const [L, R, W] = size, pts = new Float32Array([-L / 2, -R / 2, -W / 2, L / 2, -R / 2, -W / 2, L / 2, R / 2, -W / 2, -L / 2, -R / 2 + 0.03, -W / 2,
+      -L / 2, -R / 2, W / 2, L / 2, -R / 2, W / 2, L / 2, R / 2, W / 2, -L / 2, -R / 2 + 0.03, W / 2]);
+    const d = RAPIER.ColliderDesc.convexHull(pts);
+    if (d) return world.createCollider(d.setTranslation(center.x, center.y, center.z).setRotation({ x: q.x, y: q.y, z: q.z, w: q.w }).setDensity(P.mass / (L * R * W * 0.5)).setFriction(0.8), body);
+  }
   return world.createCollider(RAPIER.ColliderDesc.cuboid(size[0] / 2, size[1] / 2, size[2] / 2).setTranslation(center.x, center.y, center.z)
     .setRotation({ x: q.x, y: q.y, z: q.z, w: q.w }).setDensity(P.mass / (size[0] * size[1] * size[2])).setFriction(0.8), body);
 }
@@ -3433,6 +3688,16 @@ function shipStep(ship, t) {
     b.applyImpulseAtPoint({ x: dir.x * f * DT, y: dir.y * f * DT, z: dir.z * f * DT }, { x: px, y: py, z: pz }, true);
     if (Math.abs(ship.thr) > 0.2) addFoam(px, pz, 0.25 * Math.abs(ship.thr));
   }
+  // keel fins: a blade under water resists being pushed sideways through it (less drift and spin, firmer turns)
+  for (const p of ship.parts) {
+    if (!p.alive || !PARTS[p.type].keel) continue;
+    const wp = toWorld(ship, p.box.center, _kw1);
+    if (surfaceH(wp.x, wp.z, t) < wp.y) continue;                          // out of the water: no grip
+    const nrm = _kw2.set(0, 0, 1).applyQuaternion(p.box.q).applyQuaternion(shipPose(ship).q);
+    const vn = pointVel(ship, wp, _kw3).dot(nrm), f = -KEEL_GRIP * vn * p.box.size[0] * p.box.size[1] * DT;
+    b.applyImpulseAtPoint({ x: nrm.x * f, y: nrm.y * f, z: nrm.z * f }, { x: wp.x, y: wp.y, z: wp.z }, true);
+  }
+  shipPose(ship);
   // capsize / sink
   const up = _bv.set(0, 1, 0).applyQuaternion(_bq);
   if (ship.alive) {
@@ -3442,7 +3707,8 @@ function shipStep(ship, t) {
     else if (c.y < surfaceH(c.x, c.z, t) - 3.2 || !ship.parts.some(p => p.alive)) killShip(ship, 'sank');
   }
 }
-const CAPSIZE_TIME = 4.0;
+const CAPSIZE_TIME = 4.0, KEEL_GRIP = 9;
+const _kw1 = new THREE.Vector3(), _kw2 = new THREE.Vector3(), _kw3 = new THREE.Vector3();
 function killShip(ship, why) {
   ship.alive = false; ship.why = why;
   for (const s of battle.sailors) if (s.ship === ship && (s.state === 'aboard' || s.state === 'station' || s.state === 'climb' || s.state === 'haul')) throwOff(s, _bv.set(0, 1.5, 0));
@@ -3964,7 +4230,7 @@ function battleWheel(e) {
 }
 function battlePointerDown(e) {
   if (e.pointerType !== 'mouse' || battle.over) return false;
-  if (aimLocked()) { if (e.button === 0) { battle.reelHeld = true; if (onGun()) playerFire(); } }   // held: fires / reels / paddles
+  if (aimLocked()) { if (e.button === 0 && !battleLocked()) { battle.reelHeld = true; if (onGun()) playerFire(); } }   // held: fires / reels / paddles
   else lockAim();
   return true;
 }
@@ -4237,6 +4503,28 @@ function sailorStep(s, t, inp) {
     let jump = !!s.jumpReq; s.jumpReq = false;
     s.jumpCool = Math.max(0, (s.jumpCool || 0) - DT);
     let jdir = null;
+    // a climbing net on one of your rafts within reach: up it instead (bots use one whenever they're by it)
+    {
+      let net = null, nd = 1.1;
+      for (const sh of teamShips(ship.team)) {
+        if (!sh.alive || shipUp(sh).y < DECK_OK) continue;
+        for (const p of sh.parts) {
+          if (!p.alive || !PARTS[p.type].net) continue;
+          const lp = toLocal(sh, s.pos, new THREE.Vector3()), c = p.box.center, d = Math.hypot(lp.x - c.x, lp.z - c.z);
+          if (d < nd && lp.y > c.y - 1.6) { nd = d; net = { sh, p, lp }; }
+        }
+      }
+      if (net && (jump || (!s.isPlayer && !s.remote))) {
+        const { sh, p, lp } = net, n = new THREE.Vector3(...p.n || [1, 0, 0]); n.y = 0; if (n.lengthSq() < 1e-6) n.set(1, 0, 0); n.normalize();
+        const to = p.box.center.clone().addScaledVector(n, -0.55); const k = colKey(...colOf(to.x, to.z));
+        if (sh.cols.has(k) && !sh.blocked.has(k)) {
+          to.y = sh.cols.get(k);
+          s.ship = sh; s.state = 'climb'; s.climb = { t: 0, from: lp.clone(), to }; s.local.copy(lp);
+          s.yaw = Math.atan2(-(to.z - lp.z), to.x - lp.x);
+          return;
+        }
+      }
+    }
     if (!s.isPlayer && !s.remote && s.jumpCool <= 0) {
       let bd = 1.4;
       for (const sh of teamShips(ship.team)) {
@@ -4384,6 +4672,7 @@ function drawSailor(s, dt, camPosW) {
   for (const k of POSE_STATES) { s.w[k] += ((k === want ? 1 : 0) - s.w[k]) * (1 - Math.exp(-9 * dt)); tot += s.w[k]; }
   const stepping = (want === 'gun' || want === 'drive') && s.speed > 0.15;          // shuffling round the gun as it turns
   s.ph += dt * (want === 'walk' || stepping ? 2.2 + s.speed * 2.6 : want === 'swim' ? 4.2 : want === 'air' ? 6 : 1);
+  footsteps(s, want === 'walk' || stepping);
   s.joints.fill(0);
   for (const k of POSE_STATES) { if (s.w[k] < 0.002) continue; const P = k === 'gun' ? gunPose(s) : k === 'drive' ? drivePose(s) : k === 'paddle' ? paddlePose(s) : k === 'heave' ? heavePose(s) : poseFor(k, s.ph); for (let i = 0; i < NJ; i++) s.joints[i] += P[i] * s.w[k] / tot; }
   s.stepW = (s.stepW || 0) + ((stepping ? Math.min(1, s.speed / 0.9) : 0) - (s.stepW || 0)) * (1 - Math.exp(-10 * dt));
@@ -4452,6 +4741,28 @@ function drawSailor(s, dt, camPosW) {
   beltDraw(s, dt);
 }
 
+// ---------- footsteps: each foot that comes down makes the sound of whatever it lands on ----------
+// (everyone's own game makes these from how the sailors are drawn, so they're never sent over the network)
+const STEP_MAT = { styro: 'styro', scrap: 'scrap', plastic: 'plastic', bamboo: 'bamboo', wood: 'wood', glass: 'glass', steel: 'steel' };
+function deckUnder(s) {
+  let best = null, top = -Infinity;
+  for (const p of s.ship.parts) {
+    if (p.alive === false || PARTS[p.type].station || PARTS[p.type].side) continue;
+    const a = p.aabb; if (!a || s.local.x < a.min.x - 0.05 || s.local.x > a.max.x + 0.05 || s.local.z < a.min.z - 0.05 || s.local.z > a.max.z + 0.05) continue;
+    if (a.max.y > s.local.y + 0.15 || a.max.y < top) continue;
+    top = a.max.y; best = p;
+  }
+  return best ? (PARTS[best.type].tier || 'wood') : 'wood';
+}
+function footsteps(s, walking) {
+  const n = Math.floor(s.ph / Math.PI);                 // the walk cycle puts a foot down every half turn
+  if (n === s.stepN) return;
+  s.stepN = n;
+  if (!walking || s.air || !(s.state === 'aboard' || s.state === 'station' || s.state === 'haul') || !s.ship || s.fade < 0.5) return;
+  const mat = STEP_MAT[deckUnder(s)] || 'wood';
+  const w = toWorld(s.ship, s.local, new THREE.Vector3());
+  playSfx('step_' + mat, w, (s.isPlayer || s === battle.player ? 0.45 : 0.3) * (0.7 + Math.min(1, s.speed / WALK_SPEED) * 0.4), true);
+}
 // ---------- balance: he rides the deck instead of standing on it like a statue ----------
 // What he feels through his feet (the deck's slope, plus the pull of it lurching, heaving and swinging under him)
 // drives a springy balance offset. His hips go with it and his upper body leans against it, his knees soak up the
@@ -4601,6 +4912,7 @@ function fire(ship, st) {
   if (st.weapon === 'cannon') playSfx('cannonFire', p, 1);
   else if (st.weapon === 'swivel') playSfx('swivelFire', p, 0.9);
   else if (st.weapon === 'ballast') playSfx('ballastFire', p, 1);
+  else if (st.weapon === 'harpoon') playSfx('harpoonFire', p, 1);
   st.kick = 1;
   return true;
 }
@@ -4683,6 +4995,7 @@ function projStep(pr, t) {
       if (pr.kind !== 'charge') {
         // hitting the water costs it a chunk of its speed; it keeps its heading and carries on under
         // (a slim harpoon bolt loses less than a round ball or the spiky ballast lump)
+        if (pr.kind === 'harpoon') playSfx('harpoonWater', pr.p, 0.8);
         pr.state = 'water'; pr.waterT = 0; pr.v.multiplyScalar(pr.kind === 'harpoon' ? 0.75 : pr.kind === 'ballast' ? 0.5 : 0.6);
         return true;
       }
@@ -4760,6 +5073,7 @@ function ballHit(ship, part, pr, scale = 1) {
 const ropeMat = new THREE.LineBasicMaterial({ color: 0xe6d3a3 });
 function attachTether(pr, ship, part) {
   const W = WEAPONS.harpoon;
+  playSfx('harpoonHit', pr.p, 1);
   damagePart(ship, part, W.dmg, pr.v.clone().normalize(), pr.p);
   if (!part.alive) { restoreBolt(pr); return; }
   const toLocalP = toLocal(ship, pr.p, new THREE.Vector3());
@@ -4773,6 +5087,7 @@ function attachTether(pr, ship, part) {
   puff(pr.p, 0xffffff, 0.5);
 }
 function attachLootTether(pr, t) {
+  playSfx('harpoonHit', pr.p, 0.8);
   const from = pr.st.part, fromLocal = from.box.center.clone();
   const a = toWorld(pr.owner, fromLocal, new THREE.Vector3());
   const geo = new THREE.BufferGeometry(); geo.setAttribute('position', new THREE.Float32BufferAttribute(new Float32Array(16 * 3), 3));
@@ -4794,8 +5109,11 @@ function tetherStep(tt) {
   // reeling in treasure: the heavier it is, the slower it comes (pouch ~1.9 m/s, chest ~1.5, strongbox ~0.9, idol ~0.75)
   const reel = tt.loot ? W.reel / (1 + tt.loot.L.mass * 4) : W.reel;       // (was mass * 6: heavy pieces came in too slow)
   if (tt.reeling) tt.L = Math.max(2.5, tt.L - reel * DT);
+  // the winch ratchet clacks away while it's being wound in
+  tt.reelT = (tt.reelT || 0) - DT;
+  if (tt.reeling && tt.L > 2.5 && tt.reelT <= 0) { tt.reelT = 0.6; playSfx('harpoonReel', A, 0.55); }
   const stretch = d - tt.L;
-  if (stretch > 6) { tt.life = 0; return; }        // snaps
+  if (stretch > 6) { tt.life = 0; playSfx('harpoonSnap', A.clone().lerp(B, 0.5), 1); return; }        // snaps
   if (stretch <= 0) return;
   const vA = pointVel(tt.a, A, new THREE.Vector3()), vB = tt.loot ? (() => { const v = tt.loot.body.linvel(); return new THREE.Vector3(v.x, v.y, v.z); })() : pointVel(tt.b, B, new THREE.Vector3());
   const vr = vB.sub(vA).dot(u);
@@ -5104,6 +5422,50 @@ function botThink(s, dt) {
   return null;
 }
 
+// ---------- into the fight: the build music fades, the screen fades out of the harbour and into the arena, the fight
+// song starts, and a big 3 2 1 FLOAT counts everyone in. Until FLOAT nobody can move, act or fire (the camera's free)
+const INTRO_FADE = 0.55, INTRO_LOCK = 2.8, INTRO_STEP = 0.8;      // FLOAT lands when the lock runs out
+function battleIntro(setup, fade = INTRO_FADE) {
+  if (typeof __FG_TEST !== 'undefined' && __FG_TEST && !battle.introTest) { setup(); battle.lockT = 0; return; }   // the test harness: straight in
+  musicOut();
+  const ov = $('fadeOv'); ov.style.transitionDuration = fade + 's'; ov.classList.add('on');
+  setTimeout(() => {
+    setup();
+    musicTrack('fight');
+    battle.lockT = INTRO_LOCK; battle.cdShown = null;
+    setTimeout(() => { ov.style.transitionDuration = '0.7s'; ov.classList.remove('on'); }, 30);
+  }, fade * 1000);
+}
+// back to the harbour after a battle: fade out of the arena, fade into the build zone with BUILD across the screen
+function buildIntro(go) {
+  if (typeof __FG_TEST !== 'undefined' && __FG_TEST) { go(); return; }
+  musicOut();
+  const ov = $('fadeOv'); ov.style.transitionDuration = INTRO_FADE + 's'; ov.classList.add('on');
+  setTimeout(() => { go(); setTimeout(() => { ov.style.transitionDuration = '0.8s'; ov.classList.remove('on'); }, 60); }, INTRO_FADE * 1000);
+}
+// a big word in the logo's lettering (BUILD), with an optional line under it
+function showWord(word, sub) {
+  const el = $('countdown');
+  el.innerHTML = `<span class="cdw">${[...word].map((c, i) => `<span style="--i:${i}">${c}</span>`).join('')}</span>` + (sub ? `<span class="cdsub">${sub}</span>` : '');
+  el.className = 'countdown go'; el.hidden = false; void el.offsetWidth; el.classList.add('on');
+  clearTimeout(showWord.t); showWord.t = setTimeout(() => { el.hidden = true; }, 1700);
+}
+const battleLocked = () => battle.on && (battle.lockT || 0) > 0;
+// the countdown in the middle of the screen, from how long the lock has left
+function drawCountdown(dt) {
+  const L = battle.lockT || 0;
+  let say = null;
+  if (L > 0) { const k = Math.ceil(L / INTRO_STEP); say = k <= 3 && L <= 3 * INTRO_STEP ? String(k) : null; }
+  else if (battle.cdShown && battle.cdShown !== 'FLOAT' && battle.cdShown !== 'done') say = 'FLOAT';
+  if (say && say !== battle.cdShown) {
+    battle.cdShown = say;
+    const el = $('countdown');
+    el.innerHTML = say === 'FLOAT' ? `<span class="cdw">${[...'FLOAT'].map((c, i) => `<span style="--i:${i}">${c}</span>`).join('')}</span>` : `<span class="cdn">${say}</span>`;
+    el.className = 'countdown ' + (say === 'FLOAT' ? 'go' : 'num');
+    el.hidden = false; void el.offsetWidth; el.classList.add('on');
+    if (say === 'FLOAT') setTimeout(() => { if (battle.cdShown === 'FLOAT') { el.hidden = true; battle.cdShown = 'done'; } }, 1200);
+  }
+}
 // ---------- battle flow ----------
 function startBattle() {
   let layout = raft.parts.map(snap);
@@ -5113,6 +5475,7 @@ function startBattle() {
 }
 function setupBattle() {
   teardownBattle();
+  battle.lockT = typeof __FG_TEST !== 'undefined' && __FG_TEST && !battle.introTest ? 0 : INTRO_LOCK;
   raft.mode = 'battle'; battle.on = true; battle.over = false; battle.overT = 0; battle.result = null; battle.net = null; battle.myTeam = 'you';
   raftGroup.visible = false; comMark.visible = cobMark.visible = false; if (ghost) ghost.visible = false;
   SWELL.target = waveLevel();
@@ -5202,10 +5565,12 @@ function endRound(title) {
 }
 function nextRound() {
   $('banner').hidden = true;
-  exitBattle();
-  if (battle.matchDone) { restartMatch(); return; }
-  match.round++;
-  newRound();
+  buildIntro(() => {
+    exitBattle();
+    if (battle.matchDone) { restartMatch(); return; }
+    match.round++;
+    newRound();
+  });
 }
 
 // ---------- battle input ----------
@@ -5246,6 +5611,7 @@ function playerFire(s = battle.player) {
 addEventListener('keydown', e => {
   if (typingInField(e)) return;                     // typing a name: the keys are letters, not controls
   if (raft.mode !== 'battle') return;
+  if (battleLocked() && ['KeyE', 'Space', 'KeyF', 'KeyQ'].includes(e.code)) { e.preventDefault(); return; }   // counting in
   if (e.code === 'KeyE') { e.preventDefault(); interact(); }
   if (e.code === 'Space' && battle.player && (battle.player.state === 'aboard' || battle.player.state === 'swim') && !battle.over) { e.preventDefault(); if (!e.repeat) { if (netGuest()) netAct({ k: 'jump' }); else battle.player.jumpReq = true; } return; }   // on deck, Space jumps
   if (e.code === 'Space' || e.code === 'KeyF') { e.preventDefault(); if (!e.repeat) { battle.reelHeld = true; playerFire(); } }
@@ -5254,7 +5620,7 @@ addEventListener('keydown', e => {
 });
 $('interact').addEventListener('click', () => interact());
 // demo: balance on/off, to compare
-$('balBtn').addEventListener('click', () => { BALANCE.on = !BALANCE.on; $('balBtn').setAttribute('aria-pressed', String(BALANCE.on)); $('balBtn').textContent = BALANCE.on ? 'Balance on' : 'Balance off'; });
+if (DEMO) $('balBtn').addEventListener('click', () => { BALANCE.on = !BALANCE.on; $('balBtn').setAttribute('aria-pressed', String(BALANCE.on)); $('balBtn').textContent = BALANCE.on ? 'Balance on' : 'Balance off'; });
 $('fire').addEventListener('pointerdown', e => { e.preventDefault(); battle.reelHeld = true; playerFire(); });
 // letting go of the trigger stops reeling
 const releaseReel = () => { battle.reelHeld = false; };
@@ -5401,13 +5767,16 @@ function battleFrame(dt) {
     const focus = me.state === 'swim' || me.state === 'air' || me.state === 'drowned' ? me.pos : me.ship.body.translation();
     followSim(focus.x, focus.z);
     dNow.fill(0);
-    const pin = battle.over ? null : playerInput();
+    const locked = (battle.lockT || 0) > 0;                      // the countdown: nobody moves yet
+    if (locked) battle.lockT = Math.max(0, battle.lockT - DT);
+    const pin = battle.over || locked ? null : playerInput();
     const ins = new Map();                                       // what each sailor wants this step
     for (const s of battle.sailors) {
       if (s === me) ins.set(s, pin);
-      else if (s.remote) ins.set(s, battle.over ? null : netRemoteInput(s));
-      else ins.set(s, botThink(s, DT));
+      else if (s.remote) ins.set(s, battle.over || locked ? null : netRemoteInput(s));
+      else ins.set(s, locked ? null : botThink(s, DT));
     }
+    if (locked && battle.net) battle.net.acts.length = 0;        // button presses during the countdown don't count
     for (const sh of battle.ships) {
       const t = sh.body.translation(), r = sh.body.rotation();
       sh.prev.p.set(t.x, t.y, t.z); sh.prev.q.set(r.x, r.y, r.z, r.w);
@@ -5453,7 +5822,7 @@ function battleFrame(dt) {
     if (ld.mesh.userData.grow < 1) { ld.mesh.userData.grow = Math.min(1, ld.mesh.userData.grow + dt * 4); ld.mesh.scale.setScalar(0.6 + 0.4 * ld.mesh.userData.grow); }
   }
   // round timer: when it runs out, whatever is on each raft scores
-  if (!battle.over) {
+  if (!battle.over && !battleLocked()) {
     match.battleLeft -= dt;
     if (!battle.wreck && !battle.wreckDone && match.battleTotal - match.battleLeft >= battle.wreckAt) { battle.wreckDone = true; wreckWarning(); }
     if (battle.net) netHostRoundCheck();
@@ -5473,6 +5842,7 @@ function battleFrame(dt) {
 }
 // everything drawn each frame (the host's own world, or the guest's copy of it)
 function battleDraw(dt, a) {
+  drawCountdown(dt);
   const me = battle.player;
   $('timer').textContent = fmtTime(Math.max(0, match.battleLeft));
   $('timer').classList.toggle('low', match.battleLeft < 20);
@@ -6475,13 +6845,26 @@ function towPose(t, ship, outC, outQ) {
   return outQ;
 }
 // is the deck there for the piece to sit at this F / G? (no hole under it, no wall or gun in the way)
+// a blocked walking column is blocked a little wider than the wall or gun in it (so nobody's feet clip it); a box
+// sliding past only stops where it would really meet one: test the actual part, so it fits through a gap it fits
+const _thP = new THREE.Vector3();
+function towHits(ship, x, z, deckY) {
+  _thP.set(x, deckY + 0.2, z);
+  for (const p of ship.parts) {
+    if (p.alive === false) continue;
+    const P = PARTS[p.type]; if (P.side || !(P.station || isWall(p))) continue;
+    const a = p.aabb || boxAabb(p.box); if (a.max.y < deckY + 0.1) continue;     // under the deck (a keel)
+    if (boxDist(p.box, _thP) < 0.03) return true;
+  }
+  return false;
+}
 // how many of the box's footprint samples sit on something it can't slide over (a gun, a wall, a step up)
 function towBad(ship, F, G, w, deckY) {
   let dx = G.x - F.x, dz = G.y - F.y; const l = Math.hypot(dx, dz) || 1; dx /= l; dz /= l;
   const px = -dz, pz = dx; let n = 0;
   for (const a of [0.03, 0.26, 0.5, 0.74, 0.97]) for (const b of [-0.47, -0.24, 0, 0.24, 0.47]) {
-    const [i, j] = colOf(F.x + (G.x - F.x) * a + px * b * w, F.y + (G.y - F.y) * a + pz * b * w), key = colKey(i, j);
-    if (ship.cols.has(key) && (ship.blocked.has(key) || ship.cols.get(key) > deckY + 0.3)) n++;
+    const x = F.x + (G.x - F.x) * a + px * b * w, z = F.y + (G.y - F.y) * a + pz * b * w, [i, j] = colOf(x, z), key = colKey(i, j);
+    if (ship.cols.has(key) && ((ship.blocked.has(key) && towHits(ship, x, z, deckY)) || ship.cols.get(key) > deckY + 0.3)) n++;
   }
   return n;
 }
@@ -6493,7 +6876,7 @@ function towClear(ship, F, G, w, deckY) {
     const x = F.x + (G.x - F.x) * a + px * b * w, z = F.y + (G.y - F.y) * a + pz * b * w;
     const [i, j] = colOf(x, z), key = colKey(i, j);
     if (!ship.cols.has(key)) continue;
-    if (ship.blocked.has(key) || ship.cols.get(key) > deckY + 0.3) return 'blocked';
+    if ((ship.blocked.has(key) && towHits(ship, x, z, deckY)) || ship.cols.get(key) > deckY + 0.3) return 'blocked';
     support++;
   }
   return support ? (support >= 6 ? 'ok' : 'edge') : 'off';
@@ -6736,6 +7119,49 @@ async function netClient() {
   };
   return NET.client;
 }
+// ---- patch notes: one line per SHIPPED version (newest last here, shown newest first). Demo builds don't add lines:
+// the next ship's line is kept up to date instead ----
+const FG_LOG = [
+  ['0.01', 'Raft builder with buoyant parts and a test pool; battles vs a dummy raft with cannon, mortar, swivel, harpoon, ballast and ram; timed rounds'],
+  ['0.02', 'Floating treasure scores if it\'s aboard at time-up; shove with Q; raft hovers while building with a waterline preview'],
+  ['0.03', 'Motor tiers; renamed FLOAT GOAT; treasure loads the deck and slides off; one sailor drives every motor'],
+  ['0.04', 'Rafts break apart when joints go; cannonballs skip; carry and throw small loot; imperial/metric units'],
+  ['0.05', 'Mouse-locked aiming: move to aim, click to fire; heavy loot is harder to shove'],
+  ['0.06', 'Minimap; tumbling ballast bombs; hold fire to reel a harpoon in'],
+  ['0.07', 'Right-click drops a harpoon rope; E targets what you look at; camera follows your aim'],
+  ['0.08', 'Mouse wheel sets the ballast bomb arc; dotted aim preview with a landing ring'],
+  ['0.09', 'Sailors walk around obstacles; gunners stand behind their guns; clearer build ghost'],
+  ['0.10', 'Shots behave differently underwater; drag parts to move them; motors clamp on with a tiller; part menus'],
+  ['0.11', 'Building overhaul: snap to any face, half planks, flip and rotate, seams hold the raft; build and buy merged'],
+  ['0.12', 'Grid snap toggle and sizes; parts sit level on what\'s under them'],
+  ['0.13', 'Tiller with swing limits; drivers walk the tiller across; right-drag turns the build camera'],
+  ['0.14', 'Sharper part models; snap sizes 1/8 to 1 block'],
+  ['0.15', 'Snap-size buttons; driver\'s feet planted at the tiller'],
+  ['0.16', 'Driver stands beside the tiller; motors show their push; gun range shown in green'],
+  ['0.17', 'Build camera holds still; guns turn at their own speed and never run ahead of your aim'],
+  ['0.18', 'Motor crew rings; moving a part leaves what\'s mounted on it; even tiller swing'],
+  ['0.19', 'Grab any visible bit of a part; tiller swing 50°'],
+  ['0.20', 'Sound effects and music; tiller swing 40°; one-hand tiller grip'],
+  ['0.21', 'Half walls block walking; volume sliders; new cannon hit sounds'],
+  ['0.22', 'Three variations of every sound with no back-to-back repeats'],
+  ['0.23', 'Inventory slots 1-4 and a paddle; grunts, effort sounds and punches'],
+  ['0.24', 'Drowning screams; belt pouches (up to 3, lost when shot); heavy treasure is heaved aboard and dragged; 300g per round'],
+  ['0.25', 'First online test build; flush wall corners; jump over half walls and guns; harpoon reels heavy treasure slower'],
+  ['0.26', 'Main menu and online lobbies (8 players, 4 teams, bots); no starter raft; E acts on what\'s in front of you'],
+  ['0.27', 'Fixed lobby list; volume on the main menu; new title colours; teammates share a raft and gold'],
+  ['0.28', 'Online battles together; build on teammates\' parts; tow and push heavy treasure; swim and grab pouches'],
+  ['0.29', 'Item store with paddles and fishing rods; aim sensitivity; towed treasure works around corners'],
+  ['0.30', 'Stackable planks; higher build plane; pricier weapons; pry off ballast bombs; mortar wheel arc; evenly spaced steps'],
+  ['0.31', 'Less whitecap foam in big seas; ctrl-drag lays a row of parts with a live cost'],
+  ['0.32', 'No more falling through decks or getting stuck under rafts; shove goes where you face'],
+  ['0.33', 'Shift-drag fills a block of parts; capsize grace period; water stops poking up through decks'],
+  ['0.34', 'Over-the-shoulder gun camera (X swaps); rafts no longer "sink" in deep troughs; you\'re told why you went overboard'],
+  ['0.35', 'Jump out of the water to get back aboard; harpoon steals dragged treasure; hold to fire the swivel'],
+  ['0.36', 'Sailors balance on a moving deck; harpoon snags treasure off decks; chest lid fixed'],
+  ['0.37', 'Bigger balance reactions; pull enemy harpoon bolts out with E; same reach for all treasure'],
+  ['0.38', 'Harpoon reels heavy treasure in faster'],
+  ['0.39', 'Seven material tiers, ramps, pontoons, railing, keel fin and climbing net; Rusty/Standard/Racing motors; treasure tows through gaps; fight music; fade into the arena with a 3-2-1-FLOAT countdown and back to the harbour with BUILD; harpoon sounds; footsteps that sound like the deck you\'re on; mouse wheel scrolls the parts tray; one build bar along the parts tray with a big gold counter and a ? for controls; match scoreboard; patch notes'],
+];
 
 // =====================================================================================
 // MAIN MENU + LOBBIES. The menu floats over an aerial view of the arena with the sea at full storm.
@@ -6757,7 +7183,13 @@ function playerName() {
 }
 try { $('pName').value = localStorage.getItem('floatgoat.name') || ''; } catch (_) {}
 $('pName').addEventListener('change', () => { try { localStorage.setItem('floatgoat.name', $('pName').value.trim()); } catch (_) {} });
-$('mVer').textContent = document.querySelector('.brand span') ? document.querySelector('.brand span').textContent : '';
+if (DEMO) $('verTag').textContent += ` · demo ${DEMO_BUILD}`;
+$('mVer').textContent = $('verTag').textContent;
+// patch notes, newest first
+$('logList').innerHTML = FG_LOG.slice().reverse().map(([v, n]) => `<li><b>v${v}</b><span>${n.replace(/&/g, '&amp;').replace(/</g, '&lt;')}</span></li>`).join('');
+$('mLogBtn').addEventListener('click', () => { $('mLog').hidden = false; $('mLogClose').focus(); });
+$('mLogClose').addEventListener('click', () => { $('mLog').hidden = true; });
+addEventListener('keydown', e => { if (e.code === 'Escape' && !$('mLog').hidden) $('mLog').hidden = true; });
 
 function menuPanel(id) {
   for (const p of ['mMain', 'mFindP', 'mRoom']) $(p).hidden = p !== id;
@@ -6771,6 +7203,7 @@ function enterMenu(panel = 'mMain') {
   raft.mode = 'menu'; match.phase = 'menu';
   raftGroup.visible = false; if (ghost) ghost.visible = false;
   document.body.classList.add('in-menu');
+  if (typeof musicTrack === 'function') musicTrack('build');
   menuPanel(panel);
 }
 function leaveMenu() {
@@ -6888,6 +7321,7 @@ async function openRoom(id) {
   room.onBroadcast('collect', () => netSendLayout());
   room.onBroadcast('layout', p => netCollectFrom(p));
   room.onBroadcast('bstart', p => netGuestStart(p));
+  room.onBroadcast('bfade', () => netGuestFade());
   room.onBroadcast('snap', p => netSnapIn(p));
   room.onBroadcast('bend', p => { if (!lobby.host && battle.net) netShowEnd(p); });
   room.onBroadcast('next', p => { if (!lobby.host) netGoNext(!!(p && p.done)); });
@@ -7135,7 +7569,12 @@ function netCollectTick() {
     const ox = ARENA_C.x + Math.cos(a) * TEAM_SPAWN_R, oz = ARENA_C.z + Math.sin(a) * TEAM_SPAWN_R;
     return { team: t, nid: i + 1, layout, origin: [ox, oz], yaw: Math.atan2(-(ARENA_C.z - oz), ARENA_C.x - ox) };
   });
-  netSetup({ teams, crew: lobby.game.roster.map(r => ({ rid: r.id, team: r.team, bot: !!r.bot, name: r.name, kit: pend.kits.get(r.id) || DEFAULT_KIT })) }, true);
+  const crew = lobby.game.roster.map(r => ({ rid: r.id, team: r.team, bot: !!r.bot, name: r.name, kit: pend.kits.get(r.id) || DEFAULT_KIT }));
+  lobby.room.send('bfade', {});                                   // everyone fades out of the harbour together
+  battleIntro(() => netHostBegin(teams, crew));
+}
+function netHostBegin(teams, crew) {
+  netSetup({ teams, crew }, true);
   spawnRoundLoot();
   for (const t of battle.loot) if (!t.nid) t.nid = battle.net.nextLoot++;
   lobby.room.send('bstart', { teams, crew: battle.net.crewDesc, loot: battle.loot.map(t => { const c = t.body.translation(); return [t.nid, t.type, +c.x.toFixed(3), +c.y.toFixed(3), +c.z.toFixed(3)]; }), tl: match.battleLeft, total: match.battleTotal, round: match.round });
@@ -7160,6 +7599,7 @@ function netSetup(p, host) {
   else { match.battleTotal = match.battleLeft = Number($('battleTime').value) || BATTLE_TIME; }
   raftGroup.visible = false; comMark.visible = cobMark.visible = false; if (ghost) ghost.visible = false;
   SWELL.target = waveLevel();
+  battle.lockT = typeof __FG_TEST !== 'undefined' && __FG_TEST && !battle.introTest ? 0 : INTRO_LOCK;
   battle.myTeam = lobby.game.team;
   battle.net = { host, ships: new Map(), sailors: new Map(), loot: new Map(), proj: new Map(), acts: [], snaps: [], sendT: 0, inT: 0, nextShip: 100, nextLoot: 1, nextProj: 1, crewDesc: p.crew, offset: null, out: {}, ropes: [], last: null };
   battle.ships = []; battle.sideMax = {};
@@ -7198,11 +7638,17 @@ function netSetup(p, host) {
   hudNames(`Team ${TEAMS[battle.myTeam].name}`, 'Enemies');
   updateUI(); updateBattleHud(true);
   const T = TEAMS[battle.myTeam];
-  bigFlash('Battle!', `Round ${match.round} of ${match.rounds} · Team ${T.name}`);
   lockAim();
 }
 function netGuestStart(p) {
   if (!lobby.game || lobby.host) return;
+  // normally the screen's already faded out (the host said 'bfade'); if not, a quick fade
+  const ov = $('fadeOv');
+  if (ov.classList.contains('on')) { netGuestBegin(p); musicTrack('fight'); setTimeout(() => { ov.style.transitionDuration = '0.7s'; ov.classList.remove('on'); }, 30); }
+  else battleIntro(() => netGuestBegin(p), 0.3);
+}
+function netGuestFade() { if (!lobby.game || lobby.host) return; musicOut(); const ov = $('fadeOv'); ov.style.transitionDuration = INTRO_FADE + 's'; ov.classList.add('on'); setTimeout(() => { if (raft.mode !== 'battle') { ov.style.transitionDuration = '0.7s'; ov.classList.remove('on'); } }, 6000); }
+function netGuestBegin(p) {
   netSetup(p, false);
   if (p.round) match.round = p.round;
   for (const L of p.loot) { const t = spawnLoot(L[1], new THREE.Vector3(L[2], L[3], L[4])); t.nid = L[0]; t.body.setGravityScale(0, true); battle.net.loot.set(t.nid, t); }
@@ -7303,10 +7749,12 @@ function netShowEnd(m) {
 function netNextRound() { if (!lobby.host) return; const done = !!battle.matchDone; lobby.room.send('next', { done }); netGoNext(done); }
 function netGoNext(done) {
   $('banner').hidden = true; $('nextRound').disabled = false;
-  if (raft.mode === 'battle') exitBattle();
-  battle.net = null; battle.myTeam = 'you';
-  if (done) { match.tscore = {}; freshMatch(lobby.game.settings); teamBegin(); bigFlash(`Round 1 of ${match.rounds}`, `Team ${TEAMS[lobby.game.team].name} · build your raft`); }
-  else { match.round++; newRound(); }
+  buildIntro(() => {
+    if (raft.mode === 'battle') exitBattle();
+    battle.net = null; battle.myTeam = 'you';
+    if (done) { match.tscore = {}; freshMatch(lobby.game.settings); teamBegin(); showWord('BUILD', `Round 1 of ${match.rounds} · Team ${TEAMS[lobby.game.team].name}`); }
+    else { match.round++; newRound(); }
+  });
 }
 function netForfeit() { if (battle.over) return; if (lobby.host) { battle.player.dead = true; battle.player.fade = 0; } else netAct({ k: 'forfeit' }); }
 
@@ -7361,7 +7809,8 @@ function netSnapSend(force) {
   const out = {}; for (const t of gameTeams()) out[t] = teamOut(t);
   const snapMsg = { t: Math.round(performance.now()), tl: +match.battleLeft.toFixed(2), sh: ships, sa: sailors, lo: loot, pr: proj, te: ropes, fx: battle.fx.splice(0), out, pts: Object.fromEntries(gameTeams().map(t => [t, teamPts(t)])) };
   snapMsg.ld = battle.loads.map(ld => [ld.ship.nid, +ld.mesh.position.x.toFixed(3), +ld.mesh.position.y.toFixed(3), +ld.mesh.position.z.toFixed(3)]);   // ballast bombs stuck on rafts
-  snapMsg.sw = +SWELL.target.toFixed(2);      // the host's sea, so everyone floats on the same waves
+  snapMsg.sw = +SWELL.target.toFixed(2);
+  if (battle.lockT > 0) snapMsg.lk = +battle.lockT.toFixed(2);      // the host's sea, so everyone floats on the same waves
   if (battle.wreck) snapMsg.wk = [+battle.wreck.p.x.toFixed(2), +battle.wreck.p.z.toFixed(2), +battle.wreck.t.toFixed(2)];
   lobby.room.send('snap', snapMsg);
 }
@@ -7399,12 +7848,14 @@ function netSnapIn(p) {
   }
   N.out = p.out || {}; N.pts = p.pts || {};
   if (p.sw !== undefined) SWELL.target = p.sw;
+  battle.lockT = p.lk || 0;
   match.battleLeft = p.tl;
 }
 const _nga = new THREE.Vector3(), _ngb = new THREE.Vector3(), _ngqa = new THREE.Quaternion(), _ngqb = new THREE.Quaternion();
 const lerpArr = (a, b, k, out) => out.set(a[0] + (b[0] - a[0]) * k, a[1] + (b[1] - a[1]) * k, a[2] + (b[2] - a[2]) * k);
 function netGuestFrame(dt) {
   const N = battle.net;
+  if (battle.lockT > 0) battle.lockT = Math.max(0, battle.lockT - dt);        // between snapshots
   SWELL.amp += (SWELL.target - SWELL.amp) * (1 - Math.exp(-1.5 * dt));
   SWELL_UNIFORM.value = SWELL.amp;
   const me = battle.player;
