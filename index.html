@@ -35,9 +35,32 @@
   .sens { display: flex; align-items: center; gap: 6px; } .sens input { width: 110px; margin: 0; accent-color: #1f6fb2; } .sens output { font: 600 .82rem var(--ui); min-width: 2.6em; text-align: right; font-variant-numeric: tabular-nums; }
   .mvol .sens input { width: 100%; flex: 1; }
   .settings .note { font-size: .78rem; opacity: .7; margin: 0; }
-  .store-go { background: var(--sun); }
   .store { position: fixed; z-index: 6; top: calc(env(safe-area-inset-top, 0px) + 56px); right: max(16px, env(safe-area-inset-right, 0px)); width: min(340px, calc(100vw - 32px));
     background: #fff; border-radius: 16px; padding: 12px 14px; box-shadow: 0 8px 24px rgba(11,42,74,.25); display: flex; flex-direction: column; gap: 8px; max-height: calc(100vh - 160px); overflow-y: auto; }
+  /* the store: a wooden shop sign hanging on the right edge, a rusty flintlock nailed across it; it swings when touched */
+  /* the store: a wooden shop sign over the build bar (bottom left), a rusty flintlock nailed across it; it swings when touched */
+  .shop-sign { position: relative; justify-self: start; width: 132px; height: 112px; margin-bottom: -6px;
+    border: 0; padding: 0; background: none; cursor: pointer; transform-origin: 50% 4px; pointer-events: auto; filter: drop-shadow(0 5px 0 rgba(11,42,74,.25)); }
+  .shop-sign svg { width: 100%; height: 100%; display: block; overflow: visible; }
+  .shop-sign .lbl { position: absolute; left: 0; right: 0; top: 33px; text-align: center; font: 700 1.3rem var(--ui); letter-spacing: .12em; color: #ffe9b8;
+    text-shadow: 0 2px 0 #4a2a14, 0 0 6px rgba(0,0,0,.25); pointer-events: none; }
+  .shop-sign:hover, .shop-sign:focus-visible { animation: signSwing 1.1s ease-out; }
+  .shop-sign:focus-visible { outline: none; } .shop-sign:focus-visible .lbl { text-decoration: underline; text-underline-offset: 3px; }
+  .shop-sign:active { transform: translateY(2px); }
+  .shop-sign[aria-expanded="true"] .board { filter: brightness(1.12); }
+  .shop-sign[aria-expanded="true"] .lbl { color: #fff; }
+  @keyframes signSwing { 0% { transform: rotate(0); } 18% { transform: rotate(7deg); } 40% { transform: rotate(-4.5deg); } 62% { transform: rotate(2.4deg); } 82% { transform: rotate(-1deg); } 100% { transform: rotate(0); } }
+  body.battle .shop-sign, body.in-menu .shop-sign, body.testing .shop-sign { display: none; }
+  .store.by-sign { top: auto; right: auto; }      /* placed next to the sign when it opens */
+  @media (max-width: 640px) { .shop-sign { width: 96px; height: 82px; } .shop-sign .lbl { top: 23px; font-size: .95rem; } }
+  @media (prefers-reduced-motion: reduce) { .shop-sign:hover, .shop-sign:focus-visible { animation: none; } }
+  .store .st-item .sell { background: #fff; color: var(--ink); box-shadow: inset 0 0 0 2px #d6dde6; }
+  .store .st-item .acts { display: flex; flex-direction: column; gap: 4px; align-items: stretch; }
+  .store .st-undo { position: sticky; bottom: -12px; margin: 0 -14px -12px; padding: 8px 14px 10px; background: var(--ink); color: #fff; display: flex; align-items: center; gap: 10px; font-size: .85rem; font-weight: 600; border-radius: 0 0 16px 16px; overflow: hidden; }
+  .store .st-undo span { margin-right: auto; }
+  .store .st-undo button { border: 0; border-radius: 999px; padding: 5px 12px; background: var(--sun); color: var(--ink); font: 700 .85rem var(--ui); cursor: pointer; }
+  .store .st-undo button b { display: inline-block; min-width: 1ch; font-variant-numeric: tabular-nums; }
+  .store .st-undo i { position: absolute; left: 0; bottom: 0; height: 3px; background: var(--sun); width: 100%; transform-origin: left; }
   .store h2 { margin: 0; font-size: 1.15rem; } .store h3 { margin: 4px 0 0; font-size: .9rem; }
   .store .st-head { display: flex; align-items: center; gap: 8px; } .store .st-head h2 { margin-right: auto; }
   .store .st-head .pill { box-shadow: none; background: #f2f5f9; }
@@ -193,6 +216,7 @@
   .hotbar .slot { position: relative; width: 50px; height: 50px; border-radius: 12px; border: 2px solid transparent; background: var(--panel); box-shadow: 0 3px 0 rgba(11,42,74,.2); color: var(--ink); cursor: pointer; display: grid; place-items: center; padding: 0; }
   .hotbar .slot kbd { position: absolute; top: 2px; left: 5px; font: 700 .68rem var(--ui); opacity: .6; }
   .hotbar .slot .ic { width: 30px; height: 30px; display: block; }
+  .hotbar .slot .rl { position: absolute; left: 0; right: 0; bottom: 0; height: 0; border-radius: 0 0 10px 10px; background: rgba(11,42,74,.35); pointer-events: none; }
   .hotbar .slot .ic svg { width: 100%; height: 100%; display: block; color: #8a5a2b; }
   .hotbar .slot.on { border-color: #1e88ff; background: #eaf3ff; transform: translateY(-3px); }
   .hotbar .slot.empty { opacity: .55; cursor: default; }
@@ -248,7 +272,10 @@
   @media (prefers-reduced-motion: reduce) { .flash, .knob.release { transition: none; } }
 
   /* ---- main menu: the stormy sea behind, the title across the top ---- */
-  body.in-menu > :not(canvas):not(#menu):not(script) { display: none !important; }
+  body.in-menu > :not(canvas):not(#menu):not(script):not(.top) { display: none !important; }
+  /* menus and lobbies keep the music and sound sliders, top right */
+  body.in-menu .top { z-index: 21; justify-content: flex-end; }
+  body.in-menu .top > :not(.vol), body.in-menu .top > .demo { display: none !important; }
   /* the panel sits in the middle of the screen; the title is centred in the space above it; the version is in the corner */
   .menu { position: fixed; inset: 0; z-index: 20; display: none; grid-template-rows: minmax(0, 1fr) auto minmax(0, 1fr); justify-items: center; overflow-y: auto;
     padding: calc(env(safe-area-inset-top, 0px) + 18px) max(16px, env(safe-area-inset-right, 0px)) calc(env(safe-area-inset-bottom, 0px) + 18px) max(16px, env(safe-area-inset-left, 0px));
@@ -262,6 +289,15 @@
     animation: lbob 2.8s ease-in-out infinite; animation-delay: calc(var(--i) * -.31s); transform-origin: 50% 80%; }
   .logo .lrow.goat span { color: #fff; text-shadow: 0 -4px 0 #ffffff, 4px 0 0 var(--ink), -4px 0 0 var(--ink), 0 4px 0 var(--ink), 0 -4px 0 var(--ink), 3px 3px 0 var(--ink), -3px 3px 0 var(--ink), 3px -3px 0 var(--ink), -3px -3px 0 var(--ink), 0 10px 0 var(--ink), 0 14px 12px rgba(0,0,0,.25); }
   .logo .lrow.goat span:nth-child(2n) { color: var(--coral); }
+  /* flintlock crosshair: a white ring in the middle of the screen (fainter while reloading) */
+  .xhair { position: fixed; left: 50%; top: 50%; width: 22px; height: 22px; margin: -11px 0 0 -11px; border: 2px solid #fff; border-radius: 50%; box-shadow: 0 0 0 1px rgba(11,42,74,.45), inset 0 0 0 1px rgba(11,42,74,.35); pointer-events: none; z-index: 12; transition: opacity .15s, transform .15s; }
+  .xhair::after { content: ""; position: absolute; left: 50%; top: 50%; width: 3px; height: 3px; margin: -1.5px 0 0 -1.5px; border-radius: 50%; background: #fff; }
+  .xhair.cool { opacity: .55; transform: scale(.85); }
+  /* reloading: a ring around the crosshair fills as the reload completes */
+  .xhair::before { content: ""; position: absolute; inset: -7px; border-radius: 50%; background: conic-gradient(#fff calc(var(--p, 1) * 1turn), rgba(255,255,255,.18) 0);
+    -webkit-mask: radial-gradient(farthest-side, transparent calc(100% - 3px), #000 calc(100% - 2.5px)); mask: radial-gradient(farthest-side, transparent calc(100% - 3px), #000 calc(100% - 2.5px)); opacity: 0; transition: opacity .2s; }
+  .xhair.cool::before { opacity: 1; }
+  body.in-menu .xhair { display: none; }
   /* ---- into the fight: fade, then 3 2 1 FLOAT in the logo's lettering ---- */
   .fadeov { position: fixed; inset: 0; background: #06223a; opacity: 0; pointer-events: none; transition: opacity .55s ease; z-index: 40; }
   .fadeov.on { opacity: 1; }
@@ -326,14 +362,20 @@
   .rset { display: flex; gap: 12px; flex-wrap: wrap; font-weight: 600; font-size: .9rem; }
   .rset label { display: flex; gap: 6px; align-items: center; }
   .rset select { font: 600 .9rem var(--ui); border-radius: 8px; padding: 4px 6px; }
+  /* number steppers: − value + */
+  .stepper { display: inline-flex; align-items: center; gap: 2px; background: #fff; border-radius: 999px; padding: 2px; box-shadow: inset 0 0 0 1.5px rgba(11,42,74,.18); }
+  .stepper button { width: 28px; height: 28px; border: 0; border-radius: 50%; background: #eaf3ff; font: 700 1rem var(--ui); color: var(--ink); cursor: pointer; }
+  .stepper button:disabled { opacity: .35; cursor: default; }
+  .stepper output { min-width: 3.4em; text-align: center; font-weight: 700; font-variant-numeric: tabular-nums; }
   .rset.locked select { pointer-events: none; opacity: .7; }
 </style>
 
 <canvas id="game" aria-label="3D raft building view on the water"></canvas>
 <div class="fadeov" id="fadeOv" aria-hidden="true"></div>
+<div class="xhair" id="xhair" hidden aria-hidden="true"></div>
 <div class="countdown" id="countdown" aria-live="assertive" hidden></div>
 <div class="top">
-  <div class="brand"><h1>FLOAT GOAT</h1><span id="verTag">v0.39</span></div>
+  <div class="brand"><h1>FLOAT GOAT</h1><span id="verTag">v0.40</span></div>
   <div class="scoreboard" id="scoreboard" aria-label="Match score">
     <span class="sb-side you"><i>You</i><b id="scoreYou">0</b></span>
     <span class="sb-round" id="round">Round 1/3</span>
@@ -347,15 +389,16 @@
   </div>
   <div class="pill vol demo" title="Wave height (demo)"><label for="waveLvl">🌊</label><input type="range" id="waveLvl" min="0" max="4" step="0.05" value="0.55" aria-label="Wave height"><span id="waveVal">0.55</span></div>
   <button class="pill demo" id="addGold" title="Demo: add gold">+500g</button>
-  <button class="pill demo" id="balBtn" aria-pressed="true" title="Demo: sailors balancing on the deck">Balance on</button>
   <button class="pill" id="settingsBtn" aria-label="Host settings">⚙</button>
 </div>
+
 <section class="store" id="store" hidden aria-label="Item store">
   <div class="st-head"><h2>Store</h2><span class="pill"><span class="coin"></span><span id="storeGold">0</span></span><button class="st-x" id="storeClose" aria-label="Close store">×</button></div>
   <div class="st-items" id="storeItems"></div>
   <h3>Your kit</h3>
   <div class="st-kit" id="storeKit"></div>
-  <p class="note">Better gear replaces the old one of the same kind. Your kit comes into every battle this match.</p>
+  <p class="note">Better gear replaces the old one of the same kind. Sell gear back for a third of what it cost. Your kit comes into every battle this match.</p>
+  <div class="st-undo" id="storeUndo" hidden><span id="storeUndoTxt"></span><button type="button" id="storeUndoBtn">Undo <b id="storeUndoN">5</b></button><i id="storeUndoBar"></i></div>
 </section>
 <div class="paintcost" id="paintCost" hidden></div>
 <div class="partmenu" id="partMenu" hidden>
@@ -368,13 +411,13 @@
 </div>
 <div class="settings" id="settings" hidden>
   <label for="buildTime">Build time
-    <select id="buildTime"><option value="60">1 min</option><option value="120">2 min</option><option value="180" selected>3 min</option><option value="300">5 min</option></select>
+    <span class="stepper" data-min="30" data-max="600" data-step="30" data-unit="time"><button type="button" class="sdn" aria-label="Less">−</button><output></output><button type="button" class="sup" aria-label="More">+</button><input type="hidden" id="buildTime" value="180"></span>
   </label>
   <label for="battleTime">Battle time
-    <select id="battleTime"><option value="60">60 s</option><option value="90">90 s</option><option value="120" selected>2 min</option><option value="180">3 min</option></select>
+    <span class="stepper" data-min="30" data-max="600" data-step="30" data-unit="time"><button type="button" class="sdn" aria-label="Less">−</button><output></output><button type="button" class="sup" aria-label="More">+</button><input type="hidden" id="battleTime" value="300"></span>
   </label>
   <label for="rounds">Rounds
-    <select id="rounds"><option value="1">1</option><option value="3" selected>3</option><option value="5">5</option><option value="7">7</option></select>
+    <span class="stepper" data-min="1" data-max="10" data-step="1" data-unit="n"><button type="button" class="sdn" aria-label="Less">−</button><output></output><button type="button" class="sup" aria-label="More">+</button><input type="hidden" id="rounds" value="10"></span>
   </label>
   <p class="note">Host settings. Times apply from the next phase; rounds apply when the match restarts.</p>
   <label for="dummyFires">Dummy fires back <input type="checkbox" id="dummyFires" checked></label>
@@ -411,6 +454,22 @@
 <div class="stick" id="stickL"><div class="knob" id="knobL"></div></div>
 <div class="stick x" id="stickR"><div class="knob" id="knobR"></div></div>
 <div class="bottom">
+  <button class="shop-sign" id="storeBtn" aria-expanded="false" aria-controls="store" aria-label="Store">
+  <svg viewBox="0 0 132 112" aria-hidden="true">
+    <path d="M66 3 L22 26 M66 3 L110 26" stroke="#c9a66b" stroke-width="2.4" fill="none" stroke-linecap="round"/>
+    <circle cx="66" cy="4" r="3.6" fill="#5b6470" stroke="#0b2a4a" stroke-width="1.2"/>
+    <g class="board">
+      <rect x="6" y="24" width="120" height="76" rx="8" fill="#8a5a2e" stroke="#0b2a4a" stroke-width="2.2"/>
+      <rect x="6" y="24" width="120" height="38" rx="8" fill="#9b6838"/>
+      <path d="M8 62 H124" stroke="#5e3a1c" stroke-width="2"/>
+      <path d="M14 34 q20 -3 40 1 t44 -1 M18 46 q26 3 50 -1 t40 2 M12 74 q22 -3 46 1 t52 -1 M16 88 q28 3 54 -1 t38 2" stroke="#6e4422" stroke-width="1.1" fill="none" opacity=".6"/>
+      <rect x="6" y="24" width="120" height="76" rx="8" fill="none" stroke="#0b2a4a" stroke-width="2.2"/>
+      <g fill="#c9ced8" stroke="#0b2a4a" stroke-width="1"><circle cx="16" cy="32" r="2.4"/><circle cx="116" cy="32" r="2.4"/><circle cx="16" cy="92" r="2.4"/><circle cx="116" cy="92" r="2.4"/></g>
+      <g transform="translate(23 55) rotate(-9) scale(1.32)"><g stroke="#0b2a4a" stroke-width="0.9" stroke-linejoin="round" stroke-linecap="round"> <path d="M30 17.4 L56 16.6" stroke="#4a3222" stroke-width="1.3"/> <path d="M22 12.6 L55 13 L55.2 15.4 Q40 16.6 27 17.2 Z" fill="#6a4a32"/> <path d="M22 8.6 L60 9.2 L60 13.2 L22 13.4 Z" fill="#8a7a68"/> <path d="M57.4 8.2 L61 8.4 L61 14 L57.4 14.1 Z" fill="#a07a3e"/> <path d="M23 9.8 L57 10.2" stroke="#fff" stroke-opacity=".4" stroke-width=".7"/> <g fill="#9a4a1e" opacity=".85" stroke="none"><ellipse cx="36" cy="10.6" rx="2.2" ry="1"/><ellipse cx="47" cy="12" rx="1.6" ry=".8"/><ellipse cx="55" cy="10.4" rx="1.2" ry=".7"/><ellipse cx="22" cy="13.6" rx="1.4" ry=".8"/></g> <path d="M25 8.8 C18 8.6 13.6 12 10.8 17.6 C8.8 21.6 6.4 25.4 5.2 28.6 Q4.4 32.6 8.4 33.4 L12.6 33 Q15.4 32.4 15.8 28.8 C17 24.4 20.4 20.6 25.6 18.4 L27.6 17.2 L26 13.2 Z" fill="#6a4a32"/> <path d="M14.5 15.5 C12.6 19 11 22.4 9.6 25.6" stroke="#4a3222" stroke-width="1.1" fill="none"/> <ellipse cx="9.8" cy="31.2" rx="4.8" ry="3" transform="rotate(-18 9.8 31.2)" fill="#a07a3e"/> <rect x="17" y="10.6" width="13" height="5.2" rx="2.2" fill="#6d6152"/> <path d="M27 11 L27.8 5.8 L29.8 6.2 L28.8 11 Z" fill="#8a7a68"/> <path d="M20.4 11.6 C19 8.4 17.4 6.6 15.4 6.4 L14.2 5.4 L16.8 4.2 C19.4 4.6 21.6 7 23.2 10.6 Z" fill="#8a7a68"/> <rect x="14.6" y="3.4" width="3" height="2" rx=".5" fill="#6b6f78" transform="rotate(-20 16 4.4)"/> <path d="M21.4 17.8 Q21 22.6 25.4 22.6 Q29.8 22.6 31 17" fill="none" stroke="#a07a3e" stroke-width="1.8"/> <path d="M21.4 17.8 Q21 22.6 25.4 22.6 Q29.8 22.6 31 17" fill="none" stroke-width=".6"/> <path d="M24.6 17.4 Q24 19.8 25.8 20.8" fill="none" stroke-width="1.2"/> </g></g>
+    </g>
+  </svg>
+  <span class="lbl">STORE</span>
+</button>
   <div class="tools">
     <button class="btn tray-toggle" id="trayToggle" aria-expanded="true" aria-controls="tray">Hide parts</button>
     <span class="helpwrap"><button class="help" id="helpBtn" type="button" aria-expanded="false" aria-controls="helpPop" aria-label="Building controls">?</button>
@@ -420,7 +479,6 @@
     <button class="btn" id="clear">Clear</button>
     <span class="snapctl"><button class="btn" id="snapOn" aria-pressed="true" title="Grid snapping (G)">Snap</button><span class="sz" id="snapSize" role="group" aria-label="Grid size in blocks"><button data-s="0.125" title="⅛ block">⅛</button><button data-s="0.25" title="¼ block">¼</button><button data-s="0.5" title="½ block">½</button><button data-s="1" title="1 block">1</button></span></span>
     <div class="testbar"><input type="range" id="swell" min="0" max="1.6" step="0.05" value="1" hidden><button class="btn" id="rock">Rock it</button><span class="hintk">WASD drives the motor</span></div>
-    <button class="btn store-go" id="storeBtn" aria-expanded="false" aria-controls="store">Store</button>
     <div class="goldbig" title="Gold"><span class="coin"></span><span id="gold">1000</span></div>
     <button class="btn primary" id="test">Test in water</button>
     <button class="btn battle-go" id="ready">Ready</button>
@@ -439,14 +497,24 @@
   </h1>
   <section class="mpanel" id="mMain">
     <label class="mname" for="pName">Your Name<input id="pName" maxlength="14" autocomplete="off" spellcheck="false"></label>
+    <button class="mbtn big" id="mPlayBtn">Play</button>
+    <button class="mbtn" id="mOptBtn">Options</button>
+  </section>
+  <section class="mpanel" id="mPlay" hidden>
+    <h2>Play</h2>
     <button class="mbtn big" id="mHost">Host a game</button>
     <button class="mbtn big" id="mFind">Find a game</button>
-    <button class="mbtn" id="mSolo">Practice vs bot</button>
+    <button class="mbtn" id="mSolo">Play vs bots</button>
+    <div class="rbtns"><button class="mbtn" id="mPlayBack">Back</button></div>
+  </section>
+  <section class="mpanel" id="mOpt" hidden>
+    <h2>Options</h2>
     <div class="mvol">
       <label for="mMusicVol"><span>♪ Music</span><input type="range" id="mMusicVol" min="0" max="1" step="0.01" value="0.5"></label>
       <label for="mSfxVol"><span>🔊 Sound</span><input type="range" id="mSfxVol" min="0" max="1" step="0.01" value="0.5"></label>
       <label for="mAimSens"><span>🎯 Aim</span><span class="sens"><input type="range" id="mAimSens" min="0.2" max="3" step="0.1" value="1"><output id="mAimSensV">1.0×</output></span></label>
     </div>
+    <div class="rbtns"><button class="mbtn" id="mOptBack">Back</button></div>
   </section>
   <section class="mpanel" id="mFindP" hidden>
     <h2>Open games</h2>
@@ -458,9 +526,9 @@
     <h2 id="roomTitle">Lobby</h2>
     <div class="teams" id="teams"></div>
     <div class="rset" id="roomSet">
-      <label for="rBuild">Build <select id="rBuild"><option value="60">1 min</option><option value="120">2 min</option><option value="180" selected>3 min</option><option value="300">5 min</option></select></label>
-      <label for="rBattle">Battle <select id="rBattle"><option value="60">60 s</option><option value="90">90 s</option><option value="120" selected>2 min</option><option value="180">3 min</option></select></label>
-      <label for="rRounds">Rounds <select id="rRounds"><option value="1">1</option><option value="3" selected>3</option><option value="5">5</option><option value="7">7</option></select></label>
+      <label for="rBuild">Build <span class="stepper" data-min="30" data-max="600" data-step="30" data-unit="time"><button type="button" class="sdn" aria-label="Less">−</button><output></output><button type="button" class="sup" aria-label="More">+</button><input type="hidden" id="rBuild" value="180"></span></label>
+      <label for="rBattle">Battle <span class="stepper" data-min="30" data-max="600" data-step="30" data-unit="time"><button type="button" class="sdn" aria-label="Less">−</button><output></output><button type="button" class="sup" aria-label="More">+</button><input type="hidden" id="rBattle" value="300"></span></label>
+      <label for="rRounds">Rounds <span class="stepper" data-min="1" data-max="10" data-step="1" data-unit="n"><button type="button" class="sdn" aria-label="Less">−</button><output></output><button type="button" class="sup" aria-label="More">+</button><input type="hidden" id="rRounds" value="10"></span></label>
     </div>
     <p class="mnote" id="roomNote"></p>
     <div class="rbtns"><button class="mbtn" id="mLeave">Leave</button><button class="mbtn go" id="mStart">Start</button></div>
@@ -479,7 +547,7 @@ const RAPIER_URL = 'https://cdn.jsdelivr.net/npm/@dimforge/rapier3d-compat@0.14.
 
 // the demo copy (shared privately) has testing controls; the live site (GitHub Pages) never shows them
 const DEMO = typeof location === 'undefined' || !/github\.io$/i.test(location.hostname);
-const DEMO_BUILD = 5;        // demo builds between ships: shown as "v0.39 · demo 3"; the version itself only moves when shipping
+const DEMO_BUILD = 25;        // demo builds between ships: shown as "v0.39 · demo 3"; the version itself only moves when shipping
 function fail(msg) {
   const d = document.createElement('div');
   d.className = 'err'; d.textContent = msg; document.body.appendChild(d);
@@ -1154,6 +1222,7 @@ const SFX = {
   harpoonFire: ['sfx/harpoon/harpoon_wobble_01.mp3', 'sfx/harpoon/harpoon_wobble_01_a.mp3', 'sfx/harpoon/harpoon_wobble_01_b.mp3', 'sfx/harpoon/harpoon_wobble_01_c.mp3'],   // the bolt leaving the gun (his recording)
   harpoonHit: ['sfx/harpoon/harpoon_hit_01.mp3', 'sfx/harpoon/harpoon_hit_01_a.mp3', 'sfx/harpoon/harpoon_hit_01_b.mp3', 'sfx/harpoon/harpoon_hit_01_c.mp3', 'sfx/harpoon/harpoon_hit_02.mp3', 'sfx/harpoon/harpoon_hit_02_a.mp3', 'sfx/harpoon/harpoon_hit_02_b.mp3', 'sfx/harpoon/harpoon_hit_02_c.mp3'],   // the head biting into a raft or a treasure
   harpoonWater: ['sfx/harpoon/harpoon_water_01.mp3', 'sfx/harpoon/harpoon_water_01_a.mp3', 'sfx/harpoon/harpoon_water_01_b.mp3', 'sfx/harpoon/harpoon_water_01_c.mp3', 'sfx/harpoon/harpoon_water_02.mp3', 'sfx/harpoon/harpoon_water_02_a.mp3', 'sfx/harpoon/harpoon_water_02_b.mp3', 'sfx/harpoon/harpoon_water_02_c.mp3'],   // a miss plunging into the sea
+  ropePull: ['sfx/rope/rope_pull_02.mp3', 'sfx/rope/rope_pull_02_a.mp3', 'sfx/rope/rope_pull_02_b.mp3', 'sfx/rope/rope_pull_02_c.mp3'],   // hauling a hand harpoon's line in, hand over hand
   harpoonReel: ['sfx/harpoon/harpoon_reel_01.mp3', 'sfx/harpoon/harpoon_reel_01_a.mp3', 'sfx/harpoon/harpoon_reel_01_b.mp3', 'sfx/harpoon/harpoon_reel_01_c.mp3'],   // the winch ratchet while reeling in
   harpoonSnap: ['sfx/harpoon/harpoon_snap_01.mp3', 'sfx/harpoon/harpoon_snap_01_a.mp3', 'sfx/harpoon/harpoon_snap_01_b.mp3', 'sfx/harpoon/harpoon_snap_01_c.mp3', 'sfx/harpoon/harpoon_snap_02.mp3', 'sfx/harpoon/harpoon_snap_02_a.mp3', 'sfx/harpoon/harpoon_snap_02_b.mp3', 'sfx/harpoon/harpoon_snap_02_c.mp3'],   // the rope parting
   // footsteps, one set per deck material
@@ -1220,7 +1289,7 @@ function musicTrack(name) {
   audio.music = next; next.currentTime = 0;
   if (audio.musicVol > 0) fadeEl(next, musicLevel(audio.musicVol), 0.03);
 }
-function musicOut() { if (audio.music) fadeEl(audio.music, 0, 0.035); }
+function musicOut(secs) { const a = audio.music; if (a) fadeEl(a, 0, secs ? Math.max(0.002, a.volume / (secs * 25)) : 0.035); }   // (secs: how long the fade takes)
 // volume sliders: music follows the slider directly (no fade while dragging); 0 pauses it
 function setMusicVol(v) {
   audio.musicVol = v;
@@ -1307,9 +1376,9 @@ const PARTS = {
   crate:  { name: 'Crate',         cost: 30,  hp: 80,  density: 0.5,  size: [0.9, 0.9, 0.9],   color: 0xd4a15f },
   foam:   { name: 'Foam block',      cost: 50,  hp: 25,  density: 0.05, size: [0.9, 0.9, 0.9],   color: 0xffc93c },
   plate:  { name: 'Steel plate',   cost: 60,  hp: 200, density: 7.8,  size: [1, 0.08, 1],      color: 0x9aa5b4 },
-  engine:   { name: 'Rusty motor', cost: 150, hp: 50,  density: 2,    size: [0.5, 0.7, 0.4],  vol: 0.03, color: 0xff4f4f, thrust: 2.0, scale: 1,    station: 'drive' },
-  motor:    { name: 'Standard motor',      cost: 260, hp: 70,  density: 2.33, size: [0.6, 0.85, 0.5], vol: 0.06, color: 0x1e88ff, thrust: 4.5, scale: 1.2,  station: 'drive' },
-  bigmotor: { name: 'Racing motor',  cost: 400, hp: 100, density: 2.6,  size: [0.75, 1.0, 0.6], vol: 0.1,  color: 0x2b2f3a, thrust: 8.0, scale: 1.45, station: 'drive' },
+  engine:   { name: 'Small motor', cost: 120, hp: 50,  density: 2,    size: [0.5, 0.7, 0.4],  vol: 0.03, color: 0xff4f4f, thrust: 2.0, scale: 1,    station: 'drive' },
+  motor:    { name: 'Medium motor',      cost: 240, hp: 70,  density: 2.33, size: [0.6, 0.85, 0.5], vol: 0.06, color: 0x1e88ff, thrust: 4.5, scale: 1.2,  station: 'drive' },
+  bigmotor: { name: 'Large motor',  cost: 420, hp: 100, density: 2.6,  size: [0.75, 1.0, 0.6], vol: 0.1,  color: 0x2b2f3a, thrust: 8.0, scale: 1.45, station: 'drive' },
   cannon:  { name: 'Cannon',         cost: 900, hp: 90,  density: 6,    size: [0.8, 0.55, 0.8], vol: 0.03,  color: 0x2b2f3a, station: 'gun', weapon: 'cannon',  desc: '40 dmg + splash · 2.2 s' },
   swivel:  { name: 'Swivel gun',     cost: 250,  hp: 50,  density: 5,    size: [0.5, 0.45, 0.5], vol: 0.012, color: 0xc9a227, station: 'gun', weapon: 'swivel',  desc: '12 dmg · fires every 0.7 s' },
   mortar:  { name: 'Depth charge mortar', cost: 550, hp: 70, density: 4.7, size: [0.7, 0.5, 0.7], vol: 0.03, color: 0x2f6b4f, station: 'gun', weapon: 'mortar', desc: 'Sinks, blasts from below · 4 s' },
@@ -1341,7 +1410,6 @@ const SHAPES = {
   ramp4:     { name: 'Deck ramp',   size: [2, 1, 1],       hp: 80, cost: 45, ramp: true, volK: 0.51 },
   pontoon:   { name: 'Pontoon',     size: [2, 0.6, 0.7],   hp: 90, cost: 40, hollow: true, volK: 0.8 },
   railing:   { name: 'Railing',     size: [1, 0.6, 0.1],   hp: 30, cost: 10, volK: 0.25 },
-  keel:      { name: 'Keel fin',    size: [1, 0.6, 0.06],  hp: 50, cost: 22, keel: true, volK: 0.75 },
 };
 const PONTOON_NAMES = { styro: 'Foam float', scrap: 'Oil drums', plastic: 'Inflatable tube', bamboo: 'Bamboo bundle', wood: 'Timber float', glass: 'Fiberglass hull', steel: 'Steel pontoon' };
 const TIER_PARTS = {};            // tier id -> part keys, in tray order
@@ -1360,6 +1428,23 @@ for (const T of TIERS) {
   if (T.id === 'steel') { PARTS.plate.tier = 'steel'; PARTS.plate.short = 'Steel plate'; TIER_PARTS.steel.push('plate'); }
   if (T.id === 'wood') { PARTS.barrel.tier = 'wood'; PARTS.barrel.short = 'Barrel'; TIER_PARTS.wood.push('barrel'); }
 }
+// every gun comes rusty, normal or gold: rusty is cheap and weak, gold dear and strong (stats: GRADE_STAT in battle)
+const GRADES = { rusty: { name: 'Rusty', price: 0.5, hp: 0.8, blurb: 'Weaker, slower to reload and turn', tint: [0x8a4a2a, 0.45] },
+  gold: { name: 'Gold', price: 1.9, hp: 1.25, blurb: 'Hits harder, reloads and turns faster, reaches further', tint: [0xffc83d, 0.6] } };
+const GUN_BASES = ['swivel', 'harpoon', 'ballast', 'mortar', 'cannon'];
+for (const w of GUN_BASES) for (const g in GRADES) {
+  const B = PARTS[w], G = GRADES[g];
+  PARTS[`${w}_${g}`] = { ...B, name: `${G.name} ${B.name.toLowerCase()}`, cost: Math.round(B.cost * G.price / 10) * 10, hp: Math.round(B.hp * G.hp), grade: g, base: w, desc: G.blurb };
+}
+// every motor size comes rusty, standard or racing: rusty is cheap and pushes weakly, racing costs a lot and flies
+const MOTOR_GRADES = { rusty: { name: 'Rusty', price: 0.5, hp: 0.8, thrust: 0.65, blurb: 'Cheap, but pushes about a third weaker', tint: [0x8a4a2a, 0.5] },
+  race: { name: 'Racing', price: 2.2, hp: 0.9, thrust: 1.5, blurb: 'Half again the push of a standard one', tint: [0xe8322a, 0.4] } };
+const MOTOR_BASES = ['engine', 'motor', 'bigmotor'];
+for (const m of MOTOR_BASES) for (const g in MOTOR_GRADES) {
+  const B = PARTS[m], G = MOTOR_GRADES[g];
+  PARTS[`${m}_${g}`] = { ...B, name: `${G.name} ${B.name.toLowerCase()}`, cost: Math.round(B.cost * G.price / 10) * 10, hp: Math.round(B.hp * G.hp), thrust: +(B.thrust * G.thrust).toFixed(2), grade: g, base: m, desc: G.blurb };
+}
+const gradeOf = P => GRADES[P.grade] || MOTOR_GRADES[P.grade];
 // a climbing net to hang over the side: swimmers on your team climb straight up it
 PARTS.net = { name: 'Climbing net', cost: 15, hp: 25, density: 0.3, size: [0.1, 1.1, 1], vol: 0.02, color: 0xd9c08a, side: true, net: true, desc: 'Hang it over a side · climb straight up from the water' };
 for (const k in PARTS) { const P = PARTS[k]; if (!P.vol) P.vol = P.size[0] * P.size[1] * P.size[2]; P.mass = P.vol * P.density; }
@@ -1418,6 +1503,11 @@ function tierMesh(type, ghost) {
 }
 function partMesh(type, ghost) {
   const P = PARTS[type], g = new THREE.Group();
+  if (P.base) {                                    // a rusty or gold gun: the same gun, rusted or gilded
+    const m = partMesh(P.base, ghost), [tc, k] = gradeOf(P).tint, c = new THREE.Color(tc);
+    m.traverse(o => { if (o.material && o.material.color) o.material.color.lerp(c, k); });
+    return m;
+  }
   if (P.shape && /_/.test(type)) return tierMesh(type, ghost);
   if (type === 'net') {
     const ropeM = toon(0xd9c08a); if (ghost) { ropeM.transparent = true; ropeM.opacity = 0.72; }
@@ -1715,7 +1805,7 @@ function faceContact(A, B) {
 function seamPoint(a, b) { const pa = clampToBox(a.box, b.box.center, new THREE.Vector3()), pb = clampToBox(b.box, pa, new THREE.Vector3()); return pa.add(pb).multiplyScalar(0.5); }
 function joinParts(a, b, list) {
   if (a.joins.some(j => (j.a === a && j.b === b) || (j.a === b && j.b === a))) return null;
-  const hp = ((JOINT[a.type] || 50) + (JOINT[b.type] || 50)) / 2;
+  const jh = t => JOINT[t] || JOINT[PARTS[t].base] || 50, hp = (jh(a.type) + jh(b.type)) / 2;
   const j = { a, b, p: seamPoint(a, b), hp, maxHp: hp };
   a.joins.push(j); b.joins.push(j); if (list) list.push(j);
   return j;
@@ -2923,8 +3013,8 @@ function rockIt() {
 // ---------- timer (host sets the build time) ----------
 const timer = { total: 180, left: 180 };
 // ---------- match: rounds of build -> battle -> results ----------
-const match = { phase: 'build', round: 1, rounds: 3, score: { you: 0, dummy: 0 }, battleLeft: 120, battleTotal: 120 };
-const BATTLE_TIME = 180;
+const match = { phase: 'build', round: 1, rounds: 10, score: { you: 0, dummy: 0 }, battleLeft: 300, battleTotal: 300 };
+const BATTLE_TIME = 300;
 const isWeapon = k => !!PARTS[k].weapon;
 const phaseAllows = k => !!(k && PARTS[k]) && match.phase === 'build';      // one build phase: hull, motors and weapons together
 const locked = () => raft.mode === 'battle' || match.phase !== 'build';
@@ -2954,7 +3044,7 @@ function nextPhase() {
 function newRound() {
   // the raft carries over. The first round starts with the full budget; each round after that adds ROUND_GOLD
   // to whatever you have left
-  if (match.round <= 1) raft.gold = START_GOLD - layoutCost();
+  if (match.round <= 1) raft.gold = Math.max(0, START_GOLD - layoutCost());
   else raft.gold += ROUND_GOLD;
   setPhase('build');
   const sub = `Round ${match.round} of ${match.rounds}` + (match.round > 1 ? ` · +${ROUND_GOLD}g` : '');
@@ -2963,7 +3053,13 @@ function newRound() {
 function restartMatch() {
   if (raft.mode === 'battle') exitBattle(); else if (raft.mode === 'test') endTest();
   match.round = 1; match.score.you = match.score.dummy = 0; match.rounds = Number($('rounds').value);
+  // a new match starts everyone level: an empty raft, the old kit, the starting gold (keeping last match's raft
+  // and taking its cost off the new budget is what sent gold negative)
+  if (typeof myKit !== 'undefined') myKit = DEFAULT_KIT.slice();
+  for (const p of [...raft.parts]) removePart(p, false);
+  raft.history = [];
   newRound();
+  changed();
 }
 function bigFlash(title, sub) {
   if (battle.net && battle.net.host && raft.mode === 'battle') battle.fx.push(['f', title, sub || '']);   // the guests see it too
@@ -2974,10 +3070,9 @@ function bigFlash(title, sub) {
 // ---------- UI ----------
 const $ = id => document.getElementById(id);
 // the parts menu: grouped cards, each with a little turning model of the part
-const TRAY_GROUPS = [...TIERS.map(T => [T.name, TIER_PARTS[T.id], T.id]), ['Fittings', ['net', 'ram']], ['Motors', ['engine', 'motor', 'bigmotor']], ['Weapons', ['cannon', 'swivel', 'mortar', 'harpoon', 'ballast']]];
+const TRAY_GROUPS = [...TIERS.map(T => [T.name, TIER_PARTS[T.id], T.id]), ['Fittings', ['net', 'ram']], ['Motors', MOTOR_BASES.flatMap(m => [`${m}_rusty`, m, `${m}_race`])], ['Weapons', GUN_BASES.flatMap(w => [`${w}_rusty`, w, `${w}_gold`])]];
 // which material sections are open (Wood to start with); remembered per viewer
-let trayOpen = new Set(['wood']);
-try { const v = JSON.parse(localStorage.getItem('floatgoat.trayOpen') || 'null'); if (Array.isArray(v)) trayOpen = new Set(v); } catch (_) {}
+let trayOpen = new Set(['styro']);              // every game starts on styrofoam (the cheap stuff a first raft is made of)
 const thumbs = [];
 function buildTray() {
   const tray = $('tray');
@@ -2993,7 +3088,10 @@ function buildTray() {
       sec.innerHTML = `<button class="tier-h" type="button" aria-expanded="${open}" id="tier-${tierId}"><i style="background:#${T.col[0].toString(16).padStart(6, '0')}"></i><span>${title}</span><b>${keys.length}</b></button><div class="tcards"></div>`;
       sec.querySelector('.tier-h').addEventListener('click', e => {
         const now = !sec.classList.toggle('collapsed'); e.currentTarget.setAttribute('aria-expanded', String(now));
-        if (now) trayOpen.add(tierId); else trayOpen.delete(tierId);
+        if (now) {                                    // one material open at a time: opening one folds the rest
+          for (const o of tray.querySelectorAll('.tgroup.tier')) if (o !== sec && !o.classList.contains('collapsed')) { o.classList.add('collapsed'); o.querySelector('.tier-h').setAttribute('aria-expanded', 'false'); }
+          trayOpen = new Set([tierId]);
+        } else trayOpen.delete(tierId);
         try { localStorage.setItem('floatgoat.trayOpen', JSON.stringify([...trayOpen])); } catch (_) {}
       });
     } else sec.innerHTML = `<h3>${title}</h3><div class="tcards"></div>`;
@@ -3221,6 +3319,7 @@ function rightClick() {
   updateUI();
 }
 canvas.addEventListener('pointerdown', e => {
+  if (e.button === 2 && raft.mode === 'battle' && battle.player && typeof aimsHeld === 'function' && aimsHeld(battle.player)) { e.preventDefault(); battle.aimHeld = true; return; }   // hold to aim a flintlock
   if (e.button === 2 && raft.mode !== 'build') { e.preventDefault(); rightClick(); return; }
   if (raft.mode === 'battle' && battlePointerDown(e)) return;
   if (raft.mode === 'build' && e.button === 0 && gizmoDown(e.clientX, e.clientY)) { canvas.setPointerCapture(e.pointerId); return; }
@@ -3480,7 +3579,29 @@ const WEAPONS = {
   harpoon: { speed: 28, reload: 6.0, pitch: [-0.1, 0.5], yawRate: 1.4, pitchRate: 0.9, dmg: 8, push: 0.3, recoil: 0.2, reel: 2.2, holdShip: 5, holdLoot: 12, autoReel: false },
   ballast: { speed: 18, rangeAim: true, range: [5, 42], maxSpeed: 32, reload: 5.0, pitch: [0.3, 1.25], yawRate: 1.3, pitchRate: 0.8, dmg: 5, push: 0.2, recoil: 0.25, load: 0.3375, wheelArc: true },          // load: 35% heavier than it was
 };
-const RAM = { minSpeed: 1.5, dmgPerMs: 14, cool: 0.6 };
+// grades: how a rusty or gold gun (or a thrown hand harpoon) differs from the normal one
+const GRADE_STAT = { rusty: { dmg: 0.7, reload: 1.35, turn: 0.8, speed: 0.9 }, gold: { dmg: 1.35, reload: 0.8, turn: 1.2, speed: 1.08 },
+  // thrown hand harpoons: speed 9 / 11 / 13.5 m/s, so about 8 / 12 / 18 m at best on a flat throw from the deck
+  thrown_rusty: { dmg: 0.45, reload: 1, turn: 1, speed: 0.32, reel: 0.35, hold: 0.5, autoReel: true },
+  thrown: { dmg: 0.6, reload: 1, turn: 1, speed: 0.39, reel: 0.45, hold: 0.6, autoReel: true },
+  thrown_hunt: { dmg: 0.8, reload: 1, turn: 1, speed: 0.48, reel: 0.6, hold: 0.75, autoReel: true } };
+const _wst = {};
+function WST(st) {
+  const g = st.grade; if (!g) return WEAPONS[st.weapon];
+  const key = st.weapon + '_' + g; if (_wst[key]) return _wst[key];
+  const W = { ...WEAPONS[st.weapon] }, M = GRADE_STAT[g];
+  W.dmg *= M.dmg; if (W.splashDmg) W.splashDmg *= M.dmg; W.reload *= M.reload; W.yawRate *= M.turn; W.pitchRate *= M.turn; W.speed *= M.speed;
+  if (W.maxSpeed) W.maxSpeed *= M.speed; if (W.range) W.range = [W.range[0], W.range[1] * M.speed]; if (W.load) W.load *= M.dmg; if (W.blastR) W.blastR *= 0.85 + 0.15 * M.dmg;
+  if (W.reel && M.reel) W.reel *= M.reel; if (M.hold) { W.holdShip *= M.hold; } if (M.autoReel) W.autoReel = true;
+  return (_wst[key] = W);
+}
+const RAM = { minSpeed: 1.5, dmgPerMs: 14, cool: 0.6, shove: 0.8 };
+// rafts bumping hull to hull (not a ram): the heavier one shoves the lighter one aside, and hard knocks hurt -
+// the lighter raft more. bounce: extra shove on top of the physics (water drag otherwise evens it all out)
+const BUMP = { minSpeed: 0.35, bounce: 0.55, dmgFrom: 1.3, dmgPerMs: 5, cool: 0.35 };
+// how much harm a part does when it's what hits: styrofoam is soft and hurts nothing at all
+const HARD = { styro: 0, plastic: 0.45, bamboo: 0.7, wood: 1, glass: 1, scrap: 1.2, steel: 1.5 };
+const hardOf = part => { const P = PARTS[part.type]; return P.tier ? HARD[P.tier] ?? 1 : part.type === 'foam' ? 0 : 1; };
 const HIGH_ARC = { mortar: true, ballast: true };
 const WEAPON_NAMES = { cannon: 'cannon', swivel: 'swivel gun', mortar: 'mortar', harpoon: 'harpoon', ballast: 'ballast bomb' };
 const DUMMY_LAYOUT = (() => {
@@ -3491,12 +3612,49 @@ const DUMMY_LAYOUT = (() => {
   L.push({ type: 'crate', cell: [6, 2, 2], n: [0, 1, 0] }, { type: 'crate', cell: [6, 2, 6], n: [0, 1, 0] });
   return L;
 })();
-function dummyLayout() {
-  const pool = ['cannon', 'swivel', 'mortar', 'harpoon', 'ballast'];
-  const a = pool[Math.floor(Math.random() * pool.length)];
-  const L = [...DUMMY_LAYOUT, { type: a, cell: [5, 2, 4], n: [0, 1, 0] }];
-  battle.dummyWeapon = a;
+// ---- bot rafts: built from the same gold a player has by this round (the start, plus each round's pay), spent the
+// way a player might: the biggest deck it can float, a motor, then guns. Every combination that fits the budget and
+// floats the crew is scored, with a little randomness so bots differ. ----
+const botBudget = () => START_GOLD + Math.max(0, (match.round || 1) - 1) * ROUND_GOLD;
+function botPlan(budget, rnd = Math.random) {
+  const lift = k => PARTS[k].vol * (1 - PARTS[k].density) * 1000;             // kg it floats (negative: kg it sinks)
+  const decks = ['plank_styro', 'plank_plastic', 'plank_bamboo', 'plank'];
+  const motors = [null, ...['engine', 'motor', 'bigmotor'].flatMap(m => [`${m}_rusty`, m, `${m}_race`])], guns = [null, ...['swivel', 'harpoon', 'ballast', 'mortar', 'cannon'].flatMap(w => [`${w}_rusty`, w, `${w}_gold`])];
+  const MV0 = { engine: 260, motor: 310, bigmotor: 340 }, MV = Object.fromEntries(motors.filter(Boolean).map(k => [k, MV0[PARTS[k].base || k] * ({ rusty: 0.8, race: 1.15 }[PARTS[k].grade] || 1)])), GB = { swivel: 230, harpoon: 200, ballast: 210, mortar: 260, cannon: 290 }, GG = { rusty: 0.65, gold: 1.3 };
+  const GV = Object.fromEntries(guns.filter(Boolean).map(k => [k, GB[PARTS[k].base || k] * (GG[PARTS[k].grade] || 1)]));
+  const mood = { gun: 0.8 + rnd() * 0.5, hull: 0.8 + rnd() * 0.5 };           // some bots are gunners, some builders
+  let best = null;
+  for (let k = 2; k <= 6; k++) for (const deck of decks) for (const floats of [false, true]) for (const mo of motors)
+    for (const g1 of guns) for (const g2 of (k >= 4 && g1 ? guns : [null])) {
+      if (g2 && (guns.indexOf(g2) < guns.indexOf(g1))) continue;                  // (each pair once)
+      if ((g1 && k < 3)) continue;                                              // guns need deck room
+      const parts = [[deck, k * k], ['barrel', floats ? 2 * k : 0], [mo, 1], [g1, 1], [g2, 1]].filter(([t, n]) => t && n);
+      const cost = parts.reduce((c, [t, n]) => c + PARTS[t].cost * n, 0);
+      if (cost > budget) continue;
+      const net = parts.reduce((c, [t, n]) => c + lift(t) * n, 0);
+      if (net < 80 * 1.8 + 40 * k) continue;                                    // has to carry its crew with room to spare
+      const score = mood.hull * (110 * k + 0.25 * PARTS[deck].hp * k * k) + (mo ? MV[mo] : 0) + mood.gun * ((g1 ? GV[g1] : 0) + (g2 ? GV[g2] * 0.5 : 0)) - 0.02 * cost + rnd() * 40;
+      if (!best || score > best.score) best = { score, k, deck, floats, mo, g1, g2, cost };
+    }
+  return best;
+}
+function botLayoutFrom(plan) {
+  if (!plan) return legacyLayout([{ type: 'plank_styro', cell: [4, 1, 4], n: [0, 1, 0] }]);
+  const { k, deck, floats, mo, g1, g2 } = plan, lo = 4 - Math.floor((k - 1) / 2), hi = lo + k - 1, mid = Math.round((lo + hi) / 2);
+  const L = [];
+  if (floats) for (let i = lo; i <= hi; i++) for (const j of [lo, hi]) L.push({ type: 'barrel', cell: [i, 0, j], n: [0, 1, 0] });
+  for (let i = lo; i <= hi; i++) for (let j = lo; j <= hi; j++) L.push({ type: deck, cell: [i, floats ? 1 : 0, j], n: [0, 1, 0] });
+  const top = floats ? 2 : 1;
+  if (mo) L.push({ type: mo, cell: [lo - 1, floats ? 0 : 0, mid], n: [0, 1, 0] });
+  if (g1) L.push({ type: g1, cell: [hi - 1, top, mid], n: [0, 1, 0] });
+  if (g2) L.push({ type: g2, cell: [lo + 1, top, mid], n: [0, 1, 0] });
   return legacyLayout(L);
+}
+function dummyLayout(budget = botBudget()) {
+  const plan = botPlan(budget);
+  battle.dummyWeapon = plan ? plan.g1 : null;
+  battle.dummyPlan = plan;
+  return botLayoutFrom(plan);
 }
 const UPV = new THREE.Vector3(0, 1, 0);
 const _opv = new THREE.Vector3(), _bv = new THREE.Vector3(), _bv2 = new THREE.Vector3(), _bv3 = new THREE.Vector3(), _bq = new THREE.Quaternion(), _bq2 = new THREE.Quaternion(), _bq3 = new THREE.Quaternion();
@@ -3537,9 +3695,9 @@ function buildShip(layout, origin, yaw, team) {
   for (const part of ship.parts) {
     const P = PARTS[part.type];
     if (P.station) {
-      const st = { part, kind: P.station, weapon: P.weapon, user: null, reload: 0, gun: P.station === 'gun' ? part.mesh.userData.gun : null, yaw: 0, pitch: 0, tYaw: 0, tPitch: 0, preview: 0 };
+      const st = { part, kind: P.station, weapon: P.weapon, grade: P.grade || null, user: null, reload: 0, gun: P.station === 'gun' ? part.mesh.userData.gun : null, yaw: 0, pitch: 0, tYaw: 0, tPitch: 0, preview: 0 };
       if (st.gun) { st.pitch = st.tPitch = st.gun.pitch.rotation.z; st.yaw = st.tYaw = part.rot; }
-      if (st.gun && WEAPONS[st.weapon].rangeAim) { st.range = 18; st.pitch = st.tPitch = 0.75; }
+      if (st.gun && WST(st).rangeAim) { st.range = 18; st.pitch = st.tPitch = 0.75; }
       ship.stations.push(st); part.station = st;
     }
   }
@@ -3701,13 +3859,45 @@ function shipStep(ship, t) {
   // capsize / sink
   const up = _bv.set(0, 1, 0).applyQuaternion(_bq);
   if (ship.alive) {
-    ship.capT = up.y < 0.1 ? ship.capT + DT : Math.max(0, ship.capT - DT);
-    if (ship.capT > CAPSIZE_TIME) killShip(ship, 'capsized');     // a brief roll in a storm it can come back from
+    // capsized isn't out: a raft that stays upside down becomes a raft the other way up - its bottom is now its deck,
+    // to climb onto, stand on, shoot and paddle from. Its guns and motors are under it, out of use, until it's
+    // turned back over
+    ship.capT = up.y < -0.3 ? ship.capT + DT : Math.max(0, ship.capT - DT * 2);
+    if (ship.capT > FLIP_TIME) { reframeShip(ship); ship.capT = 0; }
     // sunk: well under the water where it is (not under sea level - in a big sea a raft riding a deep trough is not sunk)
     else if (c.y < surfaceH(c.x, c.z, t) - 3.2 || !ship.parts.some(p => p.alive)) killShip(ship, 'sank');
   }
 }
-const CAPSIZE_TIME = 4.0, KEEL_GRIP = 9;
+const CAPSIZE_TIME = 4.0, KEEL_GRIP = 9, FLIP_TIME = 1.2;
+const FLIPQ = new THREE.Quaternion().setFromAxisAngle(new THREE.Vector3(1, 0, 0), Math.PI);   // half a turn about the raft's length
+// turn a raft's own frame over (without moving anything in the world): every part, mesh, rope end, bomb and stand
+// point is restated in the flipped frame, so 'up' on the raft is up in the world again
+function reframeShip(ship, guest = false) {
+  const F = FLIPQ;
+  for (const s of battle.sailors) if (s.ship === ship && (s.state === 'aboard' || s.state === 'station' || s.state === 'haul' || s.state === 'climb')) { if (guest) continue; throwOff(s, new THREE.Vector3(0, 1, 0)); }
+  if (!guest) {
+    const r = ship.body.rotation(), q = new THREE.Quaternion(r.x, r.y, r.z, r.w).multiply(F);
+    ship.body.setRotation({ x: q.x, y: q.y, z: q.z, w: q.w }, true);
+  }
+  ship.prev.q.multiply(F);
+  for (const c of ship.group.children) { c.position.applyQuaternion(F); c.quaternion.premultiply(F); }
+  for (const p of ship.parts) {
+    p.box.center.applyQuaternion(F); p.box.q.premultiply(F); p.aabb = boxAabb(p.box); p.samples = samplesOf(p);
+    if (Array.isArray(p.n)) p.n = new THREE.Vector3(...p.n).applyQuaternion(F).toArray();
+    if (!guest && p.collider) { world.removeCollider(p.collider, false); p.collider = partCollider(p, ship.body); }
+  }
+  for (const ld of battle.loads) if (ld.ship === ship) ld.local.applyQuaternion(F);
+  for (const tt of battle.tethers) { if (tt.a === ship) tt.aLocal.applyQuaternion(F); if (tt.b === ship) tt.bLocal.applyQuaternion(F); }
+  ship.fr = (ship.fr || 0) + 1; ship.flipped = !ship.flipped;
+  recolumn(ship);
+  // guns and motors that are now hanging underneath can't be worked
+  for (const st of ship.stations) {
+    const upL = new THREE.Vector3(0, 1, 0).applyQuaternion(st.part.box.q).y;
+    st.off = upL < 0.3;
+    if (st.user) leaveStation(st.user);
+    st.stand = st.off ? null : standPoint(ship, st);
+  }
+}
 const _kw1 = new THREE.Vector3(), _kw2 = new THREE.Vector3(), _kw3 = new THREE.Vector3();
 function killShip(ship, why) {
   ship.alive = false; ship.why = why;
@@ -3718,6 +3908,7 @@ function killShip(ship, why) {
 function damagePart(ship, part, dmg, push, at) {
   if (!part.alive || dmg <= 0) return;
   part.hp -= dmg; part.hitT = 1;
+  dmgNumber(at || toWorld(ship, part.box.center, new THREE.Vector3()), dmg, part);
   // the seams near the blow take some of it too; one that gives out lets the raft come apart there
   let broke = false;
   if (at) {
@@ -3734,6 +3925,133 @@ function damagePart(ship, part, dmg, push, at) {
   else if (broke) splitCheck(ship, push);
 }
 const SEAM_REACH = 0.9;
+
+// ---------- damage you can see ----------
+// a number floats up off whatever took the hit (hits close together in a moment add up into one number);
+// white for a scratch, yellow once the part's badly hurt, red when it breaks
+const _dn = [], DN_LIFE = 1.1;
+function dmgNumber(at, dmg, part) {
+  if (typeof document === 'undefined' || !(dmg > 0.05)) return;
+  const broke = part && part.hp <= 0, hurt = part ? 1 - Math.max(0, part.hp) / (part.maxHp || 1) : 0;
+  for (const n of _dn) if (n.t < 0.3 && n.p0.distanceTo(at) < 0.9) { n.v += dmg; n.broke ||= broke; n.hurt = Math.max(n.hurt, hurt); n.t = Math.min(n.t, 0.08); dnPaint(n); return; }
+  const cv = document.createElement('canvas'); cv.width = 192; cv.height = 72;
+  const tex = new THREE.CanvasTexture(cv); tex.colorSpace = THREE.SRGBColorSpace;
+  const sp = new THREE.Sprite(new THREE.SpriteMaterial({ map: tex, transparent: true, depthTest: false, depthWrite: false }));
+  sp.renderOrder = 999; sp.position.copy(at); scene.add(sp);
+  const n = { sp, cv, tex, p0: at.clone(), v: dmg, broke, hurt, t: 0, dx: (Math.random() - 0.5) * 0.5, dz: (Math.random() - 0.5) * 0.5 };
+  dnPaint(n); _dn.push(n);
+}
+function dnPaint(n) {
+  const c = n.cv.getContext && n.cv.getContext('2d'); if (!c) return;
+  const txt = n.broke ? `${Math.max(1, Math.round(n.v))} BROKE` : String(Math.max(1, Math.round(n.v)));
+  c.clearRect(0, 0, 192, 72);
+  c.font = `900 ${n.broke ? 40 : 50}px "Lilita One", "Arial Black", sans-serif`; c.textAlign = 'center'; c.textBaseline = 'middle';
+  c.lineJoin = 'round'; c.lineWidth = 9; c.strokeStyle = '#0b2a4a'; c.strokeText(txt, 96, 38);
+  c.fillStyle = n.broke ? '#ff4f4f' : n.hurt > 0.5 ? '#ffcf3a' : '#ffffff'; c.fillText(txt, 96, 38);
+  n.tex.needsUpdate = true;
+  n.size = 0.5 + Math.min(0.5, Math.sqrt(n.v) * 0.09) + (n.broke ? 0.15 : 0);
+}
+function dmgNumbersStep(dt) {
+  for (let i = _dn.length - 1; i >= 0; i--) {
+    const n = _dn[i]; n.t += dt;
+    const k = Math.min(1, n.t / DN_LIFE), rise = 1 - (1 - k) * (1 - k);
+    n.sp.position.set(n.p0.x + n.dx * rise, n.p0.y + 0.3 + 1.1 * rise, n.p0.z + n.dz * rise);
+    const pop = n.t < 0.12 ? 0.6 + 0.6 * Math.sin(n.t / 0.12 * Math.PI / 2) + 0.2 * Math.sin(n.t / 0.12 * Math.PI) : 1.2 - 0.2 * Math.min(1, (n.t - 0.12) / 0.15);
+    // (a bit bigger further away so it stays readable)
+    const far = camera ? Math.max(1, camera.position.distanceTo(n.sp.position) / 14) : 1, s = n.size * pop * far;
+    n.sp.scale.set(s * 192 / 72, s, 1);
+    n.sp.material.opacity = n.t < 0.65 ? 1 : Math.max(0, 1 - (n.t - 0.65) / (DN_LIFE - 0.65));
+    if (n.t >= DN_LIFE) { scene.remove(n.sp); n.tex.dispose(); n.sp.material.dispose(); _dn.splice(i, 1); }
+  }
+}
+function dmgNumbersClear() { for (const n of _dn) { scene.remove(n.sp); n.tex.dispose(); n.sp.material.dispose(); } _dn.length = 0; }
+
+// a part shows how hurt it is, in four stages before it breaks: sound; scuffed (scratches, a little
+// weathered); battered (holes punched in it, splinters sticking out, darker); wrecked (a crack right across,
+// more holes, charred, and smoking). Each new mark grows in rather than popping.
+const DMG_STAGE = [0.75, 0.5, 0.25];            // hp fraction at which each stage starts
+const dmgStage = p => { const f = Math.max(0, p.hp) / (p.maxHp || 1); return f > DMG_STAGE[0] ? 0 : f > DMG_STAGE[1] ? 1 : f > DMG_STAGE[2] ? 2 : 3; };
+const DMG_TINT = [0, 0.14, 0.3, 0.48], _dmgChar = new THREE.Color(0x2e2620), _dmgMat = { dark: null };
+function dmgMats() { if (!_dmgMat.dark) { _dmgMat.dark = toon(0x1f1712); _dmgMat.crack = toon(0x140f0b); } return _dmgMat; }
+// a spot on the part's surface (its own frame): mostly on top, sometimes on a side
+function dmgSpot(p) {
+  const [sx, sy, sz] = p.box.size, hx = sx / 2, hy = sy / 2, hz = sz / 2, r = Math.random();
+  const u = (Math.random() - 0.5) * 0.8, v = (Math.random() - 0.5) * 0.8;
+  if (r < 0.6 || sy < 0.2) return { p: new THREE.Vector3(u * sx, hy + 0.006, v * sz), n: new THREE.Vector3(0, 1, 0) };
+  if (r < 0.8) { const sd = Math.random() < 0.5 ? -1 : 1; return { p: new THREE.Vector3(sd * (hx + 0.006), u * sy, v * sz), n: new THREE.Vector3(sd, 0, 0) }; }
+  const sd = Math.random() < 0.5 ? -1 : 1; return { p: new THREE.Vector3(u * sx, v * sy, sd * (hz + 0.006)), n: new THREE.Vector3(0, 0, sd) };
+}
+function dmgAdd(p, mesh, at, nrm, spin) {
+  mesh.position.copy(at); mesh.quaternion.setFromUnitVectors(new THREE.Vector3(0, 1, 0), nrm);
+  if (spin) mesh.rotateY(spin);
+  mesh.scale.setScalar(0.001); mesh.userData.grow = 0; p.dmgG.add(mesh);
+}
+function dmgMarks(p, stage) {
+  const M = dmgMats(), P = PARTS[p.type], light = toon(new THREE.Color(P.color || 0xc4864a).lerp(new THREE.Color(0xffffff), 0.45));
+  const small = Math.min(p.box.size[0], p.box.size[2], 1), k = 0.6 + 0.4 * small;
+  if (stage === 1) for (let i = 0; i < 3; i++) {                                // scratches
+    const a = dmgSpot(p); dmgAdd(p, new THREE.Mesh(new THREE.BoxGeometry((0.14 + Math.random() * 0.16) * k, 0.008, 0.018), M.dark), a.p, a.n, Math.random() * Math.PI);
+  }
+  if (stage === 2) for (let i = 0; i < 2; i++) {                                // holes, with splinters round them
+    const a = dmgSpot(p), r = (0.05 + Math.random() * 0.03) * k;
+    dmgAdd(p, new THREE.Mesh(new THREE.CylinderGeometry(r, r * 0.8, 0.01, 7), M.crack), a.p, a.n, Math.random() * 3);
+    for (let j = 0; j < 3; j++) {
+      const sp = new THREE.Mesh(new THREE.ConeGeometry(0.014, 0.09 * k, 4), light), ang = j / 3 * Math.PI * 2 + Math.random();
+      const off = new THREE.Vector3(Math.cos(ang) * r, 0.03, Math.sin(ang) * r).applyQuaternion(new THREE.Quaternion().setFromUnitVectors(new THREE.Vector3(0, 1, 0), a.n));
+      const tilt = a.n.clone().add(off.clone().normalize().multiplyScalar(0.9)).normalize();
+      dmgAdd(p, sp, a.p.clone().add(off), tilt, 0);
+    }
+  }
+  if (stage === 3) {
+    // a crack right across the top, in a few jagged pieces
+    const [sx, sy, sz] = p.box.size, along = sx >= sz ? 'z' : 'x', L = along === 'z' ? sz : sx, n = 4;
+    let x0 = (Math.random() - 0.5) * 0.3 * (along === 'z' ? sx : sz);
+    for (let i = 0; i < n; i++) {
+      const t0 = -L / 2 + L * i / n, t1 = t0 + L / n, x1 = x0 + (Math.random() - 0.5) * 0.12;
+      const a = new THREE.Vector3(), b = new THREE.Vector3();
+      if (along === 'z') { a.set(x0, sy / 2 + 0.007, t0); b.set(x1, sy / 2 + 0.007, t1); } else { a.set(t0, sy / 2 + 0.007, x0); b.set(t1, sy / 2 + 0.007, x1); }
+      const d = b.clone().sub(a), seg = new THREE.Mesh(new THREE.BoxGeometry(0.03, 0.01, d.length() + 0.02), M.crack);
+      seg.position.copy(a).addScaledVector(d, 0.5); seg.lookAt(seg.position.clone().add(d)); seg.scale.setScalar(0.001); seg.userData.grow = 0; p.dmgG.add(seg);
+      x0 = x1;
+    }
+    dmgMarks(p, 2);
+  }
+}
+function partDamageDraw(p, dt) {
+  const st = dmgStage(p);
+  if (!p.dmgG && st === 0) return;
+  if (!p.dmgG) { p.dmgG = new THREE.Group(); p.dmgSt = 0; p.dmgK = 0; }
+  if (p.dmgG.parent !== p.mesh.parent && p.mesh.parent) p.mesh.parent.add(p.dmgG);
+  p.dmgG.position.copy(p.box.center); p.dmgG.quaternion.copy(p.box.q); p.dmgG.scale.copy(p.mesh.scale);
+  p.dmgG.visible = p.mesh.visible;
+  while (p.dmgSt < st) dmgMarks(p, ++p.dmgSt);
+  for (const m of p.dmgG.children) if (m.userData.grow < 1) { m.userData.grow = Math.min(1, m.userData.grow + dt / 0.22); const e = m.userData.grow; m.scale.setScalar(Math.max(0.001, e * e * (3 - 2 * e) * (1 + 0.25 * Math.sin(e * Math.PI)))); }
+  // weathered, then charred: the part's own colours darken toward soot
+  const want = DMG_TINT[st];
+  if (Math.abs(p.dmgK - want) > 0.002) {
+    p.dmgK += (want - p.dmgK) * (1 - Math.exp(-6 * dt));
+    if (!p.mesh.userData.ownMats) { p.mesh.traverse(o => { if (o.material && o.material.color) { o.material = o.material.clone(); o.userData.c0 = o.material.color.clone(); } }); p.mesh.userData.ownMats = true; }
+    p.mesh.traverse(o => { if (o.userData.c0) o.material.color.copy(o.userData.c0).lerp(_dmgChar, p.dmgK); });
+  }
+  // wrecked: it smokes
+  if (st === 3 && p.alive && p.mesh.visible) {
+    p.smokeT = (p.smokeT || 0) - dt;
+    if (p.smokeT <= 0) { p.smokeT = 0.35 + Math.random() * 0.4; const w = p.dmgG.localToWorld(new THREE.Vector3((Math.random() - 0.5) * p.box.size[0] * 0.6, p.box.size[1] / 2, (Math.random() - 0.5) * p.box.size[2] * 0.6)); smokeWisp(w); }
+  }
+}
+// a little curl of grey smoke that drifts up and thins out (just here; not sent online - everyone makes their own)
+const _wisps = [];
+function smokeWisp(p) {
+  const m = new THREE.Mesh(puffGeo, new THREE.MeshBasicMaterial({ color: 0x6d6a66, transparent: true, opacity: 0.5, depthWrite: false }));
+  m.position.copy(p); m.scale.setScalar(0.06); scene.add(m); _wisps.push({ m, t: 0, dx: (Math.random() - 0.5) * 0.25 });
+}
+function wispsStep(dt) {
+  for (let i = _wisps.length - 1; i >= 0; i--) {
+    const w = _wisps[i]; w.t += dt;
+    w.m.position.y += dt * 0.7; w.m.position.x += w.dx * dt; w.m.scale.setScalar(0.06 + w.t * 0.18); w.m.material.opacity = 0.5 * Math.max(0, 1 - w.t / 1.6);
+    if (w.t > 1.6) { scene.remove(w.m); w.m.material.dispose(); _wisps.splice(i, 1); }
+  }
+}
 function seamSnap(ship, j) {
   const w = toWorld(ship, j.p, new THREE.Vector3());
   puff(w, 0xd9b27a, 0.45);
@@ -4094,7 +4412,7 @@ function gunPose(s) {
   const st = s.station, P = poseFor('gun', s.ph);
   if (!st || !st.gun || !GUN_POSE[st.weapon]) return P;
   P.set(GUN_POSE[st.weapon]);
-  const W = WEAPONS[st.weapon], t = performance.now() / 1000;
+  const W = WST(st), t = performance.now() / 1000;
   // reloading: each crew has its own chore while the gun is cooling
   const r = st.reload / W.reload;
   if (r > 0.08 && r < 0.92) {
@@ -4212,7 +4530,21 @@ function lockAim() {
 }
 function unlockAim() { if (aimLocked()) try { document.exitPointerLock(); } catch (_) {} }
 const onGun = () => { const s = battle.player; return !!(s && s.station && s.station.kind === 'gun' && !battle.over); };
-// right click in battle: on a harpoon with a rope out, lets the rope go; otherwise not decided yet
+// right click in battle: holds a flintlock up to aim; on a harpoon with a rope out, lets the rope go
+// the mouse buttons as a set: a second button pressed while one is already down doesn't make a new pointerdown
+// (only a pointermove with the new buttons), so both are read from e.buttons on every pointer event
+let _mBtns = 0;
+function mouseButtons(e) {
+  if (e.pointerType && e.pointerType !== 'mouse') return;
+  const b = e.buttons | 0, was = _mBtns; _mBtns = b;
+  const s = battle.player;
+  const pistol = raft.mode === 'battle' && !battle.over && s && aimsHeld(s) && !onGun();
+  battle.aimHeld = !!(pistol && (b & 2));
+  if (pistol && (heldKind(s) === 'rod' || heldKind(s) === 'paddle')) { battle.reelHeld = !!(b & 1) && aimLocked(); return; }      // a rod: click casts, hold reels; a paddle: hold to paddle
+  if (pistol && (b & 1) && !(was & 1) && aimLocked()) { if (heldKind(s) === 'spear') spearThrow(); else pistolFire(); }
+}
+for (const t of ['pointerdown', 'pointermove', 'pointerup']) document.addEventListener(t, mouseButtons, true);
+addEventListener('blur', () => { battle.aimHeld = false; _mBtns = 0; });
 function battleRightClick() {
   const s = battle.player;
   if (s && s.station && s.station.weapon === 'harpoon') {
@@ -4223,28 +4555,30 @@ function battleRightClick() {
 // mouse wheel on the ballast bomb raises or lowers the arc
 function battleWheel(e) {
   if (!onGun()) return false;
-  const st = battle.player.station, W = WEAPONS[st.weapon];
+  const st = battle.player.station, W = WST(st);
   if (!W.wheelArc) return true;          // other guns: the wheel does nothing (no camera zoom while aiming)
   st.tPitch = clamp(st.tPitch - Math.sign(e.deltaY) * 0.06, W.pitch[0], W.pitch[1]);
   return true;
 }
 function battlePointerDown(e) {
   if (e.pointerType !== 'mouse' || battle.over) return false;
+  if (aimLocked() && e.button === 0 && battle.player && aimsHeld(battle.player) && !onGun()) return true;   // (fired from the button tracker)
   if (aimLocked()) { if (e.button === 0 && !battleLocked()) { battle.reelHeld = true; if (onGun()) playerFire(); } }   // held: fires / reels / paddles
   else lockAim();
   return true;
 }
-document.addEventListener('mousemove', e => {
+// looking and aiming: pointer events (mouse events stop once a pointerdown has been claimed, e.g. while right is held)
+document.addEventListener(typeof PointerEvent !== 'undefined' ? 'pointermove' : 'mousemove', e => {
   if (!aimLocked() || raft.mode !== 'battle' || battle.over) return;
   if (onGun()) {
-    const st = battle.player.station, W = WEAPONS[st.weapon];
+    const st = battle.player.station, W = WST(st);
     st.tYaw -= e.movementX * 0.0025 * aimSens.v;
     // the ballast bomb: up/down sets how far it lands; the mouse wheel sets how high it arcs
     if (W.rangeAim) st.range = clamp(st.range - e.movementY * 0.05 * aimSens.v, W.range[0], W.range[1]);
     else if (!W.wheelArc) st.tPitch = clamp(st.tPitch - e.movementY * 0.002 * aimSens.v, W.pitch[0], W.pitch[1]);
   } else {
     view.yaw -= e.movementX * 0.0025 * aimSens.v;
-    view.pitch = clamp(view.pitch + e.movementY * 0.002 * aimSens.v, 0.08, 1.35);
+    view.pitch = clamp(view.pitch + e.movementY * 0.002 * aimSens.v, (battle.aimW || 0) > 0.3 ? -1.4 : 0.08, 1.35);   // aiming: from nearly straight down to nearly straight up
     battle.lastLook = performance.now();
   }
 });
@@ -4325,6 +4659,9 @@ function sailorStep(s, t, inp) {
   const ship = s.ship;
   s.shoveT += DT; s.shoveCool = Math.max(0, s.shoveCool - DT); s.stagger = Math.max(0, s.stagger - DT);
   if (s.shovePending > 0) { s.shovePending -= DT; if (s.shovePending <= 0 && s.state === 'aboard') shoveImpact(s); }
+  // Space lets go: mid-heave (it drops back where it is - for when it's too much and the raft starts to tip), or while dragging
+  if (s.jumpReq && s.state === 'haul') { s.jumpReq = false; if (s.haulT) releaseLoot(s.haulT, null); s.state = 'aboard'; }
+  else if (s.jumpReq && s.state === 'aboard' && s.carry && s.carry.drag) { s.jumpReq = false; dropLoot(s, false); }
   itemsStep(s);
   if (s.state === 'aboard' || s.state === 'station' || s.state === 'haul') {
     const { q } = shipPose(ship);
@@ -4347,6 +4684,7 @@ function sailorStep(s, t, inp) {
     }
     if (s.pad && (s.pad.active || s.pad.w > 0.3)) mv.set(0, 0, 0);          // kneeling to paddle: he stays put
     if (s.pry) { mv.set(0, 0, 0); pryStep(s); }                              // working a ballast bomb loose
+    if (s.aiming && aimsHeld(s)) mv.multiplyScalar(heldKind(s) === 'paddle' ? 0 : 0.5);         // steady steps while aiming; a paddle held out: feet planted
     s.move.lerp(mv, 1 - Math.exp(-12 * DT));
     // his weight: a hard lurch of the deck under him (not just its slope) shoves him across it; gunners hold on
     if (BALANCE.on && s.state === 'aboard') {
@@ -4452,8 +4790,13 @@ function sailorStep(s, t, inp) {
       if (best) { s.slide.x += (best[0] - s.local.x) * 6 * DT; s.slide.z += (best[1] - s.local.z) * 6 * DT; }
     }
     s.speed = Math.hypot(s.move.x, s.move.z);
+    if (s.aiming && s.aimDir && aimsHeld(s) && heldKind(s) !== 'paddle' && s.state === 'aboard') {          // turned to face where he aims
+      const fl = _bv3.copy(s.aimDir).applyQuaternion(_bq2.copy(shipPose(ship).q).invert());
+      s.aimYawL = Math.atan2(-fl.z, fl.x);
+    } else s.aimYawL = null;
     if (s.shoveT < 0.4) s.yaw = lerpAngle(s.yaw, s.shoveYaw, 1 - Math.exp(-22 * DT));
-    else if (s.pad && s.pad.active) s.yaw = lerpAngle(s.yaw, s.pad.dir, 1 - Math.exp(-5 * DT));     // turns to face the way he paddles
+    else if (s.aimYawL !== null && s.aimYawL !== undefined) s.yaw = lerpAngle(s.yaw, s.aimYawL, 1 - Math.exp(-16 * DT));
+    else if (s.pad && s.pad.active && !s.pad.aim) s.yaw = lerpAngle(s.yaw, s.pad.dir, 1 - Math.exp(-5 * DT));     // turns to face the way he paddles
     else if (s.carry && s.carry.drag) s.yaw = lerpAngle(s.yaw, dragYaw(s), 1 - Math.exp(-8 * DT));   // keeps facing what he drags
     else if (s.speed > 0.2 && s.state !== 'haul' && !(s.state === 'station' && !(s.route && s.route.length))) { const ty = Math.atan2(-s.move.z, s.move.x); s.yaw = lerpAngle(s.yaw, ty, 1 - Math.exp(-10 * DT)); }
     pushLoot(s);
@@ -4692,6 +5035,14 @@ function drawSailor(s, dt, camPosW) {
       P[12] += (s.dragLow || 0) + 0.18 * s.dragM - 0.12 * Math.max(0, -s.dragM);   // lower for a lower piece; leaning in to push, sitting back to tow
       for (const i of [0, 1, 2, 3, 4, 5, 12, 13]) J[i] = J[i] * (1 - cw) + P[i] * cw; J[6] += 0.8 * cw; J[7] += 0.8 * cw; J[10] -= 1.3 * cw; J[11] -= 1.3 * cw; }   // knees bent under the crouch
   }
+  // aiming while moving: he keeps facing the aim, so his legs step the way he's actually going (sideways, backwards)
+  if ((s.aimW || 0) > 0.02 && (want === 'walk' || s.speed > 0.15) && s.state === 'aboard') {
+    const sp = Math.max(0.15, Math.hypot(s.move.x, s.move.z)), fx = Math.cos(s.yaw), fz = -Math.sin(s.yaw);
+    const ff = (s.move.x * fx + s.move.z * fz) / sp, rr = (s.move.x * -fz + s.move.z * fx) / sp, aw = itemSmooth(s.aimW), S = Math.sin(s.ph);
+    for (const i of [6, 7]) J[i] = J[i] * (1 - aw) + J[i] * ff * aw;                     // swing forward / back as much as he's going that way
+    J[8] += aw * rr * 0.34 * S; J[9] += aw * rr * 0.34 * S;                               // and step out to the side for the rest
+    J[13] -= aw * 0.05; J[12] += aw * 0.06;                                               // a little lower, a little forward: braced
+  }
   const bal = balancePose(s, dt, J);
   for (let i = 0; i < 2; i++) {
     M.sh[i].rotation.set(J[2 + i], 0, J[i]);
@@ -4700,7 +5051,7 @@ function drawSailor(s, dt, camPosW) {
     M.kn[i].rotation.z = J[10 + i];
   }
   M.spine.rotation.z = -J[12]; M.hips.position.y = 0.9 + J[13]; M.body.rotation.z = J[14];
-  M.spine.rotation.x = 0; M.spine.rotation.y = 0;
+  M.spine.rotation.x = 0; M.spine.rotation.y = 0; M.neck.rotation.y = 0;      // (anything that turns these adds to them each frame)
   M.hips.position.x = M.hips.position.z = 0;
   if (bal) { M.spine.rotation.z += bal.lf; M.spine.rotation.x += bal.ls; M.hips.position.x = bal.hx; M.hips.position.z = bal.hz; M.neck.rotation.z = -bal.lf * 0.5; M.neck.rotation.x = -bal.ls * 0.5; }
   else { M.neck.rotation.z = M.neck.rotation.x = 0; }
@@ -4741,6 +5092,164 @@ function drawSailor(s, dt, camPosW) {
   beltDraw(s, dt);
 }
 
+// ---------- flintlocks: hold right click to aim over the shoulder, click to fire ----------
+// A shot is a straight line from the muzzle: it stops at the first sailor, raft part, treasure or wave it meets.
+// Sailors don't have health: a hit staggers and shoves them (off the edge, if they're near it) and costs them their
+// belt pouches; raft parts take damage.
+function traceShot(from, dir, maxD, shooter, d0 = 0.15) {
+  const p = new THREE.Vector3(), STEP = 0.1;
+  for (let d = d0; d <= maxD + 1e-6; d += STEP) {
+    p.copy(from).addScaledVector(dir, d);
+    for (const o of battle.sailors) {
+      if (o === shooter || o.dead || o.fade < 0.5) continue;
+      const c = sailorWorld(o, _bv);
+      const swim = o.state === 'swim', body = c.clone().add(_bv2.set(0, swim ? 0.1 : 1.0, 0)), head = c.clone().add(_bv2.set(0, swim ? 0.35 : 1.55, 0));
+      if (p.distanceTo(body) < 0.32 || p.distanceTo(head) < 0.17) return { kind: 'sailor', o, p: p.clone() };
+    }
+    for (const sh of battle.ships) { if (!sh.parts.length) continue; const part = hitTest(sh, p, 0.02); if (part) return { kind: 'part', ship: sh, part, p: p.clone() }; }
+    for (const t of battle.loot) { if (t.gone || t.belt) continue; const c = t.body.translation(); if (Math.hypot(c.x - p.x, c.y - p.y, c.z - p.z) < Math.max(...t.L.size) * 0.42) return { kind: 'loot', t, p: p.clone() }; }
+    if (p.y < surfaceH(p.x, p.z, simTime)) return { kind: 'water', p: p.clone() };
+  }
+  return { kind: 'none', p: from.clone().addScaledVector(dir, maxD) };
+}
+// a shot is a real ball: it flies (fast, dropping a little), trailing smoke, and hits whatever it meets on the way
+const BULLET_G = 3.2;
+function shootRay(s, from, dir, I) {
+  playSfx('swivelFire', from, 0.55);
+  puff(from.clone().addScaledVector(dir, 0.15), 0xf2f2f2, 0.35);
+  spawnBullet(from.clone().addScaledVector(dir, 0.1), dir.clone().multiplyScalar(I.speed || 60), s, I, true);
+}
+const bulletGeo = new THREE.SphereGeometry(0.035, 8, 6), bulletMat = toon(0x2b2f3a);
+function spawnBullet(p, v, shooter, I, real) {
+  if (real && battle.net && battle.net.host) battle.fx.push(['b', +p.x.toFixed(2), +p.y.toFixed(2), +p.z.toFixed(2), +v.x.toFixed(2), +v.y.toFixed(2), +v.z.toFixed(2), I.range || 40]);
+  const mesh = new THREE.Mesh(bulletGeo, bulletMat); mesh.position.copy(p); scene.add(mesh);
+  const pts = Array.from({ length: 10 }, () => p.clone());
+  const trail = new THREE.Line(new THREE.BufferGeometry().setFromPoints(pts), new THREE.LineBasicMaterial({ color: 0xffffff, transparent: true, opacity: 0.55, depthWrite: false }));
+  trail.frustumCulled = false; scene.add(trail);
+  (battle.bullets ||= []).push({ p: p.clone(), v: v.clone(), shooter, I, real, mesh, trail, pts, dist: 0 });
+}
+function bulletsStep() {
+  const L = battle.bullets || [];
+  for (let i = L.length - 1; i >= 0; i--) {
+    const b = L[i];
+    b.v.y -= BULLET_G * DT;
+    const step = b.v.length() * DT, dir = b.v.clone().normalize();
+    const hit = traceShot(b.p, dir, step, b.shooter, 0);
+    let done = false;
+    if (hit.kind !== "none") { done = true; if (b.real) shotHit(b.shooter, hit, dir, b.I); else if (hit.kind === 'water') spray(hit.p, 4, 0.8, 0.3); }
+    b.p.copy(hit.p); b.dist += step;
+    if (b.dist > (b.I.range || 40) * 1.4) done = true;
+    b.mesh.position.copy(b.p);
+    b.pts.pop(); b.pts.unshift(b.p.clone()); b.trail.geometry.setFromPoints(b.pts);
+    if (done) { removeBullet(b); L.splice(i, 1); }
+  }
+}
+function removeBullet(b) { scene.remove(b.mesh); scene.remove(b.trail); b.trail.geometry.dispose(); }
+function shotHit(s, hit, dir, I) {
+  if (hit.kind === 'sailor') {
+    const o = hit.o;
+    if (enemyOf(s, o)) {
+      sailorHurt(o, hit.p);
+      if (o.state === 'swim') o.vel.addScaledVector(dir, I.knock);
+      else if (o.state === 'aboard' || o.state === 'station' || o.state === 'haul') {
+        if (o.station) leaveStation(o);
+        if (o.state === 'haul' && o.haulT) releaseLoot(o.haulT, null);
+        if (o.state === 'haul') o.state = 'aboard';
+        const ld = dir.clone().applyQuaternion(_bq2.copy(shipPose(o.ship).q).invert()); ld.y = 0;
+        if (ld.lengthSq() > 1e-6) o.slide.addScaledVector(ld.normalize(), I.knock);
+        o.stagger = Math.max(o.stagger, 0.45);
+      }
+    }
+    puff(hit.p, 0xff6b6b, 0.2);
+  } else if (hit.kind === 'part') { damagePart(hit.ship, hit.part, I.dmg, dir.clone().multiplyScalar(0.15), hit.p); puff(hit.p, 0xd8c3a0, 0.22); }
+  else if (hit.kind === 'loot') { hit.t.body.applyImpulseAtPoint({ x: dir.x * 0.25, y: 0.1, z: dir.z * 0.25 }, { x: hit.p.x, y: hit.p.y, z: hit.p.z }, true); puff(hit.p, 0xffe08a, 0.2); }
+  else if (hit.kind === 'water') spray(hit.p, 4, 0.8, 0.3);
+}
+// a streak of smoke along the shot, gone in a moment
+function tracer(a, b) {
+  if (battle.net && battle.net.host) battle.fx.push(['t', +a.x.toFixed(2), +a.y.toFixed(2), +a.z.toFixed(2), +b.x.toFixed(2), +b.y.toFixed(2), +b.z.toFixed(2)]);
+  const geo = new THREE.BufferGeometry().setFromPoints([a, b]);
+  const line = new THREE.Line(geo, new THREE.LineBasicMaterial({ color: 0xffffff, transparent: true, opacity: 0.7, depthWrite: false }));
+  scene.add(line); (battle.tracers ||= []).push({ line, life: 0.14 });
+}
+function tracersStep(dt) {
+  const T = battle.tracers || [];
+  for (let i = T.length - 1; i >= 0; i--) { const t = T[i]; t.life -= dt; t.line.material.opacity = Math.max(0, t.life / 0.14) * 0.7; if (t.life <= 0) { scene.remove(t.line); t.line.geometry.dispose(); T.splice(i, 1); } }
+}
+// the player pulls the trigger: aimed at whatever's under the crosshair (or straight ahead from the hip)
+function pistolFire(s = battle.player) {
+  if (!s || battle.over || battleLocked() || heldKind(s) !== 'pistol' || s.state !== 'aboard' || s.eqK < 0.97) return;
+  const I = ITEMS[heldItem(s)];
+  if ((s === battle.player && netGuest() ? battle.myGunCD || 0 : s.gunCD) > 0) return;
+  const T = s.tools[s.eqCur]; if (!T) return;
+  T.mesh.updateMatrixWorld(true);
+  const muzzle = T.mesh.localToWorld(MUZZLE.clone());
+  let dir;
+  const aimed = (s.aimW || 0) > 0.7;
+  if (aimed && battle.aimDir) {
+    const target = traceShot(camera.position, battle.aimDir, 70, s).p;                          // what the crosshair is on
+    // aimed a touch high for the ball's drop, so it comes down on what the crosshair is on
+    const D = target.distanceTo(muzzle), tf = D / (I.speed || 60); target.y += 0.5 * BULLET_G * tf * tf;
+    dir = target.sub(muzzle).normalize();
+  } else dir = new THREE.Vector3(1, 0, 0).applyQuaternion(T.mesh.getWorldQuaternion(new THREE.Quaternion())).setY(0).normalize();
+  const sp = aimed ? I.spread : I.hip, a = Math.random() * Math.PI * 2, r = Math.sqrt(Math.random()) * sp;
+  const u = new THREE.Vector3(0, 1, 0).cross(dir).normalize(), v = dir.clone().cross(u);
+  dir.addScaledVector(u, Math.cos(a) * r).addScaledVector(v, Math.sin(a) * r).normalize();
+  s.gunShotT = 0;
+  if (s === battle.player && netGuest()) { battle.myGunCD = I.reload; netAct({ k: 'shoot', o: muzzle.toArray().map(v => +v.toFixed(3)), d: dir.toArray().map(v => +v.toFixed(4)) }); return; }
+  s.gunCD = I.reload;
+  shootRay(s, muzzle, dir, I);
+}
+// the player throws a hand harpoon: straight along the aim, as hard as it throws; gravity does the rest, so for
+// distance he aims high (from the hip: ahead of him, a little up)
+function spearThrow(s = battle.player) {
+  if (!s || battle.over || battleLocked() || heldKind(s) !== 'spear' || s.state !== 'aboard' || s.eqK < 0.97 || s.spOut) return;
+  const I = ITEMS[heldItem(s)];
+  if ((s === battle.player && netGuest() ? Math.max(battle.myGunCD || 0, s.gunCD || 0) : s.gunCD) > 0) return;
+  const T = s.tools[s.eqCur]; if (!T) return;
+  T.mesh.updateMatrixWorld(true);
+  const from = T.mesh.localToWorld(new THREE.Vector3(0, 0.5, 0));
+  let dir;
+  if ((s.aimW || 0) > 0.7 && battle.aimDir) dir = battle.aimDir.clone().normalize();
+  else { const y = worldYawOf(s); dir = new THREE.Vector3(Math.cos(y), 0.25, -Math.sin(y)).normalize(); }
+  s.gunShotT = 0;
+  if (s === battle.player && netGuest()) { battle.myGunCD = I.reload; netAct({ k: 'throw', o: from.toArray().map(v => +v.toFixed(3)), d: dir.toArray().map(v => +v.toFixed(4)) }); return; }
+  throwSpear(s, from, dir, I);
+}
+// the direction to throw at speed v to land on a point (the flatter of the two arcs; out of reach: 45 degrees)
+function lobDir(from, to, v) {
+  const dx = to.x - from.x, dz = to.z - from.z, x = Math.hypot(dx, dz), y = to.y - from.y;
+  if (x < 0.01) return new THREE.Vector3(0, Math.sign(y) || 1, 0);
+  const disc = v ** 4 - G * (G * x * x + 2 * y * v * v);
+  const th = disc >= 0 ? Math.atan2(v * v - Math.sqrt(disc), G * x) : Math.PI / 4;
+  return new THREE.Vector3(dx / x * Math.cos(th), Math.sin(th), dz / x * Math.cos(th));
+}
+// the nearest piece of a raft to a point in its frame
+function partBeneath(ship, lp) {
+  let best = null, bd = 1e9;
+  for (const p of ship.parts) { if (!p.alive) continue; const d = boxDist(p.box, lp); if (d < bd) { bd = d; best = p; } }
+  return best;
+}
+// it leaves his hand: a harpoon (a weak one) with its rope tied off on the raft he's standing on
+function throwSpear(s, from, dir, I) {
+  const ship = s.ship, part = partBeneath(ship, s.local); if (!part) return;
+  const H = s.hst ||= { kind: 'gun', weapon: 'harpoon', thrown: true, gun: null, reload: 0 };
+  H.user = s; H.part = part; H.I = I; H.grade = I.grade || 'thrown'; H.type = heldItem(s) || 'spear';
+  const W = WST(H), v = pointVel(ship, from, new THREE.Vector3()).addScaledVector(dir, W.speed);
+  const mesh = spearFlyMesh(H.type); mesh.traverse(o => { o.castShadow = true; }); mesh.position.copy(from); mesh.quaternion.setFromUnitVectors(_bv.set(1, 0, 0), dir); scene.add(mesh);
+  battle.projectiles.push({ kind: 'harpoon', weapon: 'spear', W, st: H, p: from.clone(), v, mesh, owner: ship, t: 0, state: 'air', fuse: 0 });
+  s.gunCD = I.reload; s.gunShotT = 0; s.spOut = true; s.spTied = false; (s.spAt ||= new THREE.Vector3()).copy(from); s.spRet = null;
+  playSfx('grunt', from, 0.6);
+}
+// the deck edge nearest a piece of treasure, and how far it is from there to the treasure's near side (ship frame)
+function lootEdge(s, t) {
+  const c = t.body.translation(), lt = toLocal(s.ship, _bv.set(c.x, c.y, c.z), new THREE.Vector3());
+  let best = null, bd = 1e9;
+  for (const [k] of s.ship.cols) { if (s.ship.blocked.has(k)) continue; const [x, z] = colCenter(Math.floor(k / 1000), k % 1000), d = Math.hypot(lt.x - x, lt.z - z); if (d < bd) { bd = d; best = { x, z }; } }
+  if (!best) return null;
+  best.gap = bd - FC / 2 - lootHalf(t);
+  return best;
+}
 // ---------- footsteps: each foot that comes down makes the sound of whatever it lands on ----------
 // (everyone's own game makes these from how the sailors are drawn, so they're never sent over the network)
 const STEP_MAT = { styro: 'styro', scrap: 'scrap', plastic: 'plastic', bamboo: 'bamboo', wood: 'wood', glass: 'glass', steel: 'steel' };
@@ -4890,7 +5399,7 @@ function gunSpeed(st, W, p) {
 function fire(ship, st) {
   if (st.reload > 0 || !st.part.alive) return false;
   if (st.weapon === 'harpoon' && ropeOut(st)) return false;
-  const W = WEAPONS[st.weapon];
+  const W = WST(st);
   const p = new THREE.Vector3(), d = new THREE.Vector3();
   muzzleOf(st, p, d);
   const v = pointVel(ship, p, new THREE.Vector3()).addScaledVector(d, gunSpeed(st, W, p));
@@ -4899,7 +5408,7 @@ function fire(ship, st) {
   const mesh = kind === 'charge' ? chargeMesh() : kind === 'harpoon' ? boltMesh() : kind === 'ballast' ? lumpMesh() :
     new THREE.Mesh(new THREE.SphereGeometry(st.weapon === 'swivel' ? 0.07 : 0.14, 12, 10), toon(0x1b1f2a));
   mesh.traverse(o => { o.castShadow = true; }); mesh.position.copy(p); scene.add(mesh);
-  const pr = { kind, weapon: st.weapon, st, p: p.clone(), v, mesh, owner: ship, t: 0, state: 'air', fuse: W.fuse || 0 };
+  const pr = { kind, weapon: st.weapon, W, st, p: p.clone(), v, mesh, owner: ship, t: 0, state: 'air', fuse: W.fuse || 0 };
   if (kind === 'ballast') {
     // tumbles end over end: spin about an axis across its path, a bit off-true so it wobbles
     const across = new THREE.Vector3(-d.z, 0, d.x).normalize().add(new THREE.Vector3((Math.random() - 0.5) * 0.6, (Math.random() - 0.5) * 0.6, (Math.random() - 0.5) * 0.6)).normalize();
@@ -4945,7 +5454,7 @@ function projHitsLoot(pr) {
     const c = t.body.translation();
     if (Math.hypot(c.x - pr.p.x, c.y - pr.p.y, c.z - pr.p.z) > Math.max(...t.L.size) / 2 + (pr.kind === 'harpoon' ? 0.3 : 0.15)) continue;
     if (dragged && pr.owner.alive) { const v = t.body.linvel(); releaseLoot(t, new THREE.Vector3(v.x, v.y, v.z)); }   // torn out of his hands
-    if (pr.kind === 'charge') { detonate(pr.p, pr.owner, true); return true; }
+    if (pr.kind === 'charge') { detonate(pr.p, pr.owner, true, pr.W); return true; }
     if (pr.kind === 'harpoon' && pr.owner.alive) { attachLootTether(pr, t); return true; }
     const k = pr.weapon === 'swivel' ? 0.03 : 0.08;
     t.body.applyImpulseAtPoint({ x: pr.v.x * k, y: pr.v.y * k + 0.6 * k * 10, z: pr.v.z * k }, { x: pr.p.x, y: pr.p.y, z: pr.p.z }, true);
@@ -4965,8 +5474,8 @@ function projStep(pr, t) {
       const part = hitTest(ship, pr.p, pr.kind === 'ball' ? 0.16 : 0.2);
       if (part) {
         if (pr.kind === 'ball') ballHit(ship, part, pr);
-        else if (pr.kind === 'charge') detonate(pr.p, pr.owner, true);
-        else if (pr.kind === 'harpoon') { if (ship !== pr.owner) attachTether(pr, ship, part); else { ballHit(ship, part, pr); restoreBolt(pr); } }
+        else if (pr.kind === 'charge') detonate(pr.p, pr.owner, true, pr.W);
+        else if (pr.kind === 'harpoon') { if (ship !== pr.owner) attachTether(pr, ship, part); else { if (!pr.st.thrown) ballHit(ship, part, pr); else puff(pr.p, 0xd8c3a0, 0.3); restoreBolt(pr); } }
         else if (pr.kind === 'ballast') attachLoad(pr, ship, part);
         return false;
       }
@@ -4978,8 +5487,8 @@ function projStep(pr, t) {
       const c = s.state === 'swim' || s.state === 'air' ? _bv.copy(s.pos) : toWorld(s.ship, s.local, _bv);
       c.y += 0.9;
       if (c.distanceTo(pr.p) < 0.55) {
-        if (pr.kind === 'charge') { detonate(pr.p, pr.owner, true); return false; }
-        const f = pr.weapon === 'swivel' ? 4 : pr.kind === 'ballast' ? 3 : 7;
+        if (pr.kind === 'charge') { detonate(pr.p, pr.owner, true, pr.W); return false; }
+        const f = pr.weapon === 'swivel' || pr.weapon === 'spear' ? 4 : pr.kind === 'ballast' ? 3 : 7;
         sailorHurt(s, c);
         if (s.state !== 'swim') throwOff(s, _bv2.copy(pr.v).normalize().multiplyScalar(f).add(_bv3.set(0, 3, 0)), 'Blown off by a blast');
         puff(pr.p, 0xffffff, 0.8); restoreBolt(pr); return false;
@@ -5005,6 +5514,7 @@ function projStep(pr, t) {
     // under water it carries on along its path: water drag grows with the square of speed, and an iron
     // ball still sinks (gravity less its buoyancy). It slows within a few metres, then settles to the bottom.
     pr.waterT += DT;
+    if (pr.st && pr.st.thrown && pr.waterT > 0.6) return false;            // a thrown one that missed: he hauls it back in
     // drag per kind: iron ball, streamlined bolt, blunt spiky lump (which is also less dense, so sinks slower)
     const drag = pr.kind === 'harpoon' ? 0.15 : pr.kind === 'ballast' ? 0.6 : 0.35, rel = pr.kind === 'ballast' ? 3.5 : 7.8;
     const v0 = pr.v.length();
@@ -5018,7 +5528,7 @@ function projStep(pr, t) {
       if (!part) continue;
       if (pr.kind === 'ballast') { attachLoad(pr, ship, part); return false; }            // sticks on below the waterline
       if (pr.kind === 'harpoon' && ship !== pr.owner) { attachTether(pr, ship, part); return false; }
-      ballHit(ship, part, pr, pr.kind === 'ball' ? sp / WEAPONS[pr.weapon].speed : 0.3); pr.v.multiplyScalar(0.1);
+      ballHit(ship, part, pr, pr.kind === 'ball' ? sp / (pr.W || WEAPONS[pr.weapon]).speed : 0.3); pr.v.multiplyScalar(0.1);
       if (pr.kind === 'harpoon') pr.spent = true;
       break;
     }
@@ -5037,7 +5547,7 @@ function projStep(pr, t) {
     pr.p.addScaledVector(pr.v, DT);
     pr.sinkT += DT;
     if (Math.random() < 0.3) addFoam(pr.p.x, pr.p.z, 0.06);
-    if (pr.sinkT > pr.fuse) { detonate(pr.p, pr.owner, false); return false; }
+    if (pr.sinkT > pr.fuse) { detonate(pr.p, pr.owner, false, pr.W); return false; }
   }
   pr.mesh.position.copy(pr.p);
   if (pr.kind === 'charge') pr.mesh.rotation.x += DT * 4;
@@ -5048,7 +5558,7 @@ function projStep(pr, t) {
 }
 function restoreBolt(pr) { if (pr.kind === 'harpoon' && pr.st && pr.st.gun && pr.st.gun.bolt) pr.boltBack = true; }
 function ballHit(ship, part, pr, scale = 1) {
-  const W = WEAPONS[pr.weapon] || WEAPONS.cannon, dir = pr.v.clone().normalize();
+  const W = pr.W || WEAPONS[pr.weapon] || WEAPONS.cannon, dir = pr.v.clone().normalize();
   if (pr.weapon === 'cannon') playSfx('cannonHit', pr.p, Math.min(1, 0.35 + 0.65 * scale));
   const imp = dir.clone().multiplyScalar(W.push * scale);
   ship.body.applyImpulseAtPoint({ x: imp.x, y: imp.y, z: imp.z }, { x: pr.p.x, y: pr.p.y, z: pr.p.z }, true);
@@ -5072,52 +5582,68 @@ function ballHit(ship, part, pr, scale = 1) {
 // ---- harpoon rope: pulls the two rafts together along the line and reels in ----
 const ropeMat = new THREE.LineBasicMaterial({ color: 0xe6d3a3 });
 function attachTether(pr, ship, part) {
-  const W = WEAPONS.harpoon;
+  const W = WST(pr.st);
   playSfx('harpoonHit', pr.p, 1);
   damagePart(ship, part, W.dmg, pr.v.clone().normalize(), pr.p);
   if (!part.alive) { restoreBolt(pr); return; }
   const toLocalP = toLocal(ship, pr.p, new THREE.Vector3());
-  const from = pr.st.part, fromLocal = from.box.center.clone();
+  if (pr.st.thrown && !thrownHolds(pr)) { restoreBolt(pr); return; }
+  const from = pr.st.part, fromLocal = ropeFromLocal(pr);
   const a = toWorld(pr.owner, fromLocal, new THREE.Vector3());
   const geo = new THREE.BufferGeometry(); geo.setAttribute('position', new THREE.Float32BufferAttribute(new Float32Array(16 * 3), 3));
   const line = new THREE.Line(geo, ropeMat); line.frustumCulled = false; scene.add(line);
-  const bolt = boltMesh(); bolt.position.copy(toLocalP); ship.group.add(bolt);
+  const bolt = pr.st.thrown ? spearFlyMesh(pr.st.type) : boltMesh(); bolt.position.copy(toLocalP); ship.group.add(bolt);
   bolt.quaternion.setFromUnitVectors(_bv.set(1, 0, 0), toLocal(ship, _bv2.copy(pr.p).add(pr.v.clone().normalize()), new THREE.Vector3()).sub(toLocalP).normalize());
-  battle.tethers.push({ st: pr.st, a: pr.owner, aPart: from, aLocal: fromLocal, b: ship, bPart: part, bLocal: toLocalP, L: a.distanceTo(pr.p), life: WEAPONS.harpoon.holdShip, line, bolt });
+  battle.tethers.push({ st: pr.st, a: pr.owner, aPart: from, aLocal: fromLocal, b: ship, bPart: part, bLocal: toLocalP, L: a.distanceTo(pr.p), life: WST(pr.st).holdShip, line, bolt });
   puff(pr.p, 0xffffff, 0.5);
 }
 function attachLootTether(pr, t) {
   playSfx('harpoonHit', pr.p, 0.8);
-  const from = pr.st.part, fromLocal = from.box.center.clone();
+  if (pr.st.thrown && !thrownHolds(pr)) return;
+  const from = pr.st.part, fromLocal = ropeFromLocal(pr);
   const a = toWorld(pr.owner, fromLocal, new THREE.Vector3());
   const geo = new THREE.BufferGeometry(); geo.setAttribute('position', new THREE.Float32BufferAttribute(new Float32Array(16 * 3), 3));
   const line = new THREE.Line(geo, ropeMat); line.frustumCulled = false; scene.add(line);
   const c = t.body.translation();
-  battle.tethers.push({ st: pr.st, a: pr.owner, aPart: from, aLocal: fromLocal, loot: t, L: a.distanceTo(_bv.set(c.x, c.y, c.z)), life: WEAPONS.harpoon.holdLoot, line });
+  battle.tethers.push({ st: pr.st, a: pr.owner, aPart: from, aLocal: fromLocal, loot: t, L: a.distanceTo(_bv.set(c.x, c.y, c.z)), life: WST(pr.st).holdLoot, line });
   puff(pr.p, 0xffffff, 0.4);
 }
+// a thrown harpoon's rope is in his hands: it holds only while he's still on that raft with the harpoon out
+const thrownHolds = pr => { const u = pr.st.user; return !!(u && !u.dead && u.ship === pr.owner && (u.state === 'aboard' || u.state === 'haul') && kindOf(u.inv[u.eq] || null) === 'spear'); };
+function ropeFromLocal(pr) {
+  if (!pr.st.thrown) return pr.st.part.box.center.clone();
+  return pr.st.user.local.clone().add(_bv.set(0, 1.2, 0));
+}
 function tetherEnd(tt, out) { if (tt.loot) { const c = tt.loot.body.translation(); return out.set(c.x, c.y, c.z); } return toWorld(tt.b, tt.bLocal, out); }
+const ROPE_MIN = 1.6;            // a rope reels in no shorter than this (m)
 function tetherStep(tt) {
   const lootOk = tt.loot ? !tt.loot.gone && !(tt.loot.holder && tt.loot.holder.team === tt.a.team) : true;   // done once it's on one of your rafts; off someone else's deck it keeps pulling
   if (tt.life <= 0 || !tt.aPart.alive || !tt.a.alive || !lootOk || (!tt.loot && (!tt.bPart.alive || !tt.b.alive))) { tt.life = 0; return; }
   // a rope holds until it snaps, the raft it's in pulls the bolt out, or (on treasure) it's in or nobody's on the harpoon
   if (tt.loot) { tt.idle = tt.st.user ? 0 : (tt.idle || 0) + DT; if (tt.idle > 4) { tt.life = 0; return; } }
+  if (tt.st.thrown) {               // he holds the rope: it follows his hand, and goes if he lets go of it
+    const u = tt.st.user;
+    if (!thrownHolds({ st: tt.st, owner: tt.a })) { tt.life = 0; return; }
+    const T = u.tools && u.tools[u.eq];
+    if (T && u.eqCur === u.eq && u.model && u.model.root.visible) toLocal(tt.a, T.mesh.position, tt.aLocal);
+    else tt.aLocal.copy(u.local).y += 1.2;
+  }
   const A = toWorld(tt.a, tt.aLocal, new THREE.Vector3()), B = tetherEnd(tt, new THREE.Vector3());
   const d = A.distanceTo(B), u = B.clone().sub(A).divideScalar(d || 1);
-  const user = tt.st.user, W = WEAPONS.harpoon;
+  const user = tt.st.user, W = WST(tt.st);
   tt.reeling = W.autoReel || (user && (user.isPlayer ? battle.reelHeld : user.remote ? !!user.remote.held : true));
   // reeling in treasure: the heavier it is, the slower it comes (pouch ~1.9 m/s, chest ~1.5, strongbox ~0.9, idol ~0.75)
   const reel = tt.loot ? W.reel / (1 + tt.loot.L.mass * 4) : W.reel;       // (was mass * 6: heavy pieces came in too slow)
-  if (tt.reeling) tt.L = Math.max(2.5, tt.L - reel * DT);
+  if (tt.reeling) tt.L = Math.max(ROPE_MIN, tt.L - reel * DT);
   // the winch ratchet clacks away while it's being wound in
   tt.reelT = (tt.reelT || 0) - DT;
-  if (tt.reeling && tt.L > 2.5 && tt.reelT <= 0) { tt.reelT = 0.6; playSfx('harpoonReel', A, 0.55); }
+  if (tt.reeling && tt.L > ROPE_MIN && tt.reelT <= 0) { if (tt.st.thrown) { tt.reelT = 0.55 + Math.random() * 0.12; playSfx('ropePull', A, 0.6); } else { tt.reelT = 0.6; playSfx('harpoonReel', A, 0.55); } }   // a hand line is hauled hand over hand; the gun's winch clacks
   const stretch = d - tt.L;
-  if (stretch > 6) { tt.life = 0; playSfx('harpoonSnap', A.clone().lerp(B, 0.5), 1); return; }        // snaps
+  if (stretch > (tt.st.thrown ? 4 : 6)) { tt.life = 0; playSfx('harpoonSnap', A.clone().lerp(B, 0.5), 1); return; }        // snaps
   if (stretch <= 0) return;
   const vA = pointVel(tt.a, A, new THREE.Vector3()), vB = tt.loot ? (() => { const v = tt.loot.body.linvel(); return new THREE.Vector3(v.x, v.y, v.z); })() : pointVel(tt.b, B, new THREE.Vector3());
   const vr = vB.sub(vA).dot(u);
-  const F = clamp(40 * stretch + 6 * vr, 0, 14);
+  const F = clamp(40 * stretch + 6 * vr, 0, tt.st.thrown ? 8 : 14);       // a man hauling on a hand line pulls less than a winch
   tt.a.body.applyImpulseAtPoint({ x: u.x * F * DT, y: u.y * F * DT, z: u.z * F * DT }, { x: A.x, y: A.y, z: A.z }, true);
   (tt.loot ? tt.loot.body : tt.b.body).applyImpulseAtPoint({ x: -u.x * F * DT, y: -u.y * F * DT, z: -u.z * F * DT }, { x: B.x, y: B.y, z: B.z }, true);
 }
@@ -5138,7 +5664,7 @@ function removeTether(tt) {
 }
 // ---- ballast bomb: sticks where it lands and weighs that spot down ----
 function attachLoad(pr, ship, part) {
-  const W = WEAPONS.ballast;
+  const W = pr.W || WEAPONS.ballast;
   damagePart(ship, part, W.dmg, pr.v.clone().normalize(), pr.p);
   if (!part.alive) return;
   const local = toLocal(ship, pr.p, new THREE.Vector3());
@@ -5202,15 +5728,58 @@ function ramStep(ship) {
       const dmg = RAM.dmgPerMs * closing;
       damagePart(other, hit, dmg, dir.clone().multiplyScalar(closing * 0.5), tip);
       partsNear(other, tip, 1.1, (p, d) => { if (p !== hit) damagePart(other, p, dmg * 0.35 * (1 - d / 1.1), dir.clone(), tip); });
-      damagePart(ship, part, dmg * 0.2, dir.clone().multiplyScalar(-1), tip);
-      other.body.applyImpulseAtPoint({ x: dir.x * closing * 0.35, y: 0, z: dir.z * closing * 0.35 }, { x: tip.x, y: tip.y, z: tip.z }, true);
+      damagePart(ship, part, dmg * 0.2 * hardOf(hit), dir.clone().multiplyScalar(-1), tip);
+      // the shove follows momentum: a heavy raft ramming a light one knocks it away; a light one into a heavy one barely moves it
+      const mA = ship.body.mass(), mB = other.body.mass(), J = closing * RAM.shove * mA * mB / (mA + mB);
+      other.body.applyImpulseAtPoint({ x: dir.x * J, y: 0, z: dir.z * J }, { x: tip.x, y: tip.y, z: tip.z }, true);
+      ship.body.applyImpulseAtPoint({ x: -dir.x * J * 0.5, y: 0, z: -dir.z * J * 0.5 }, { x: tip.x, y: tip.y, z: tip.z }, true);
       puff(tip, 0xffa94d, 0.8);
       part.cool = RAM.cool;
     }
   }
 }
-function detonate(p, owner, surface) {
-  const W = WEAPONS.mortar, R = W.blastR;
+// which rafts are touching this step (from the physics contacts), and where
+function shipBumps() {
+  if (typeof world.contactPairsWith !== 'function' || battle.ships.length < 2) return;
+  const own = new Map();
+  for (const sh of battle.ships) if (sh.alive) for (const p of sh.parts) if (p.alive && p.collider) own.set(p.collider.handle, p);
+  const pairs = new Map();
+  for (const sh of battle.ships) {
+    if (!sh.alive) continue;
+    for (const p of sh.parts) {
+      if (!p.alive || !p.collider || p.type === 'ram') continue;
+      world.contactPairsWith(p.collider, c2 => {
+        const q = own.get(c2.handle); if (!q || q.ship === sh || q.type === 'ram') return;
+        const key = sh.nid !== undefined && q.ship.nid !== undefined ? `${Math.min(sh.nid, q.ship.nid)}:${Math.max(sh.nid, q.ship.nid)}` : null;
+        const k = key || (battle.ships.indexOf(sh) < battle.ships.indexOf(q.ship) ? sh : q.ship);
+        if (!pairs.has(k)) pairs.set(k, battle.ships.indexOf(sh) < battle.ships.indexOf(q.ship) ? [p, q] : [q, p]);
+      });
+    }
+  }
+  for (const [pA, pB] of pairs.values()) shipBump(pA.ship, pB.ship, pA, pB);
+}
+function shipBump(A, B, pA, pB) {
+  A.bumpCool ||= new Map();
+  if ((A.bumpCool.get(B) || 0) > simTime) return;
+  const a = toWorld(A, pA.box.center, new THREE.Vector3()), b = toWorld(B, pB.box.center, new THREE.Vector3());
+  const n = b.clone().sub(a); n.y = 0; if (n.lengthSq() < 1e-6) return; n.normalize();
+  const at = a.clone().lerp(b, 0.5);
+  const closing = pointVel(A, at, new THREE.Vector3()).sub(pointVel(B, at, new THREE.Vector3())).dot(n);
+  if (closing < BUMP.minSpeed) return;
+  const mA = A.body.mass(), mB = B.body.mass(), mu = mA * mB / (mA + mB), J = BUMP.bounce * mu * closing;
+  B.body.applyImpulseAtPoint({ x: n.x * J, y: 0, z: n.z * J }, { x: at.x, y: at.y, z: at.z }, true);
+  A.body.applyImpulseAtPoint({ x: -n.x * J, y: 0, z: -n.z * J }, { x: at.x, y: at.y, z: at.z }, true);
+  A.bumpCool.set(B, simTime + BUMP.cool);
+  if (closing > BUMP.dmgFrom) {
+    // the knock: shared by how much each weighs (the lighter raft takes the heavier share)
+    const d = (closing - BUMP.dmgFrom) * BUMP.dmgPerMs * 2;
+    damagePart(B, pB, d * mA / (mA + mB) * hardOf(pA), n.clone(), at);
+    damagePart(A, pA, d * mB / (mA + mB) * hardOf(pB), n.clone().negate(), at);
+    puff(at, 0xd8c3a0, 0.5);
+  }
+}
+function detonate(p, owner, surface, Wg) {
+  const W = Wg || WEAPONS.mortar, R = W.blastR;
   const h = surfaceH(p.x, p.z, simTime);
   // the water heaves up over the blast and rings outward; under the surface it's much stronger
   kickWater(p.x, p.z, surface ? 0.18 : 0.42, surface ? 1.0 : 1.7);
@@ -5268,7 +5837,7 @@ landRing.renderOrder = 6; scene.add(landRing);
 const _pm = new THREE.Matrix4(), _pq = new THREE.Quaternion(), _ps = new THREE.Vector3();
 function drawPreview(ship, st, dt) {
   st.preview = Math.min(1, st.preview + dt * 2.5);
-  const W = WEAPONS[st.weapon], p = new THREE.Vector3(), d = new THREE.Vector3();
+  const W = WST(st), p = new THREE.Vector3(), d = new THREE.Vector3();
   muzzleOf(st, p, d);
   const v = pointVel(ship, p, new THREE.Vector3()).addScaledVector(d, gunSpeed(st, W, p));
   const maxLen = 140 * st.preview, step = 0.015;
@@ -5331,6 +5900,8 @@ const enemyOf = (s, o) => battle.net ? o.teamId !== s.teamId : o !== s;
 function botThink(s, dt) {
   const bot = s.brain || (s.brain = { err: { yaw: 0, pitch: 0 }, wait: 2.5, retarget: 0, target: null });   // each bot keeps its own mind
   if (s.dead || (!s.ship.alive && s.state !== 'swim')) return null;
+  // a haul that threw him in the water (the raft tipped under the weight): that piece is too much for this raft
+  if (bot.haulOf && (s.state === 'swim' || s.state === 'air') && simTime - bot.haulAt < 8) { (bot.skip ||= new Map()).set(bot.haulOf, simTime + 60); bot.haulOf = null; bot.target = null; }
   if (s.state === 'swim') {
     let c = s.ship.body.translation(), bd = 1e9;
     for (const sh of teamShips(s.ship.team)) { if (!sh.alive) continue; const t = sh.body.translation(), d = Math.hypot(t.x - s.pos.x, t.z - s.pos.z); if (d < bd) { bd = d; c = t; } }
@@ -5360,21 +5931,38 @@ function botThink(s, dt) {
   if (bot.retarget <= 0 || !free(bot.target)) {
     bot.retarget = 1.5; bot.target = null; let best = 0;
     for (const t of battle.loot) {
-      if (!free(t)) continue;
+      if (!free(t) || (bot.skip && bot.skip.get(t) > simTime)) continue;
       const p = t.body.translation(), d = Math.hypot(p.x - c.x, p.z - c.z);
       if (d > 70) continue;
       const score = t.L.pts / (d + 8);
       if (score > best) { best = score; bot.target = t; }
     }
   }
-  const eng = s.ship.stations.find(st => st.kind === 'drive' && st.part.alive && st.stand && (!st.user || st.user === s));
-  const anyMotor = s.ship.stations.some(st => st.kind === 'drive' && st.part.alive);
-  if (bot.target && !anyMotor) { const r = botPaddle(s, bot.target.body.translation()); if (r !== undefined) return r; }   // no motor: paddle there
+  const eng = s.ship.stations.find(st => st.kind === 'drive' && st.part.alive && st.stand && !st.off && (!st.user || st.user === s));
+  const anyMotor = s.ship.stations.some(st => st.kind === 'drive' && st.part.alive && !st.off);
+  // close enough to grab from the edge? (the same reach a player has: to its near side, from the deck's edge)
+  if (bot.target) {
+    const T = bot.target, edge = lootEdge(s, T), close = edge && edge.gap < POUCH_REACH - 0.15;
+    if (s.state === 'aboard' && haulable(s) === T) {
+      // tried this one a few times and it never comes aboard: leave it for a while
+      const n = ((bot.tries ||= new Map()).get(T) || 0) + 1; bot.tries.set(T, n);
+      if (n > 3) { (bot.skip ||= new Map()).set(T, simTime + 45); bot.tries.delete(T); bot.target = null; return null; }
+      bot.edgeT = 0; bot.haulOf = T; bot.haulAt = simTime; startHaul(s, T); return null;
+    }
+    if (close) {
+      bot.edgeT = (bot.edgeT || 0) + dt;
+      if (bot.edgeT > 4) { (bot.skip ||= new Map()).set(T, simTime + 12); bot.target = null; bot.edgeT = 0; return null; }   // can't get it from here: try something else
+      if (s.state === 'station') leaveStation(s);
+      s.botPaddle = false; if (kindOf(s.inv[s.eq] || null) === 'paddle') s.eq = -1;
+      return walkTo(s, { x: edge.x, z: edge.z });                                   // to the edge nearest it
+    }
+    bot.edgeT = 0;
+  }
+  if (bot.target && !anyMotor) { const r = botPaddle(s, bot.target.body.translation(), bot.target); if (r !== undefined) return r; }   // no motor: paddle there
   else s.botPaddle = false;
   if (bot.target && eng) {
     const tp = bot.target.body.translation(), dist = Math.hypot(tp.x - c.x, tp.z - c.z);
-    if (s.state === 'aboard' && haulable(s) === bot.target) { startHaul(s, bot.target); return null; }
-    if (dist > 5.5) {
+    if (true) {
       if (s.station !== eng) {
         if (s.state === 'station') leaveStation(s);
         if (Math.hypot(s.local.x - eng.stand.x, s.local.z - eng.stand.z) < 0.6) { useStation(s, eng); return null; }
@@ -5382,7 +5970,7 @@ function botThink(s, dt) {
       }
       const lt = toLocal(s.ship, _bv.set(tp.x, tp.y, tp.z), new THREE.Vector3());
       const ang = Math.atan2(-lt.z, lt.x);
-      return { drive: { steer: clamp(-ang * 1.8, -1, 1), thr: Math.abs(ang) > 1.3 ? 0.35 : dist > 12 ? 1 : 0.55 } };
+      return { drive: { steer: clamp(-ang * 1.8, -1, 1), thr: Math.abs(ang) > 1.3 ? 0.35 : dist > 12 ? 1 : dist > 6 ? 0.55 : 0.3 } };   // easing in alongside
     }
     if (s.state === 'station') leaveStation(s);
     const lt = toLocal(s.ship, _bv.set(tp.x, tp.y, tp.z), new THREE.Vector3());
@@ -5409,7 +5997,7 @@ function botThink(s, dt) {
     const lt = toLocal(s.ship, _bv.set(tgt.x, tgt.y + 0.6, tgt.z), new THREE.Vector3()).sub(gun.part.box.center);
     gun.wantYaw = gun.yaw + wrapA(Math.atan2(-lt.z, lt.x) + bot.err.yaw - gun.yaw);   // the short way from where it points now
     const dist = Math.hypot(tgt.x - p.x, tgt.z - p.z);
-    const W = WEAPONS[gun.weapon];
+    const W = WST(gun);
     if (W.rangeAim) { gun.range = clamp(dist * (1 + bot.err.pitch), W.range[0], W.range[1]); gun.tPitch = 0.8; }
     else gun.tPitch = clamp(solvePitch(W.speed, dist, tgt.y + 0.6 - p.y, !!HIGH_ARC[gun.weapon]) + bot.err.pitch, W.pitch[0], W.pitch[1]);
     bot.wait -= dt;
@@ -5495,7 +6083,7 @@ function setupBattle() {
   $('banner').hidden = true;
   hudNames('You', 'Dummy');
   updateUI(); updateBattleHud(true);
-  flash(`The dummy brought a ${WEAPON_NAMES[battle.dummyWeapon]}`);
+  { const p = battle.dummyPlan; flash(p ? `The dummy spent ${p.cost}g: ${[p.g1 && WEAPON_NAMES[p.g1], p.g2 && WEAPON_NAMES[p.g2], p.mo ? PARTS[p.mo].name.toLowerCase() : 'no motor'].filter(Boolean).join(', ')}` : 'The dummy could only afford a plank'); }
   lockAim();
 }
 function teardownBattle() {
@@ -5503,6 +6091,9 @@ function teardownBattle() {
   for (const sh of battle.ships) { world.removeRigidBody(sh.body); scene.remove(sh.group); }
   for (const s of battle.sailors) { scene.remove(s.model.root); itemsTeardown(s); }
   for (const p of battle.projectiles) scene.remove(p.mesh);
+  dmgNumbersClear(); for (const w of _wisps) scene.remove(w.m); _wisps.length = 0;
+  for (const t of battle.tracers || []) scene.remove(t.line); battle.tracers = []; battle.aimHeld = false; battle.aimW = 0;
+  for (const b of battle.bullets || []) removeBullet(b); battle.bullets = [];
   for (const d of battle.debris) scene.remove(d.m);
   for (const p of battle.puffs) scene.remove(p.m);
   for (const tt of battle.tethers) scene.remove(tt.line);
@@ -5546,6 +6137,7 @@ function endRound(title) {
   const lineA = outA ? `You ${outA}, so you score nothing.` : ptsA ? `You scored ${ptsA}: ${haulList('you')}.` : 'You ended with nothing aboard.';
   const lineB = outB ? `The dummy ${outB}.` : ptsB ? `The dummy scored ${ptsB}: ${haulList('dummy')}.` : 'The dummy ended with nothing aboard.';
   battle.over = true; unlockAim();
+  musicOut(3);                     // the fight music dies away under the results
   match.score.you += ptsA; match.score.dummy += ptsB;
   const done = match.round >= match.rounds;
   battle.matchDone = done;
@@ -5590,7 +6182,7 @@ function playerInput() {
 }
 function battleDrag(dx, dy) {
   const s = battle.player; if (!s || !s.station || s.station.kind !== 'gun') return false;
-  const st = s.station, W = WEAPONS[st.weapon];
+  const st = s.station, W = WST(st);
   st.tYaw -= dx * 0.004 * aimSens.v; st.tPitch = clamp(st.tPitch - dy * 0.003 * aimSens.v, W.pitch[0], W.pitch[1]);
   return true;
 }
@@ -5613,14 +6205,12 @@ addEventListener('keydown', e => {
   if (raft.mode !== 'battle') return;
   if (battleLocked() && ['KeyE', 'Space', 'KeyF', 'KeyQ'].includes(e.code)) { e.preventDefault(); return; }   // counting in
   if (e.code === 'KeyE') { e.preventDefault(); interact(); }
-  if (e.code === 'Space' && battle.player && (battle.player.state === 'aboard' || battle.player.state === 'swim') && !battle.over) { e.preventDefault(); if (!e.repeat) { if (netGuest()) netAct({ k: 'jump' }); else battle.player.jumpReq = true; } return; }   // on deck, Space jumps
+  if (e.code === 'Space' && battle.player && (battle.player.state === 'aboard' || battle.player.state === 'swim' || battle.player.state === 'haul') && !battle.over) { e.preventDefault(); if (!e.repeat) { if (netGuest()) netAct({ k: 'jump' }); else battle.player.jumpReq = true; } return; }   // on deck, Space jumps
   if (e.code === 'Space' || e.code === 'KeyF') { e.preventDefault(); if (!e.repeat) { battle.reelHeld = true; playerFire(); } }
   if (e.code === 'KeyQ') { e.preventDefault(); playerShove(); }
   if (e.code === 'KeyX' && !e.repeat) { e.preventDefault(); battle.shoulder = -(battle.shoulder ?? 1); }    // swap the camera's shoulder
 });
 $('interact').addEventListener('click', () => interact());
-// demo: balance on/off, to compare
-if (DEMO) $('balBtn').addEventListener('click', () => { BALANCE.on = !BALANCE.on; $('balBtn').setAttribute('aria-pressed', String(BALANCE.on)); $('balBtn').textContent = BALANCE.on ? 'Balance on' : 'Balance off'; });
 $('fire').addEventListener('pointerdown', e => { e.preventDefault(); battle.reelHeld = true; playerFire(); });
 // letting go of the trigger stops reeling
 const releaseReel = () => { battle.reelHeld = false; };
@@ -5688,7 +6278,7 @@ function updateBattleHud(force) {
   $('shove').style.setProperty('--ready', String(1 - s.shoveCool / SHOVE.cool));
   if (gun) {
     const rope = gun.weapon === 'harpoon' && ropeOut(gun);
-    $('fire').style.setProperty('--ready', String(rope ? 1 : 1 - gun.reload / WEAPONS[gun.weapon].reload));
+    $('fire').style.setProperty('--ready', String(rope ? 1 : 1 - gun.reload / WST(gun).reload));
     setText('fireLabel', rope ? 'Reel' : 'Fire');
   }
   document.body.classList.toggle('mode-drive', !!(s.station && s.station.kind === 'drive'));
@@ -5699,7 +6289,7 @@ function updateBattleHud(force) {
 
 // ---------- minimap: centred on you, turned so up is where the camera looks ----------
 const MAP_RANGE = 48;                     // metres from centre to edge
-const LOOT_DOT = { pouch: 2.6, chest: 3.6, strongbox: 4.6, idol: 6 };
+const LOOT_DOT = { pouch: 2.6, goblet: 3, pearl: 3.4, spices: 4, strongbox: 4.6, chest: 5.2, idol: 6 };
 function drawMinimap() {
   const cv = $('minimap'), g = cv.getContext('2d'), W = cv.width, R = W / 2, k = (R - 10) / MAP_RANGE;
   const me = battle.player, c = sailorWorld(me, new THREE.Vector3());
@@ -5768,6 +6358,8 @@ function battleFrame(dt) {
     followSim(focus.x, focus.z);
     dNow.fill(0);
     const locked = (battle.lockT || 0) > 0;                      // the countdown: nobody moves yet
+    me.aiming = !!battle.aimHeld && !locked; if (battle.aimDir) (me.aimDir ||= new THREE.Vector3()).copy(battle.aimDir);
+    for (const s of battle.sailors) if (s.remote) { s.aiming = !!s.remote.ag && !locked; if (s.remote.ad) (s.aimDir ||= new THREE.Vector3()).fromArray(s.remote.ad); }
     if (locked) battle.lockT = Math.max(0, battle.lockT - DT);
     const pin = battle.over || locked ? null : playerInput();
     const ins = new Map();                                       // what each sailor wants this step
@@ -5788,10 +6380,11 @@ function battleFrame(dt) {
     for (const sh of battle.ships) shipStep(sh, simTime);
     for (const tt of battle.tethers) tetherStep(tt);
     for (const sh of battle.ships) if (sh.alive) ramStep(sh);
+    shipBumps();
     // guns turn toward their aim at a limited rate
     for (const sh of battle.ships) for (const st of sh.stations) {
       if (!st.gun) continue;
-      const W = WEAPONS[st.weapon];
+      const W = WST(st);
       if (st.user === me && pin && pin.aim) { st.tYaw += pin.aim.yaw * 1.1 * DT; if (W.rangeAim) st.range = clamp(st.range + pin.aim.pitch * 14 * DT, W.range[0], W.range[1]); else st.tPitch = clamp(st.tPitch + pin.aim.pitch * 0.6 * DT, W.pitch[0], W.pitch[1]); }
       // the aim never runs ahead of the gun: mouse movement turns the gun directly, up to how fast the gun can
       // turn; anything faster is dropped. Angles are running totals (never wrapped), so it always turns the way you moved
@@ -5800,7 +6393,7 @@ function battleFrame(dt) {
       const lead = W.yawRate * DT;
       st.tYaw = st.yaw + clamp(st.tYaw - st.yaw, -lead, lead);
       if (st.user) clampAim(st);
-      else if (st.arc) { const a = nearestFree(st, st.yaw); st.stand = a === null ? null : standAt(sh, st, a); }
+      else if (st.arc && !st.off) { const a = nearestFree(st, st.yaw); st.stand = a === null ? null : standAt(sh, st, a); }
       const dy = st.tYaw - st.yaw;
       st.yaw += clamp(dy, -W.yawRate * DT, W.yawRate * DT);
       st.pitch += clamp(st.tPitch - st.pitch, -W.pitchRate * DT, W.pitchRate * DT);
@@ -5810,6 +6403,7 @@ function battleFrame(dt) {
     }
     for (const [s, i] of ins) sailorStep(s, simTime, i && i.mx !== undefined ? i : null);
     battle.projectiles = battle.projectiles.filter(pr => { const keep = projStep(pr, simTime); if (!keep) scene.remove(pr.mesh); return keep; });
+    bulletsStep();
     simStep();
     world.step();
     simTime += DT; acc -= DT;
@@ -5858,9 +6452,11 @@ function battleDraw(dt, a) {
       const m = p.mesh;
       if (m.userData.dying !== undefined) {
         if (m.userData.dying > 0) { m.userData.dying = Math.max(0, m.userData.dying - dt * 4); m.scale.setScalar(Math.max(0.001, m.userData.dying)); if (m.userData.dying === 0) m.visible = false; }
+        if (p.dmgG) { p.dmgG.scale.copy(m.scale); p.dmgG.visible = m.visible; }
         continue;
       }
       if (p.hitT > 0) { p.hitT = Math.max(0, p.hitT - dt * 5); m.scale.setScalar(1 + 0.12 * Math.sin(p.hitT * Math.PI)); }
+      partDamageDraw(p, dt);
       if (p.station && p.station.gun) {
         const st = p.station; st.gun.yaw.rotation.y = st.yaw; st.gun.pitch.rotation.z = st.pitch;
         if (st.gun.bolt) st.gun.bolt.visible = st.reload <= 0.01 && !battle.tethers.some(tt => tt.st === st);
@@ -5894,15 +6490,29 @@ function battleDraw(dt, a) {
       view.yaw = lerpAngle(view.yaw, Math.atan2(-f.x, -f.z), 1 - Math.exp(-1.5 * dt));
     }
   }
-  const dist = gun ? 6 : view.dist;
+  // a flintlock held up to aim: the view closes in over his shoulder and a crosshair appears
+  const aiming = !gun && !!battle.aimHeld && aimsHeld(me) && heldKind(me) !== 'paddle' && me.state === 'aboard' && !battle.over;   // (a paddle held out keeps the normal view)
+  battle.aimW = (battle.aimW || 0) + ((aiming ? 1 : 0) - (battle.aimW || 0)) * (1 - Math.exp(-10 * dt));
+  if (!aiming && view.pitch < 0.08) view.pitch += (0.08 - view.pitch) * (1 - Math.exp(-6 * dt));
+  const aw = battle.aimW;
+  const dist = (gun ? 6 : view.dist) * (1 - aw) + 2.4 * aw * (1 - 0.7 * Math.sin(Math.max(0, -view.pitch)));   // aiming up: the view tucks in under his shoulder
   // at a gun the view sits over one shoulder (X swaps sides); it eases across, and back to centre off the gun
   battle.shW = (battle.shW || 0) + ((gun ? 1 : 0) - (battle.shW || 0)) * (1 - Math.exp(-4 * dt));
   battle.shK = (battle.shK ?? 1) + ((battle.shoulder ?? 1) - (battle.shK ?? 1)) * (1 - Math.exp(-6 * dt));
-  const sh = SHOULDER * battle.shW * battle.shK, rx = Math.cos(view.yaw) * sh, rz = -Math.sin(view.yaw) * sh;
-  bCam.set(view.target.x + rx + Math.sin(view.yaw) * Math.cos(view.pitch) * dist, view.target.y + Math.sin(view.pitch) * dist, view.target.z + rz + Math.cos(view.yaw) * Math.cos(view.pitch) * dist);
-  _shT.set(view.target.x + rx, view.target.y, view.target.z + rz);
+  const sh = (SHOULDER * battle.shW + 0.6 * aw) * battle.shK, rx = Math.cos(view.yaw) * sh, rz = -Math.sin(view.yaw) * sh, ry = 0.45 * aw;
+  bCam.set(view.target.x + rx + Math.sin(view.yaw) * Math.cos(view.pitch) * dist, view.target.y + ry + Math.sin(view.pitch) * dist, view.target.z + rz + Math.cos(view.yaw) * Math.cos(view.pitch) * dist);
+  _shT.set(view.target.x + rx, view.target.y + ry, view.target.z + rz);
   bCam.y = Math.max(bCam.y, waveH(bCam.x, bCam.z, simTime) + 0.8);
-  camera.position.lerp(bCam, 1 - Math.exp(-10 * dt)); camera.lookAt(_shT);
+  camera.position.lerp(bCam, 1 - Math.exp(-(aw > 0.01 ? 18 : 10) * dt)); camera.lookAt(_shT);
+  (battle.aimDir ||= new THREE.Vector3()).copy(_shT).sub(camera.position).normalize();
+  { const x = $('xhair'), on = aw > 0.6; if (x.hidden === on) x.hidden = !on; if (on) x.classList.toggle('cool', aimsHeld(me) && (netGuest() ? Math.max(battle.myGunCD || 0, me.gunCD || 0) : me.gunCD || 0) > 0); }
+  if (netGuest() && battle.myGunCD > 0) battle.myGunCD = Math.max(0, battle.myGunCD - dt);
+  if (aimsHeld(me) && ITEMS[heldItem(me)].reload) {                       // the reload shows on the crosshair ring and the hotbar slot
+    const I = ITEMS[heldItem(me)], cd = netGuest() ? Math.max(battle.myGunCD || 0, me.gunCD || 0) : me.gunCD || 0;
+    $('xhair').style.setProperty('--p', (cd > 0 ? 1 - cd / I.reload : 1).toFixed(3));
+    drawHotbar();
+  }
+  tracersStep(dt); dmgNumbersStep(dt); wispsStep(dt); fishRingDraw(dt);
   // sailors
   for (const s of battle.sailors) drawSailor(s, dt, camera.position);
   // projectiles, debris, puffs, spray
@@ -5948,6 +6558,33 @@ function battleDraw(dt, a) {
 const INV_SLOTS = 4;
 const svgPaddle = (wood, blade, chips) => `<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 3.2h4.2" stroke="${wood}" stroke-width="2.2" stroke-linecap="round"/><path d="M7.1 3.6v10.2" stroke="${wood}" stroke-width="2.2" stroke-linecap="round"/><path d="M7.1 12.6c2.3 0 3 1.6 3 4.1 0 2.6-1.3 4.3-3 4.3s-3-1.7-3-4.3c0-2.5.7-4.1 3-4.1z" fill="${blade}"/>${chips ? '<path d="M4.4 17.5l1.3.4-.9 1.1zM9.6 15l-1.2.6 1.1.8z" fill="#fff"/>' : ''}</svg>`;
 const svgRod = (rod, reel) => `<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 21L19 4" stroke="${rod}" stroke-width="2" stroke-linecap="round"/><path d="M19 4c1.5 3 1.5 8 0 12.5" stroke="#0b2a4a" stroke-width=".9" fill="none"/><circle cx="19" cy="17.3" r="1.4" fill="#ff4f6d"/><circle cx="7.2" cy="17.4" r="2.2" fill="${reel}"/></svg>`;
+// a flintlock pistol in profile, muzzle right. 64 x 36 units; rust: speckled with rust
+function flintSVG(o) {
+  const { metal, metalD, wood, woodD, brass, rust } = o, ln = '#0b2a4a', sw = 0.9;
+  const spots = rust ? `<g fill="#9a4a1e" opacity=".85" stroke="none"><ellipse cx="36" cy="10.6" rx="2.2" ry="1"/><ellipse cx="47" cy="12" rx="1.6" ry=".8"/><ellipse cx="55" cy="10.4" rx="1.2" ry=".7"/><ellipse cx="22" cy="13.6" rx="1.4" ry=".8"/></g>` : '';
+  return `<g stroke="${ln}" stroke-width="${sw}" stroke-linejoin="round" stroke-linecap="round">
+    <path d="M30 17.4 L56 16.6" stroke="${woodD}" stroke-width="1.3"/>
+    <path d="M22 12.6 L55 13 L55.2 15.4 Q40 16.6 27 17.2 Z" fill="${wood}"/>
+    <path d="M22 8.6 L60 9.2 L60 13.2 L22 13.4 Z" fill="${metal}"/>
+    <path d="M57.4 8.2 L61 8.4 L61 14 L57.4 14.1 Z" fill="${brass}"/>
+    <path d="M23 9.8 L57 10.2" stroke="#fff" stroke-opacity=".4" stroke-width=".7"/>
+    ${spots}
+    <path d="M25 8.8 C18 8.6 13.6 12 10.8 17.6 C8.8 21.6 6.4 25.4 5.2 28.6 Q4.4 32.6 8.4 33.4 L12.6 33 Q15.4 32.4 15.8 28.8 C17 24.4 20.4 20.6 25.6 18.4 L27.6 17.2 L26 13.2 Z" fill="${wood}"/>
+    <path d="M14.5 15.5 C12.6 19 11 22.4 9.6 25.6" stroke="${woodD}" stroke-width="1.1" fill="none"/>
+    <ellipse cx="9.8" cy="31.2" rx="4.8" ry="3" transform="rotate(-18 9.8 31.2)" fill="${brass}"/>
+    <rect x="17" y="10.6" width="13" height="5.2" rx="2.2" fill="${metalD}"/>
+    <path d="M27 11 L27.8 5.8 L29.8 6.2 L28.8 11 Z" fill="${metal}"/>
+    <path d="M20.4 11.6 C19 8.4 17.4 6.6 15.4 6.4 L14.2 5.4 L16.8 4.2 C19.4 4.6 21.6 7 23.2 10.6 Z" fill="${metal}"/>
+    <rect x="14.6" y="3.4" width="3" height="2" rx=".5" fill="#6b6f78" transform="rotate(-20 16 4.4)"/>
+    <path d="M21.4 17.8 Q21 22.6 25.4 22.6 Q29.8 22.6 31 17" fill="none" stroke="${brass}" stroke-width="1.8"/>
+    <path d="M21.4 17.8 Q21 22.6 25.4 22.6 Q29.8 22.6 31 17" fill="none" stroke-width=".6"/>
+    <path d="M24.6 17.4 Q24 19.8 25.8 20.8" fill="none" stroke-width="1.2"/>
+  </g>`;
+}
+const FLINT_RUSTY = { metal: '#8a7a68', metalD: '#6d6152', wood: '#6a4a32', woodD: '#4a3222', brass: '#a07a3e', rust: true };
+const FLINT_FINE = { metal: '#c9ced8', metalD: '#9aa2ae', wood: '#8a4220', woodD: '#5a2a12', brass: '#e0b040', rust: false };
+const svgPistol = o => `<svg viewBox="2 -12 62 62" aria-hidden="true">${flintSVG(o)}</svg>`;
+const svgSpear = (wood, iron) => `<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4.5 19.5L17 7" stroke="${wood}" stroke-width="2" stroke-linecap="round"/><path d="M15.6 5.6l5-2.2-2.2 5z" fill="${iron}" stroke="#0b2a4a" stroke-width=".6"/><path d="M16.3 8.9l-1.6.4M14.9 6.3l.4-1.6" stroke="${iron}" stroke-width="1.2" stroke-linecap="round"/><path d="M5.5 16.5c-2 1-2.6 3-1 4.3" stroke="#e6d3a3" stroke-width="1.1" fill="none"/></svg>`;
 // paddles: length (m), push while the blade pulls (raft force units; a weak motor is 2.0)
 // rods: how far a cast reaches (m), how fast it reels in (m/s)
 const ITEMS = {
@@ -5955,9 +6592,18 @@ const ITEMS = {
   paddle:     { kind: 'paddle', name: 'Good paddle', len: 1.8, force: 3.5, cost: 120, desc: 'Pushes the raft about 60% harder', icon: svgPaddle('#9b4f1e', '#d0914e', false) },
   rod_old:    { kind: 'rod', name: 'Old fishing rod', len: 1.45, range: 6, reel: 1.5, icon: svgRod('#a8925a', '#4a4036') },
   rod:        { kind: 'rod', name: 'Fine fishing rod', len: 2.0, range: 11, reel: 3.2, cost: 90, desc: 'Casts nearly twice as far, reels twice as fast', icon: svgRod('#23324a', '#b9c4d0') },
+  // flintlocks: damage to parts, spread (rad) aimed / from the hip, reload (s), range (m), how hard a hit shoves a sailor
+  pistol_old: { kind: 'pistol', name: 'Rusty flintlock', speed: 55, dmg: 9, spread: 0.035, hip: 0.13, reload: 3.6, range: 32, knock: 1.2, icon: svgPistol(FLINT_RUSTY) },
+  // a hand harpoon: thrown (aim with right click), hooks treasure or a raft and its rope hauls it in by itself.
+  // A worse harpoon gun: less damage, slower flight, a weaker pull that lets go easier. reload: picking it back up (s)
+  // grade: its stats (GRADE_STAT in battle): how hard it can be thrown, how hard it hits, how fast its rope hauls in
+  spear_rusty: { kind: 'spear', name: 'Rusty hand harpoon', grade: 'thrown_rusty', reload: 1.2, cost: 35, desc: 'Throw it, and its rope hauls in what it hooks. Short reach', icon: svgSpear('#6a4a32', '#9a6a48') },
+  spear:      { kind: 'spear', name: 'Hand harpoon', grade: 'thrown', reload: 0.9, cost: 70, desc: 'Throws further, hits harder, hauls in faster', icon: svgSpear('#8a5a32', '#c9d0d8') },
+  spear_hunt: { kind: 'spear', name: 'Hunting harpoon', grade: 'thrown_hunt', reload: 0.7, cost: 140, desc: 'The best thrown harpoon: longest reach, strongest rope', icon: svgSpear('#3a2a20', '#e6ecf2') },
+  pistol:     { kind: 'pistol', name: 'Flintlock', speed: 70, dmg: 16, spread: 0.012, hip: 0.07, reload: 2.2, range: 48, knock: 1.8, cost: 140, desc: 'Hits harder, reloads faster, shoots straighter and further', icon: svgPistol(FLINT_FINE) },
 };
-const STORE_ITEMS = ['paddle', 'rod'];
-const DEFAULT_KIT = ['paddle_old', 'rod_old', null, null];
+const STORE_ITEMS = ['paddle', 'rod', 'pistol', 'spear_rusty', 'spear', 'spear_hunt'];
+const DEFAULT_KIT = ['paddle_old', 'rod_old', 'pistol_old', null];
 let myKit = DEFAULT_KIT.slice();                 // what I bring into battle; kept from round to round in a match
 // stroke timing (s), share of the stroke spent pulling, take-out / put-away time (s), lower hand down the shaft (m)
 const PADDLE = { cycle: 1.15, power: 0.5, draw: 0.65, low: 0.5 };
@@ -5992,6 +6638,47 @@ function paddleMesh(type) {
   g.visible = false;
   return g;
 }
+// a flintlock pistol: the grip at the origin, the barrel along +x (muzzle at MUZZLE), the grip down -y
+const MUZZLE = new THREE.Vector3(0.34, 0.06, 0);
+function pistolMesh(type) {
+  const old = type === 'pistol_old', g = new THREE.Group();
+  const metal = toon(old ? 0x6d6152 : 0xb9bec8), wood = toon(old ? 0x5a4030 : 0x7a3a1a), dark = toon(0x1b1f2a), brass = toon(old ? 0x8a6a3a : 0xd8a83a);
+  mkPart(g, new THREE.CylinderGeometry(0.018, 0.021, 0.3, 10).rotateZ(Math.PI / 2), metal, 0.19, 0.06, 0);             // barrel
+  mkPart(g, new THREE.TorusGeometry(0.021, 0.005, 4, 10).rotateY(Math.PI / 2), brass, 0.335, 0.06, 0);                   // muzzle ring
+  mkPart(g, new THREE.BoxGeometry(0.26, 0.04, 0.035), wood, 0.13, 0.03, 0);                                              // stock under the barrel
+  const grip = mkPart(g, new THREE.BoxGeometry(0.05, 0.13, 0.034), wood, -0.01, -0.03, 0); grip.rotation.z = 0.45;      // the grip, raked back
+  mkPart(g, new THREE.SphereGeometry(0.03, 8, 6), brass, -0.04, -0.09, 0);                                                 // butt cap
+  mkPart(g, new THREE.BoxGeometry(0.05, 0.035, 0.02), metal, 0.03, 0.09, 0.015);                                           // lock plate
+  const hammer = mkPart(g, new THREE.BoxGeometry(0.012, 0.045, 0.012), dark, 0.01, 0.11, 0.015); hammer.rotation.z = 0.5; // the cock
+  mkPart(g, new THREE.TorusGeometry(0.018, 0.004, 4, 10, Math.PI), metal, 0.05, -0.005, 0).rotation.z = Math.PI;          // trigger guard
+  if (old) for (const x of [0.12, 0.25]) mkPart(g, new THREE.CylinderGeometry(0.0225, 0.0225, 0.025, 8).rotateZ(Math.PI / 2), toon(0x7a4a2a), x, 0.06, 0);   // rust
+  // the ramrod: rides under the barrel, comes out to ram the next ball home
+  const rod = new THREE.Group(); g.add(rod);
+  mkPart(rod, new THREE.CylinderGeometry(0.006, 0.006, 0.3, 6).rotateZ(Math.PI / 2), toon(old ? 0x5a4030 : 0xd8c9a8), 0.15, 0, 0);
+  mkPart(rod, new THREE.CylinderGeometry(0.01, 0.01, 0.02, 6).rotateZ(Math.PI / 2), brass, 0.3, 0, 0);
+  rod.position.set(0.02, 0.012, 0); g.userData.ramrod = rod;
+  g.visible = false;
+  return g;
+}
+// a hand harpoon: the grip at the origin, the head up +y (tip at SPEAR_TIP), a coil of rope at the butt
+const SPEAR_TIP = 1.15, SPEAR_BUTT = -0.55;
+const SPEAR_LOOK = { spear_rusty: [0x6a4a32, 0x9a6a48, 0xbfa77a], spear: [0x8a5a32, 0xc9d0d8, 0xe6d3a3], spear_hunt: [0x3a2a20, 0xe6ecf2, 0xb3263a] };
+function spearMesh(type = 'spear') {
+  const [cw, ci, cr] = SPEAR_LOOK[type] || SPEAR_LOOK.spear, g = new THREE.Group(), wood = toon(cw), iron = toon(ci), rope = toon(cr);
+  mkPart(g, new THREE.CylinderGeometry(0.017, 0.02, SPEAR_TIP - 0.2 - SPEAR_BUTT, 8), wood, 0, (SPEAR_TIP - 0.2 + SPEAR_BUTT) / 2, 0);   // shaft
+  mkPart(g, new THREE.CylinderGeometry(0.024, 0.022, 0.09, 8), iron, 0, SPEAR_TIP - 0.24, 0);                                            // socket
+  mkPart(g, new THREE.ConeGeometry(0.034, 0.2, 8), iron, 0, SPEAR_TIP - 0.1, 0);                                                         // head
+  for (const sd of [-1, 1]) mkPart(g, new THREE.BoxGeometry(0.012, 0.09, 0.012), iron, sd * 0.03, SPEAR_TIP - 0.2, 0).rotation.z = sd * 0.6;   // barbs
+  mkPart(g, new THREE.CylinderGeometry(0.026, 0.026, 0.12, 8), rope, 0, SPEAR_BUTT + 0.1, 0);                                            // rope lashed at the butt
+  mkPart(g, new THREE.TorusGeometry(0.03, 0.008, 4, 10), rope, 0, SPEAR_BUTT + 0.02, 0).rotation.x = Math.PI / 2;                        // the eye
+  g.visible = false;
+  return g;
+}
+// the same, flying (or stuck in something): along +x with the tip forward, like a harpoon bolt
+function spearFlyMesh(type) {
+  const g = new THREE.Group(), m = spearMesh(type); m.visible = true; m.rotation.z = -Math.PI / 2; m.position.x = -(SPEAR_TIP - 0.5); g.add(m);
+  return g;
+}
 // a rod: butt at the origin, up +y to the tip at len
 function rodMesh(type) {
   const I = ITEMS[type], L = I.len, g = new THREE.Group(), old = type === 'rod_old';
@@ -6022,16 +6709,20 @@ function giveInventory(s, kit = DEFAULT_KIT) {
   s.inv = kit.slice(0, INV_SLOTS); while (s.inv.length < INV_SLOTS) s.inv.push(null);
   s.eq = -1; s.eqCur = -1; s.eqK = 0;
   if (s.tools) for (const t of s.tools) if (t) scene.remove(t.mesh);
-  s.tools = s.inv.map(type => { if (!type) return null; const mesh = kindOf(type) === 'paddle' ? paddleMesh(type) : rodMesh(type); scene.add(mesh); return { type, mesh }; });
+  s.tools = s.inv.map(type => { if (!type) return null; const k = kindOf(type), mesh = k === 'paddle' ? paddleMesh(type) : k === 'pistol' ? pistolMesh(type) : k === 'spear' ? spearMesh(type) : rodMesh(type); scene.add(mesh); return { type, mesh }; });
+  s.gunCD = 0; s.gunKick = 0; s.gunShotT = 9; s.aimW = 0;
   s.pad ||= { u: 0, w: 0, side: 1, dir: 0, active: false, hintT: 0, wasPower: false };
   if (!s.fish) s.fish = { st: 'idle', t: 0, a: new THREE.Vector3(), from: new THREE.Vector3(), to: new THREE.Vector3(), loot: null, castT: 1, prevHeld: false, ...fishGear() };
 }
 const heldItem = s => s.inv && s.eqCur >= 0 && s.eqCur === s.eq ? s.inv[s.eqCur] : null;
 const heldKind = s => kindOf(heldItem(s));
+const AIMS = { pistol: true, spear: true, rod: true };          // held up with right click, crosshair and all
+const aimsHeld = s => !!AIMS[heldKind(s)];
 function toggleSlot(s, i) {
   if (s === battle.player && netGuest()) { netAct({ k: 'slot', i }); return; }
   if (!s || !s.inv || battle.over || i < 0 || i >= INV_SLOTS) return;
   if (!s.inv[i]) return;
+  s.eqResume = -1;                                                        // he chose: nothing to bring back out
   if (s.eq === i) { s.eq = -1; return; }                                  // put it away
   if (s.carry) { flash('Hands full'); return; }
   if (s.state === 'station') leaveStation(s);
@@ -6048,14 +6739,32 @@ const viewYawOf = s => s.isPlayer ? view.yaw : s.remote ? s.remote.vy || 0 : nul
 // The top hand stays near his inboard shoulder; the blade goes for a point in the water beside him, so the
 // paddle's angle (and how deep it bites) follows the height of the deck above the water.
 let GX0 = 0.5, GX1 = 0.3;
+// Held out with right click (P.aim): the stroke goes wherever he's holding it - P.aimA, the angle from straight
+// ahead (positive to his left). To the side it's the usual stroke down that side; straight ahead he leans out and
+// pulls the blade in toward him; behind him (past ~110 degrees) it's a back-stroke, pushing the raft backward.
+const PAD_AIM = { R: 0.74, half: 0.47, back: 1.9 };
+function padAimGeom(P, out) {
+  const r = P.aimA || 0, rev = Math.abs(r) > PAD_AIM.back, sg = rev ? -1 : 1;
+  const x0 = PAD_AIM.R * Math.cos(r), z0 = -PAD_AIM.R * Math.sin(r);
+  out.cx = clamp(x0 + PAD_AIM.half * sg, -1.0, 1.05); out.ex = clamp(x0 - PAD_AIM.half * sg, -1.0, 1.05);
+  out.cz = z0; out.ez = z0 * 0.92; out.rev = rev; out.r = r;
+  out.sd = Math.abs(z0) > 0.12 ? Math.sign(z0) : P.side;
+  return out;
+}
+const _pag = {};
 function strokeAt(s, u, waterY, out, len = 1.8) {
-  const P = s.pad, sd = P.side, p = PADDLE.power;
+  const P = s.pad, p = PADDLE.power;
   const ty = waterY - 0.32;
-  const cx = 0.62, ex = -0.32, cz = sd * 0.74, ez = sd * 0.68;
+  let cx = 0.62, ex = -0.32, sd = P.side, cz = sd * 0.74, ez = sd * 0.68, fwdK = 0, gx0 = GX0, gx1 = GX1, gz = 0;
+  if (P.aim) {
+    const A = padAimGeom(P, _pag); cx = A.cx; ex = A.ex; cz = A.cz; ez = A.ez; sd = A.sd;
+    fwdK = Math.max(0, Math.cos(A.r));                        // reaching out ahead: he leans further
+    gx0 = A.rev ? 0.05 : GX0 + 0.12 * fwdK; gx1 = A.rev ? 0.3 : GX1 + 0.1 * fwdK; gz = cz * 0.12;
+  }
   let x, y, z, feather, gx, gy;
-  if (u < p) { const e = itemSmooth(u / p); x = cx + (ex - cx) * e; z = cz + (ez - cz) * e; y = ty; feather = 0; gx = GX0 + (GX1 - GX0) * e; gy = 0.96 - 0.04 * e; }
-  else { const k = (u - p) / (1 - p), e = itemSmooth(k), arc = Math.sin(Math.PI * k); x = ex + (cx - ex) * e; z = ez + (cz - ez) * e; y = ty + 0.75 * arc; feather = arc; gx = GX1 + (GX0 - GX1) * e; gy = 0.92 + 0.04 * e + 0.12 * arc; }
-  out.grip.set(gx, gy, sd * 0.02);
+  if (u < p) { const e = itemSmooth(u / p); x = cx + (ex - cx) * e; z = cz + (ez - cz) * e; y = ty; feather = 0; gx = gx0 + (gx1 - gx0) * e; gy = 0.96 - 0.04 * e; }
+  else { const k = (u - p) / (1 - p), e = itemSmooth(k), arc = Math.sin(Math.PI * k); x = ex + (cx - ex) * e; z = ez + (cz - ez) * e; y = ty + 0.75 * arc; feather = arc; gx = gx1 + (gx0 - gx1) * e; gy = 0.92 + 0.04 * e + 0.12 * arc; }
+  out.grip.set(gx, gy, sd * 0.02 + gz);
   const Y = _iv.set(x, y, z).sub(out.grip).normalize().negate();        // up the shaft: tip to grip
   out.tip.copy(out.grip).addScaledVector(Y, -len);
   // paddle frame: +y up the shaft, blade face (local z) square to the pull, edge-on when feathered
@@ -6064,8 +6773,9 @@ function strokeAt(s, u, waterY, out, len = 1.8) {
   out.q.setFromRotationMatrix(_im.makeBasis(X, Y, Z));
   // the body: reaches forward and turns the outboard shoulder ahead at the catch, unwinds through the pull
   const e = u < p ? itemSmooth(u / p) : 1 - itemSmooth((u - p) / (1 - p));
-  out.lean = 0.3 - 0.3 * e;
-  out.twist = sd * (0.4 - 0.62 * e);
+  out.lean = 0.3 - 0.3 * e + 0.25 * fwdK;
+  out.twist = sd * (0.4 - 0.62 * e) * (P.aim ? Math.max(0.3, Math.abs(Math.sin(P.aimA || 0))) : 1);
+  out.side = sd;
   out.power = u < p ? Math.sin(Math.PI * u / p) : 0;
   return out;
 }
@@ -6078,8 +6788,18 @@ function paddlePose(s) {
   P[12] = 0.22; P[13] = -0.41;
   return P;
 }
-const _stroke = { tip: new THREE.Vector3(), grip: new THREE.Vector3(), q: new THREE.Quaternion(), lean: 0, twist: 0, power: 0 };
+const _stroke = { tip: new THREE.Vector3(), grip: new THREE.Vector3(), q: new THREE.Quaternion(), lean: 0, twist: 0, power: 0, side: 1 }, _hold = { tip: new THREE.Vector3(), grip: new THREE.Vector3(), q: new THREE.Quaternion(), lean: 0, twist: 0, power: 0, side: 1 };
 
+// is there water (not his own deck) under each of these points (his own frame: x ahead, z to his right), facing dir?
+function bladeWaterAt(s, pts, dir) {
+  const c = Math.cos(dir), sn = Math.sin(dir), [ci, cj] = colOf(s.local.x, s.local.z), [ox, oz] = colCenter(ci, cj);
+  for (const [x, z] of pts) {
+    const lx = ox + x * c + z * sn, lz = oz - x * sn + z * c;
+    const [i, j] = colOf(lx, lz), k = colKey(i, j);
+    if (s.ship.cols.has(k) && s.ship.cols.get(k) > s.local.y - 0.6) return false;
+  }
+  return true;
+}
 // is there water (not his own deck) under where the blade goes, on that side, facing that way?
 function bladeWater(s, side, dir) {
   const c = Math.cos(dir), sn = Math.sin(dir), [ci, cj] = colOf(s.local.x, s.local.z), [ox, oz] = colCenter(ci, cj);   // from the middle of his spot
@@ -6096,14 +6816,33 @@ function bladeWater(s, side, dir) {
 // comes out), paddle, fish
 function itemsStep(s) {
   const P = s.pad; if (!P) return;
-  if (s.eq >= 0 && (s.carry || s.state !== 'aboard')) s.eq = -1;
+  s.gunCD = Math.max(0, (s.gunCD || 0) - DT);
+  const aimingNow = !!s.aiming && aimsHeld(s) && s.state === 'aboard';
+  spearTrack(s);
+  s.aimW = itemApproach(s.aimW || 0, aimingNow ? 1 : 0, DT / 0.16);
+  // hands needed (hauling something in, carrying, at a gun, in the water): it goes away, and comes back out after
+  if (s.eq >= 0 && (s.carry || s.state !== 'aboard')) { s.eqResume = s.eq; s.eq = -1; }
+  else if (s.eq < 0 && s.eqResume >= 0 && !s.carry && s.state === 'aboard' && !s.pry) { if (s.inv[s.eqResume]) s.eq = s.eqResume; s.eqResume = -1; }
   if (s.eqCur !== s.eq) { s.eqK = itemApproach(s.eqK, 0, DT / PADDLE.draw); if (s.eqK <= 0) s.eqCur = s.eq; }
   else s.eqK = itemApproach(s.eqK, s.eqCur >= 0 ? 1 : 0, DT / PADDLE.draw);
   const type = s.eqCur >= 0 ? s.inv[s.eqCur] : null, kind = kindOf(type), ready = s.eqCur === s.eq && s.eqK > 0.97;
   // ---- paddling ----
   P.hintT = Math.max(0, P.hintT - DT);
+  // right click with a paddle: he plants his feet and holds it out the way he's looking (relative to his body)
+  P.aim = false;                     // (holding the paddle out with right click: tried, taken back out)
+  if (P.aim && P.w < 0.05) {          // (the angle only moves between strokes)
+    const fl = _iv.copy(s.aimDir).applyQuaternion(_iq.copy(shipPose(s.ship).q).invert());
+    P.aimA = wrapA(Math.atan2(-fl.z, fl.x) - s.yaw);
+  }
   let want = kind === 'paddle' && ready && s.state === 'aboard' && s.stagger <= 0 && paddleWanted(s);
-  if (want) {
+  if (want && P.aim) {
+    const A = padAimGeom(P, _pag);
+    P.side = A.sd; P.dir = A.rev ? wrapA(s.yaw + Math.PI) : s.yaw;       // forward strokes push the way he faces, back-strokes the other way
+    if (!bladeWaterAt(s, [[A.cx, A.cz], [(A.cx + A.ex) / 2, (A.cz + A.ez) / 2], [A.ex, A.ez]], s.yaw)) {
+      want = false;
+      if (s.isPlayer && P.hintT <= 0 && !P.active) { flash('No water to paddle there'); P.hintT = 2; }
+    }
+  } else if (want) {
     const vy = viewYawOf(s);
     if (vy !== null) {     // a player paddles the way their camera looks
       const fw = _iv.set(-Math.sin(vy), 0, -Math.cos(vy)).applyQuaternion(_iq.copy(shipPose(s.ship).q).invert());
@@ -6143,63 +6882,98 @@ function itemsStep(s) {
 }
 
 // ---- fishing ----
-// Click casts: he swings the rod back, then whips it forward and the bobber flies out to where he's looking (as
-// far as the rod reaches). A coin pouch near where it lands is hooked and reeled in to him, onto his belt if
-// there's room (otherwise it's dropped at his feet). Nothing there: the line comes back.
-const FISH = { wind: 0.42, whip: 0.55, fly: 0.65, grab: 0.95, back: 0.45 };
-const _fw = new THREE.Vector3();
+// Hold right click to aim: a ring on the water shows where the bobber will land (as far as the rod reaches; it
+// settles onto a coin pouch close by). Click casts: he swings the rod back and whips the bobber out there. A pouch
+// where it lands is hooked. Otherwise it sits on the water; hold left click to reel it in, and any pouch it passes
+// on the way is hooked. A hooked pouch only comes in while the button's held, onto his belt if there's room.
+const FISH = { wind: 0.42, whip: 0.55, fly: 0.65, grab: 0.95, snag: 0.6, snap: 1.0, back: 0.45 };
+const _fw = new THREE.Vector3(), _ft1 = new THREE.Vector3(), _ft2 = new THREE.Vector3(), _ft3 = new THREE.Vector3();
 function rodTipWorld(s, out) {
   const T = s.eqCur >= 0 ? s.tools[s.eqCur] : null;
   if (T && kindOf(T.type) === 'rod' && T.mesh.visible) return T.mesh.localToWorld(out.set(0, ITEMS[T.type].len, 0));
   return sailorWorld(s, out).add(_fw.set(0, 1.4, 0));
+}
+const fishFree = t => !t.gone && t.type === 'pouch' && !t.haul && !t.carried && !t.belt && !t.hooked;
+// where a cast would land: along his aim to the water (from the hip: ahead of him), no further than the rod
+// reaches; onto a pouch if one's near. out.snap says whether it settled on one
+function fishTarget(s, I, out) {
+  const me = sailorWorld(s, _ft1), mine = s === battle.player;
+  const aiming = (mine ? battle.aimW || 0 : s.aimW || 0) > 0.5, dir = mine && battle.aimDir ? battle.aimDir : s.aimDir;
+  let hit = false;
+  if (aiming && dir) {
+    const o = mine && typeof camera !== 'undefined' ? camera.position : _ft2.copy(me).setY(me.y + 1.55);
+    for (let k = 0.5; k < 45; k += 0.25) { out.copy(o).addScaledVector(dir, k); if (out.y < surfaceH(out.x, out.z, simTime)) { hit = true; break; } }
+    if (!hit) { out.copy(me).add(_ft3.set(dir.x, 0, dir.z).normalize().multiplyScalar(I.range)); hit = true; }   // aimed at the sky: as far as it goes
+  }
+  if (!hit) { const vy = viewYawOf(s), y = vy !== null ? vy : null; const fw = y !== null ? _ft3.set(-Math.sin(y), 0, -Math.cos(y)) : _ft3.set(Math.cos(worldYawOf(s)), 0, -Math.sin(worldYawOf(s))); out.copy(me).addScaledVector(fw, I.range * 0.75); }
+  const dx = out.x - me.x, dz = out.z - me.z, d = Math.hypot(dx, dz);
+  if (d > I.range) { out.x = me.x + dx / d * I.range; out.z = me.z + dz / d * I.range; }
+  out.snap = false; let bd = FISH.snap;
+  for (const t of battle.loot) {
+    if (!fishFree(t)) continue;
+    const c = t.body.translation(), dd = Math.hypot(c.x - out.x, c.z - out.z);
+    if (dd < bd && Math.hypot(c.x - me.x, c.z - me.z) <= I.range + 0.3) { bd = dd; out.x = c.x; out.z = c.z; out.snap = true; }
+  }
+  out.y = surfaceH(out.x, out.z, simTime) + 0.03;
+  return out;
 }
 function fishLetGo(s) {
   const F = s.fish; if (!F) return;
   if (F.loot) { const t = F.loot; t.hooked = null; t.collider.setSensor(false); t.body.setGravityScale(1, true); F.loot = null; }
   if (F.st !== 'idle') { F.st = 'back'; F.t = 0; F.from.copy(F.a); }
 }
+function fishHook(s, F, t) { F.loot = t; t.hooked = s; t.collider.setSensor(true); t.body.setGravityScale(0, true); F.st = 'reel'; }
 function fishStep(s, I, ready) {
   const F = s.fish; if (!F) return;
   const held = paddleWanted(s), press = held && !F.prevHeld; F.prevHeld = held;
   if (!I) { if (F.st !== 'idle' && F.st !== 'back') fishLetGo(s); if (F.st === 'back') F.st = 'idle'; F.castT = 1; return; }
   F.castT = Math.min(1, F.castT + DT / FISH.wind);
+  const me = sailorWorld(s, _iv3);
   if (F.st === 'idle') {
-    if (press && ready && s.state === 'aboard') { F.st = 'wind'; F.castT = 0; F.t = 0; }
+    if (press && ready && s.state === 'aboard') { F.st = 'wind'; F.castT = 0; F.t = 0; fishTarget(s, I, F.to); F.reelOk = false; }
     const hang = rodTipWorld(s, _iv); hang.y -= 0.3; F.a.lerp(hang, 1 - Math.exp(-14 * DT));      // dangles under the tip
     return;
   }
   if (F.st === 'wind') {
-    if (F.castT >= FISH.whip) {
-      // the bobber leaves the rod tip toward where he's looking (or straight ahead), as far as the rod casts
-      const vy = viewYawOf(s);
-      const dir = vy !== null ? _fw.set(-Math.sin(vy), 0, -Math.cos(vy)) : _fw.set(Math.cos(s.worldYaw || worldYawOf(s)), 0, -Math.sin(s.worldYaw || worldYawOf(s)));
-      F.from.copy(F.a);
-      const me = sailorWorld(s, _iv3);
-      F.to.copy(me).addScaledVector(dir, I.range); F.to.y = surfaceH(F.to.x, F.to.z, simTime) + 0.03;
-      F.st = 'fly'; F.t = 0;
-    }
+    if (F.castT >= FISH.whip) { F.from.copy(F.a); F.st = 'fly'; F.t = 0; }       // it leaves the rod tip
     return;
   }
   if (F.st === 'fly') {
     F.t = Math.min(1, F.t + DT / FISH.fly);
+    F.to.y = surfaceH(F.to.x, F.to.z, simTime) + 0.03;
     F.a.lerpVectors(F.from, F.to, F.t); F.a.y += Math.sin(Math.PI * F.t) * (1.2 + I.range * 0.12);
     if (F.t >= 1) {
       spray(F.to, 4, 0.8, 0.3);
       let best = null, bd = FISH.grab;
       for (const t of battle.loot) {
-        if (t.gone || t.type !== 'pouch' || t.haul || t.carried || t.belt || t.hooked) continue;
+        if (!fishFree(t)) continue;
         const c = t.body.translation(), d = Math.hypot(c.x - F.to.x, c.z - F.to.z);
         if (d < bd && c.y > F.to.y - 1.2) { bd = d; best = t; }
       }
-      if (best) { F.loot = best; best.hooked = s; best.collider.setSensor(true); best.body.setGravityScale(0, true); F.st = 'reel'; }
-      else { F.st = 'back'; F.t = 0; F.from.copy(F.a); }
+      if (best) fishHook(s, F, best); else F.st = 'sit';
     }
+    return;
+  }
+  // (the button that cast it has to come up before holding it reels)
+  if (!held) F.reelOk = true;
+  const reeling = held && F.reelOk;
+  if (F.st === 'sit') {
+    // on the water, bobbing; reeled in it skims back toward him and snags any pouch it passes
+    const dx = me.x - F.a.x, dz = me.z - F.a.z, d = Math.hypot(dx, dz);
+    if (reeling) {
+      const step = Math.min(d, I.reel * 1.4 * DT); F.a.x += dx / (d || 1) * step; F.a.z += dz / (d || 1) * step;
+      if (Math.random() < 0.3) addFoam(F.a.x, F.a.z, 0.05);
+      for (const t of battle.loot) { if (!fishFree(t)) continue; const c = t.body.translation(); if (Math.hypot(c.x - F.a.x, c.z - F.a.z) < FISH.snag && c.y > F.a.y - 1.2) { fishHook(s, F, t); return; } }
+    }
+    const lp = toLocal(s.ship, _iv.set(F.a.x, me.y, F.a.z), new THREE.Vector3()), over = s.ship.cols.has(colKey(...colOf(lp.x, lp.z)));
+    if (d < 1.1 || over) { F.st = 'back'; F.t = 0; F.from.copy(F.a); return; }      // in to the raft with nothing on it
+    F.a.y += (surfaceH(F.a.x, F.a.z, simTime) + 0.03 + 0.02 * Math.sin(simTime * 5) - F.a.y) * (1 - Math.exp(-12 * DT));
     return;
   }
   if (F.st === 'reel') {
     const t = F.loot;
     if (!t || t.gone || t.carried || t.belt || t.hooked !== s) { F.loot = null; F.st = 'back'; F.t = 0; F.from.copy(F.a); return; }
-    const c = t.body.translation(), me = sailorWorld(s, _iv3);
+    const c = t.body.translation();
     const dx = me.x - c.x, dz = me.z - c.z, d = Math.hypot(dx, dz);
     if (d < 0.75 && F.a.distanceTo(_iv2.set(c.x, c.y + 0.2, c.z)) < 0.3) {
       // in: onto the belt, or down at his feet
@@ -6208,7 +6982,8 @@ function fishStep(s, I, ready) {
       else { t.collider.setSensor(false); t.body.setGravityScale(1, true); }
       return;
     }
-    const step = Math.max(0, Math.min(d - 0.7, I.reel * DT)), nx = c.x + dx / d * step, nz = c.z + dz / d * step;
+    // only while the button's held; let go and it waits on the line where it is
+    const step = reeling ? Math.max(0, Math.min(d - 0.7, I.reel * DT)) : 0, nx = c.x + dx / d * step, nz = c.z + dz / d * step;
     // over the water it skims the surface; over his raft, it comes up over the deck
     let y = surfaceH(nx, nz, simTime) + 0.08;
     const lp = toLocal(s.ship, _iv.set(nx, me.y, nz), new THREE.Vector3()), k = colKey(...colOf(lp.x, lp.z));
@@ -6217,7 +6992,7 @@ function fishStep(s, I, ready) {
     t.body.setTranslation({ x: nx, y: ny, z: nz }, true);
     t.body.setLinvel({ x: 0, y: 0, z: 0 }, true); t.body.setAngvel({ x: 0, y: 0, z: 0 }, true);
     F.a.lerp(_iv.set(nx, ny + 0.2, nz), 1 - Math.exp(-12 * DT));                  // the bobber settles onto the catch
-    if (Math.random() < 0.25) addFoam(nx, nz, 0.08);
+    if (reeling && Math.random() < 0.25) addFoam(nx, nz, 0.08);
     return;
   }
   if (F.st === 'back') {
@@ -6227,7 +7002,31 @@ function fishStep(s, I, ready) {
     if (F.t >= 1) F.st = 'idle';
   }
 }
-
+// the aiming ring on the water (yours only): grows in, glides to where it'll land, goes gold on a pouch
+let _fRing = null;
+function fishRingDraw(dt) {
+  const s = battle.player, I = s && heldKind(s) === 'rod' ? ITEMS[heldItem(s)] : null;
+  const on = !!I && raft.mode === 'battle' && !battle.over && (battle.aimW || 0) > 0.5 && s.fish && s.fish.st === 'idle' && s.state === 'aboard';
+  if (!_fRing) {
+    _fRing = new THREE.Group();
+    const m = new THREE.MeshBasicMaterial({ color: 0xffffff, transparent: true, opacity: 0.9, depthWrite: false });
+    const r = new THREE.Mesh(new THREE.TorusGeometry(0.45, 0.04, 6, 32).rotateX(Math.PI / 2), m); _fRing.add(r);
+    const dot = new THREE.Mesh(new THREE.CircleGeometry(0.07, 12).rotateX(-Math.PI / 2), m); _fRing.add(dot);
+    _fRing.userData = { m, k: 0, tgt: new THREE.Vector3(), c: new THREE.Color(0xffffff) };
+    _fRing.renderOrder = 6; _fRing.visible = false; scene.add(_fRing);
+  }
+  const U = _fRing.userData;
+  U.k = itemApproach(U.k, on ? 1 : 0, dt / 0.15);
+  _fRing.visible = U.k > 0.01; if (!_fRing.visible) return;
+  if (on) {
+    fishTarget(s, I, U.tgt);
+    if (U.k < 0.2) _fRing.position.copy(U.tgt); else _fRing.position.lerp(U.tgt, 1 - Math.exp(-18 * dt));
+    U.m.color.lerp(new THREE.Color(U.tgt.snap ? 0xffcf3a : 0xffffff), 1 - Math.exp(-12 * dt));
+  }
+  const e = itemSmooth(U.k), pulse = 1 + 0.06 * Math.sin(simTime * 6);
+  _fRing.scale.setScalar(Math.max(0.001, e * pulse * (U.tgt.snap ? 1.15 : 1)));
+  U.m.opacity = 0.9 * e;
+}
 
 // per frame, after the body is posed: everything he owns hangs on his back; the one he's using comes over his
 // shoulder into his hands (and goes back the same way)
@@ -6238,6 +7037,7 @@ const basisQ = (Yv, Zw) => { const Y = Yv.clone().normalize(), Z = Zw.clone().ad
 // on his back (spine frame: x forward, y up, z right): paddles hang diagonally from the right shoulder, rods from the left
 const BACK = {
   paddle: [{ p: new THREE.Vector3(-0.25, 0.6, 0.2), q: basisQ(new THREE.Vector3(0, 1, 0.62), new THREE.Vector3(-1, 0, 0)) }, { p: new THREE.Vector3(-0.3, 0.56, 0.12), q: basisQ(new THREE.Vector3(0, 1, 0.5), new THREE.Vector3(-1, 0, 0)) }],
+  spear: [{ p: new THREE.Vector3(-0.24, 0.12, -0.02), q: basisQ(new THREE.Vector3(0, 1, -0.75), new THREE.Vector3(-1, 0, 0)) }],
   rod: [{ p: new THREE.Vector3(-0.27, -0.12, 0.2), q: basisQ(new THREE.Vector3(0, 1, -0.55), new THREE.Vector3(-1, 0, 0)) }, { p: new THREE.Vector3(-0.31, -0.1, 0.12), q: basisQ(new THREE.Vector3(0, 1, -0.45), new THREE.Vector3(-1, 0, 0)) }],
 };
 const CARRY_Q = basisQ(new THREE.Vector3(0.5, -0.82, -0.18), new THREE.Vector3(0, 0, 1));
@@ -6246,7 +7046,10 @@ const ROD_HOLD = 0.16;                                                      // t
 function paddlePoint(f, d, out) { return out.set(0, -d, 0).applyQuaternion(f.q).add(f.p); }
 function rodPoint(f, d, out) { return out.set(0, d, 0).applyQuaternion(f.q).add(f.p); }
 // where each owned item sits on his back
+// a flintlock rides in a holster on his right hip (hips frame), barrel down, grip back
+const HOLSTER = { p: new THREE.Vector3(0.02, -0.06, 0.2), q: basisQ(new THREE.Vector3(1, 0, 0), new THREE.Vector3(0, 0, 1)) };
 function backFrame(s, i, out) {
+  if (kindOf(s.inv[i]) === 'pistol') return frameFrom(s.model.hips, HOLSTER.p, HOLSTER.q, out);
   const k = kindOf(s.inv[i]), same = s.inv.slice(0, i).filter(t => kindOf(t) === k).length, B = BACK[k][Math.min(same, BACK[k].length - 1)];
   return frameFrom(s.model.spine, B.p, B.q, out);
 }
@@ -6266,40 +7069,154 @@ function rodHeld(s, out) {
   const butt = hand.clone().addScaledVector(hold.clone().normalize(), -ROD_HOLD);
   return frameFrom(s.model.root, butt, q, out);
 }
+// the flintlock in his hand: down by his side, or (aiming) out at arm's length along where he's aiming, kicking up as it fires
+const _phD = new THREE.Vector3(), _phU = new THREE.Vector3(), _phQ = new THREE.Quaternion();
+// reloading a flintlock: after the kick settles he brings it up muzzle-high in front of his chest, tips powder in,
+// rams the ball home with the ramrod (several strokes), returns the rod and is ready - spread over the reload time
+function reloadState(s) {
+  const type = s.eqCur >= 0 ? s.inv[s.eqCur] : null, I = type && ITEMS[type];
+  if (!I || I.kind !== 'pistol' || !(s.gunCD > 0)) return { w: 0, u: 1 };
+  const R = I.reload, el = R - s.gunCD, u = clamp(el / R, 0, 1);
+  const w = itemSmooth((el - 0.22) / 0.3) * itemSmooth(s.gunCD / 0.3);
+  return { w, u };
+}
+function pistolHeld(s, out) {
+  const M = s.model, rl = reloadState(s), w = itemSmooth(s.aimW || 0) * (1 - rl.w);
+  const lowP = _iv2.set(0.16, 0.92, 0.26), lowX = _iv3.set(0.82, -0.57, 0.05).normalize();
+  let p = lowP.clone(), X = lowX.clone();
+  if (w > 0.001 && s.aimDir) {
+    const d = _phD.copy(s.aimDir).applyQuaternion(_phQ.copy(M.root.quaternion).invert()).normalize();
+    const aimP = new THREE.Vector3(0.05, 1.42, 0.24).addScaledVector(d, 0.52);
+    p.lerp(aimP, w); X.lerp(d, w).normalize();
+  }
+  if (rl.w > 0.001) { p.lerp(_iv.set(0.3, 1.12, 0.1), rl.w); X.lerp(new THREE.Vector3(0.2, 1, -0.08).normalize(), rl.w).normalize(); }   // muzzle up, in front of his chest
+  const k = s.gunKick || 0;
+  if (k > 0.001) { X.y += 0.9 * k; X.normalize(); p.addScaledVector(X, -0.06 * k); }
+  const up = _phU.set(0, 1, 0).addScaledVector(X, -X.y).normalize();
+  const q = basisQ(up, new THREE.Vector3().crossVectors(X, up));
+  return frameFrom(M.root, p, q, out);
+}
+// a hand harpoon: held up by his ear, point to the sky; aiming, drawn back over his shoulder along the aim.
+// The throw whips the arm forward past his shoulder (the harpoon itself is already gone)
+const spearThrowK = s => { const t = s.gunShotT ?? 9; return t < 0.6 ? (t < 0.12 ? itemSmooth(t / 0.12) : 1 - itemSmooth((t - 0.12) / 0.48)) : 0; };
+function spearHeld(s, out) {
+  const M = s.model, w = itemSmooth(s.aimW || 0);
+  const p = new THREE.Vector3(0.2, 1.0, 0.27), Y = new THREE.Vector3(0.3, 1, 0.04).normalize();
+  if (w > 0.001 && s.aimDir) {
+    const d = _phD.copy(s.aimDir).applyQuaternion(_phQ.copy(M.root.quaternion).invert()).normalize();
+    p.lerp(_iv2.set(-0.2, 1.62, 0.28), w); Y.lerp(d.setY(d.y + 0.12).normalize(), w).normalize();
+  }
+  const th = spearThrowK(s);
+  if (th > 0.001) p.lerp(_iv2.set(0.55, 1.3, 0.16), th);
+  return frameFrom(M.root, p, basisQ(Y, new THREE.Vector3(0, 0, 1)), out);
+}
+// is his hand harpoon out (flying, or on its rope)? Tracks where its end is; when it's done he hauls it back in
+function spearTrack(s) {
+  const H = s.hst; if (!H) return;
+  const pr = battle.projectiles.find(p => p.st === H), tt = pr ? null : battle.tethers.find(t => t.st === H && t.life > 0);
+  const out = !!(pr || tt);
+  if (out) { (s.spAt ||= new THREE.Vector3()).copy(pr ? pr.p : tetherEnd(tt, _iv)); s.spTied = !!tt; s.gunCD = H.I.reload; }
+  else if (s.spOut) { (s.spRet ||= new THREE.Vector3()).copy(s.spAt); s.gunCD = H.I.reload; s.spTied = false; }
+  s.spOut = out;
+}
+// the harpoon's rope while it flies (from his hand), and the harpoon coming back in along it, into his hand
+const _sdH = new THREE.Vector3(), _sdP = new THREE.Vector3(), _sdQ = new THREE.Quaternion();
+function spearDraw(s, vis) {
+  const i = s.inv ? s.inv.findIndex(t => kindOf(t) === 'spear') : -1;
+  if (i < 0 || !s.tools[i]) { if (s.spLine) s.spLine.visible = false; return; }
+  const T = s.tools[i], held = i === s.eqCur;
+  if (!s.spLine) {
+    const geo = new THREE.BufferGeometry(); geo.setAttribute('position', new THREE.Float32BufferAttribute(new Float32Array(16 * 3), 3));
+    s.spLine = new THREE.Line(geo, ropeMat); s.spLine.frustumCulled = false; s.spLine.visible = false; scene.add(s.spLine);
+  }
+  if (s.spOut) T.mesh.visible = false;
+  let end = null;
+  const hand = _sdH.copy(T.mesh.position);
+  if (vis && held && s.spOut && !s.spTied && s.spAt) end = s.spAt;
+  const R = ITEMS[s.inv[i]].reload, k = 1 - (s.gunCD || 0) / R;
+  if (vis && held && !s.spOut && s.spRet && k < 1) {
+    // hauled back hand over hand: it skips back toward him, tip trailing, and he catches it
+    const e = itemSmooth(k);
+    _sdP.lerpVectors(s.spRet, hand, e); _sdP.y += Math.sin(Math.PI * e) * 0.6;
+    const away = _iv.copy(_sdP).sub(hand); if (away.lengthSq() < 1e-4) away.set(0, 1, 0);
+    _sdQ.copy(basisQ(away.normalize(), new THREE.Vector3(0, 1, 0.3)));
+    T.mesh.position.copy(_sdP); T.mesh.quaternion.slerp(_sdQ, 1 - e * e * e);
+    T.mesh.updateMatrixWorld(true);
+    end = T.mesh.localToWorld(_iv2.set(0, SPEAR_BUTT, 0));
+  }
+  s.spLine.visible = !!end;
+  if (!end) return;
+  const arr = s.spLine.geometry.attributes.position.array, d = hand.distanceTo(end), sag = s.spOut ? 0.04 * d : 0.08 * d;
+  for (let j = 0; j < 16; j++) { const u = j / 15; arr[j * 3] = hand.x + (end.x - hand.x) * u; arr[j * 3 + 1] = hand.y + (end.y - hand.y) * u - sag * 4 * u * (1 - u); arr[j * 3 + 2] = hand.z + (end.z - hand.z) * u; }
+  s.spLine.geometry.attributes.position.needsUpdate = true;
+}
 function itemsDraw(s, dt) {
   if (!s.tools) return;
   const M = s.model, vis = M.root.visible && s.state !== 'drowned', P = s.pad;
   for (const T of s.tools) if (T) T.mesh.visible = vis;
   fishDraw(s, vis);
-  if (!vis) return;
+  if (!vis) { spearDraw(s, false); return; }
   M.root.updateMatrixWorld(true);
   const cur = s.eqCur, type = cur >= 0 ? s.inv[cur] : null, kind = kindOf(type);
   const g = itemSmooth((s.eqK - 0.35) / 0.65), reach = itemSmooth(s.eqK / 0.35), w = kind === 'paddle' ? itemSmooth(P.w) : 0;
   let st = null;
+  // a shot: the kick comes up fast (not in one frame) and settles back over a moment
+  s.gunShotT = (s.gunShotT ?? 9) + dt;
+  { const t = s.gunShotT; s.gunKick = t < 0.045 ? itemSmooth(t / 0.045) : t < 0.7 ? Math.exp(-(t - 0.045) / 0.12) : 0; }
+  if (kind === 'pistol') {
+    // aiming: the chest follows the aim up and down, the right shoulder turns forward behind the arm; a shot
+    // rocks the shoulders and head back
+    const aw = itemSmooth(s.aimW || 0) * g, k = s.gunKick || 0;
+    if ((aw > 0.001 && s.aimDir) || k > 0.001) {
+      const d = s.aimDir ? _iv.copy(s.aimDir).applyQuaternion(_iq.copy(M.root.quaternion).invert()) : _iv.set(1, 0, 0);
+      const pitch = Math.asin(clamp(d.y, -1, 1));
+      M.spine.rotation.z += 0.4 * pitch * aw + 0.16 * k;
+      M.spine.rotation.y += 0.22 * aw;
+      M.neck.rotation.z += -0.3 * pitch * aw + 0.1 * k; M.neck.rotation.y -= 0.22 * aw;
+      M.root.updateMatrixWorld(true);
+    }
+  }
+  if (kind === 'spear') {
+    // winding up: the throwing shoulder goes back; the throw turns it through, and he leans into it
+    const aw = itemSmooth(s.aimW || 0) * g, th = spearThrowK(s);
+    if (aw > 0.001 || th > 0.001) {
+      M.spine.rotation.y += -0.35 * aw * (1 - th) + 0.4 * th; M.spine.rotation.z -= 0.18 * th;
+      M.neck.rotation.y += 0.35 * aw * (1 - th) - 0.4 * th;
+      M.root.updateMatrixWorld(true);
+    }
+  }
+  let hw = 0, hold = null;
   if (kind === 'paddle') {
     const water = surfaceH(M.root.position.x, M.root.position.z, simTime);
     const wy = M.root.worldToLocal(_iv.copy(M.root.position).setY(water)).y;
+    // held out (right click): the blade hangs just over the water where the stroke would start
+    hw = P.aim ? itemSmooth(s.aimW || 0) * (1 - w) : 0;
+    if (hw > 0.001) hold = strokeAt(s, 0, wy + 0.55, _hold, ITEMS[type].len);
     st = strokeAt(s, P.u, wy, _stroke, ITEMS[type].len);
     // the body works the stroke: bends forward, winds and unwinds, leans out over the water
-    if (w > 0.001) {
-      M.spine.rotation.z -= st.lean * w;
-      M.spine.rotation.y += st.twist * w;
-      M.spine.rotation.x += P.side * 0.22 * w;
+    if (w > 0.001 || hw > 0.001) {
+      const lean = st.lean * w + (hold ? hold.lean * 0.8 : 0) * hw, tw = st.twist * w + (hold ? hold.twist * 0.7 : 0) * hw, sd = hold && hw > w ? hold.side : st.side;
+      M.spine.rotation.z -= lean;
+      M.spine.rotation.y += tw;
+      M.spine.rotation.x += sd * 0.22 * Math.max(w, hw * 0.6);
       M.root.updateMatrixWorld(true);
     }
   }
   // everything not in use on his back
   s.tools.forEach((T, i) => { if (!T || i === cur) return; backFrame(s, i, _bk); T.mesh.position.copy(_bk.p); T.mesh.quaternion.copy(_bk.q); });
-  if (cur < 0 || !s.tools[cur]) return;
+  if (cur < 0 || !s.tools[cur]) { spearDraw(s, vis); return; }
   const T = s.tools[cur];
   backFrame(s, cur, _bk);
   // in hand: a paddle is carried on the shoulder and swings into the stroke; a rod is held out ready to cast
   if (kind === 'paddle') {
     const carryGrip = _iv.copy(CARRY_HAND).sub(_iv2.set(0, -CARRY_AT, 0).applyQuaternion(CARRY_Q));
     frameFrom(M.root, carryGrip, CARRY_Q, _cr);
+    if (hold) { frameFrom(M.root, hold.grip, hold.q, _hd); _cr.p.lerp(_hd.p, hw / Math.max(0.001, 1 - w)); _cr.q.slerp(_hd.q, hw / Math.max(0.001, 1 - w)); }
     frameFrom(M.root, st.grip, st.q, _hd);
     _pw.p.lerpVectors(_cr.p, _hd.p, w); _pw.q.copy(_cr.q).slerp(_hd.q, w);
-  } else { rodHeld(s, _cr); _pw.p.copy(_cr.p); _pw.q.copy(_cr.q); }
+  } else if (kind === 'pistol') { pistolHeld(s, _cr); _pw.p.copy(_cr.p); _pw.q.copy(_cr.q); }
+  else if (kind === 'spear') { spearHeld(s, _cr); _pw.p.copy(_cr.p); _pw.q.copy(_cr.q); }
+  else { rodHeld(s, _cr); _pw.p.copy(_cr.p); _pw.q.copy(_cr.q); }
   // from his back into his hand, over the shoulder
   const up = _iv2.set(0, 1, 0).applyQuaternion(M.root.quaternion);
   const handP = _iv3.copy(_pw.p), handQ = _iq.copy(_pw.q);
@@ -6308,10 +7225,32 @@ function itemsDraw(s, dt) {
   T.mesh.position.copy(_pw.p); T.mesh.quaternion.copy(_pw.q); T.mesh.updateMatrixWorld(true);
   // hands: the right reaches back for it and holds it
   if (kind === 'paddle') {
-    const sd = P.side, rightAt = CARRY_AT + ((sd > 0 ? PADDLE.low : 0.03) - CARRY_AT) * w, dR = 0.18 + (rightAt - 0.18) * g;
+    const sd = hold && hw > w ? hold.side : st.side, ww = Math.max(w, hw), rightAt = CARRY_AT + ((sd > 0 ? PADDLE.low : 0.03) - CARRY_AT) * ww, dR = 0.18 + (rightAt - 0.18) * g;
     if (reach > 0.001) armTo(M, 1, paddlePoint(_pw, dR, _iv), reach);
-    const lw = w * g;
+    const lw = ww * g;
     if (lw > 0.001) { M.root.updateMatrixWorld(true); armTo(M, 0, paddlePoint(_pw, sd > 0 ? 0.03 : PADDLE.low, _iv), lw); }
+  } else if (kind === 'pistol') {
+    if (reach > 0.001) armTo(M, 1, _iv.copy(_pw.p).add(_iv2.set(0, -0.02, 0).applyQuaternion(_pw.q)), reach);
+    // the free hand settles on his belt while he aims, or works the reload
+    const rl = reloadState(s), rod = T.mesh.userData.ramrod;
+    const lw = itemSmooth(s.aimW || 0) * g * 0.8 * (1 - rl.w);
+    if (lw > 0.001) { M.root.updateMatrixWorld(true); armTo(M, 0, M.root.localToWorld(_iv.set(0.08, 1.0, -0.2)), lw); }
+    let rodOut = 0, rodDepth = 0;
+    if (rl.w > 0.001) {
+      // powder in (to 25%), then three strokes of the ramrod (to 85%), then the rod back under the barrel
+      const u = rl.u; let along = 0.06;
+      if (u > 0.25 && u < 0.85) { const ph = (u - 0.25) / 0.6 * 3; rodOut = itemSmooth((u - 0.25) / 0.06) * itemSmooth((0.85 - u) / 0.06); rodDepth = 0.5 - 0.5 * Math.cos(ph * Math.PI * 2); along = 0.36 + 0.14 * rodDepth; }
+      else if (u <= 0.25) along = 0.05 + 0.03 * Math.sin(u * 40);                                     // tipping powder in
+      M.root.updateMatrixWorld(true);
+      armTo(M, 0, T.mesh.localToWorld(_iv.set(MUZZLE.x + along, MUZZLE.y + 0.02, 0)), rl.w);
+    }
+    if (rod) {          // the rod: under the barrel, or out and in the muzzle, following his hand
+      rod.position.set(0.02 + rodOut * (MUZZLE.x + 0.06 + 0.14 * rodDepth - 0.02), 0.012 + rodOut * (MUZZLE.y - 0.012), 0);
+    }
+  } else if (kind === 'spear') {
+    if (reach > 0.001) armTo(M, 1, _pw.p, reach);
+    const lw = itemSmooth(s.aimW || 0) * g * 0.85 * (1 - spearThrowK(s));      // the free arm points where it's going
+    if (lw > 0.001) { M.root.updateMatrixWorld(true); armTo(M, 0, M.root.localToWorld(_iv.set(0.5, 1.4, -0.12)), lw); }
   } else {
     const dR = ITEMS[type].len * 0.55 + (ROD_HOLD - ITEMS[type].len * 0.55) * g;   // grabs it near the middle off his back, slides to the handle
     if (reach > 0.001) armTo(M, 1, rodPoint(_pw, dR, _iv), reach);
@@ -6324,6 +7263,7 @@ function itemsDraw(s, dt) {
       armTo(M, 0, r, itemSmooth(s.reelW));
     }
   }
+  spearDraw(s, vis);              // the hand harpoon's rope, drawn last, once the hand is placed
 }
 // the fishing line from the rod tip to the bobber, slack while it flies, taut while reeling
 function fishDraw(s, vis) {
@@ -6333,12 +7273,13 @@ function fishDraw(s, vis) {
   if (!show) return;
   const tip = rodTipWorld(s, _iv), b = F.a;
   F.bob.position.copy(b);
-  const pos = F.line.geometry.attributes.position, d = tip.distanceTo(b), sag = F.st === 'reel' ? 0.02 * d : F.st === 'fly' ? 0.08 * d : 0.05;
+  const pos = F.line.geometry.attributes.position, d = tip.distanceTo(b), sag = F.st === 'reel' ? 0.02 * d : F.st === 'fly' ? 0.08 * d : F.st === 'sit' ? 0.12 * d : 0.05;
   for (let j = 0; j < 24; j++) { const u = j / 23; pos.setXYZ(j, tip.x + (b.x - tip.x) * u, tip.y + (b.y - tip.y) * u - Math.sin(Math.PI * u) * sag, tip.z + (b.z - tip.z) * u); }
   pos.needsUpdate = true;
 }
 function itemsTeardown(s) {
   if (s.tools) for (const T of s.tools) if (T) scene.remove(T.mesh);
+  if (s.spLine) { scene.remove(s.spLine); s.spLine = null; } s.spOut = false; s.spRet = null; s.hst = null;
   if (s.fish) { fishLetGo(s); scene.remove(s.fish.line); scene.remove(s.fish.bob); }
 }
 
@@ -6350,13 +7291,16 @@ function drawHotbar() {
   if (!bar.childElementCount) {
     for (let i = 0; i < INV_SLOTS; i++) {
       const b = document.createElement('button'); b.className = 'slot'; b.dataset.i = i;
-      b.innerHTML = `<kbd>${i + 1}</kbd><span class="ic"></span>`;
+      b.innerHTML = `<kbd>${i + 1}</kbd><span class="ic"></span><i class="rl"></i>`;
       b.addEventListener('click', e => { e.preventDefault(); toggleSlot(battle.player, i); drawHotbar(); });
       bar.appendChild(b);
     }
   }
   for (const b of bar.children) {
     const i = +b.dataset.i, it = s.inv[i];
+    // a flintlock that's reloading: the slot drains and fills back up
+    const I = it && ITEMS[it], cd = I && AIMS[I.kind] && s.eq === i ? (netGuest() ? Math.max(battle.myGunCD || 0, s.gunCD || 0) : s.gunCD || 0) : 0;
+    const fr = cd > 0 ? cd / I.reload : 0, rl = b.querySelector('.rl'); if (rl && rl.dataset.f !== fr.toFixed(2)) { rl.dataset.f = fr.toFixed(2); rl.style.height = (fr * 100).toFixed(0) + '%'; }
     const sig = (it || '') + (s.eq === i ? '*' : '');
     if (b.dataset.sig === sig) continue;
     b.dataset.sig = sig;
@@ -6376,10 +7320,11 @@ addEventListener('keydown', e => {
 // a bot whose motors are gone paddles toward what it's after: takes the paddle out, walks to the nearest spot
 // at the edge where the blade reaches the water facing that way, and strokes. Returns undefined when not paddling.
 const _bpS = new THREE.Vector3();
-function botPaddle(s, tp) {
+function botPaddle(s, tp, t) {
   const c = s.ship.body.translation(), dist = Math.hypot(tp.x - c.x, tp.z - c.z);
   s.botPaddle = false;
-  if (dist <= 5.5 || (s.state !== 'aboard' && s.state !== 'station') || s.carry) { if (kindOf(s.inv[s.eq] || null) === 'paddle') s.eq = -1; return undefined; }
+  const e = t ? lootEdge(s, t) : null, near = e ? e.gap < POUCH_REACH - 0.15 : dist <= 5.5;     // paddle until it's in reach of the edge
+  if (near || (s.state !== 'aboard' && s.state !== 'station') || s.carry) { if (kindOf(s.inv[s.eq] || null) === 'paddle') s.eq = -1; return undefined; }
   if (s.state === 'station') leaveStation(s);
   if (kindOf(s.inv[s.eq] || null) !== 'paddle') s.eq = s.inv.findIndex(t => kindOf(t) === 'paddle');
   if (s.eq < 0) return undefined;
@@ -6405,6 +7350,13 @@ function botPaddle(s, tp) {
 function storeOpen(on) {
   const ok = on && raft.mode !== 'battle' && match.phase === 'build';
   $('store').hidden = !ok; $('storeBtn').setAttribute('aria-expanded', String(!!ok));
+  if (ok) {          // opens beside the sign, its bottom level with the sign's (above the sign on a narrow screen)
+    const r = $('storeBtn').getBoundingClientRect(), st = $('store'), narrow = innerWidth < 640;
+    st.classList.add('by-sign');
+    st.style.left = (narrow ? 16 : r.right + 12) + 'px';
+    st.style.bottom = (narrow ? innerHeight - r.top + 8 : innerHeight - r.bottom) + 'px';
+    st.style.maxHeight = (narrow ? r.top - 24 : r.bottom - 70) + 'px';
+  }
   if (ok) { $('settings').hidden = true; drawStore(); }
 }
 function drawStore() {
@@ -6413,35 +7365,76 @@ function drawStore() {
   const box = $('storeItems'); box.textContent = '';
   for (const type of STORE_ITEMS) {
     const I = ITEMS[type], owned = myKit.includes(type);
+    const better = !owned && myKit.some(t => t && kindOf(t) === I.kind && (ITEMS[t].cost || 0) > I.cost);    // you've something better of its kind
     const row = document.createElement('div'); row.className = 'st-item';
     const ic = document.createElement('span'); ic.className = 'ic'; ic.innerHTML = I.icon;
     const txt = document.createElement('div'); const b = document.createElement('b'); b.textContent = I.name; const sm = document.createElement('small'); sm.textContent = I.desc; txt.append(b, sm);
+    const acts = document.createElement('div'); acts.className = 'acts';
     const btn = document.createElement('button');
     const slot = kitSlotFor(type);
-    btn.textContent = owned ? 'Owned' : `${I.cost}g`;
-    btn.disabled = owned || raft.gold < I.cost || slot < 0;
-    btn.title = owned ? 'Already in your kit' : slot < 0 ? 'Your kit is full' : raft.gold < I.cost ? 'Not enough gold' : `Buy for ${I.cost}g`;
-    btn.addEventListener('click', () => buyItem(type));
-    row.append(ic, txt, btn); box.appendChild(row);
+    if (owned) {
+      // sell it back for a third; whatever it replaced comes back
+      btn.className = 'btn sell'; btn.textContent = `Sell +${sellPrice(type)}g`; btn.title = `Sell for ${sellPrice(type)}g`;
+      btn.disabled = match.phase !== 'build';
+      btn.addEventListener('click', () => sellItem(type));
+    } else {
+      btn.textContent = better ? 'Have better' : `${I.cost}g`;
+      btn.disabled = better || raft.gold < I.cost || slot < 0;
+      btn.title = better ? 'You have a better one' : slot < 0 ? 'Your kit is full' : raft.gold < I.cost ? 'Not enough gold' : `Buy for ${I.cost}g`;
+      btn.addEventListener('click', () => buyItem(type));
+    }
+    acts.append(btn); row.append(ic, txt, acts); box.appendChild(row);
   }
   const kit = $('storeKit'); kit.textContent = '';
   myKit.forEach((t, i) => { const d = document.createElement('div'); const ic = document.createElement('span'); ic.className = 'ic'; ic.innerHTML = t ? ITEMS[t].icon : ''; d.append(ic, document.createTextNode(t ? ITEMS[t].name : `Slot ${i + 1}`)); kit.appendChild(d); });
 }
-// a bought item takes the place of the old one of its kind, or the first empty slot
+// a bought item takes the place of a cheaper one of its kind, or the first empty slot
 function kitSlotFor(type) {
   const I = ITEMS[type];
-  let i = myKit.findIndex(t => t && kindOf(t) === I.kind && !ITEMS[t].cost);
+  let i = myKit.findIndex(t => t && kindOf(t) === I.kind && (ITEMS[t].cost || 0) < I.cost);      // trades up the one of its kind you have
   if (i < 0) i = myKit.indexOf(null);
   return i;
 }
+const sellPrice = type => Math.floor(ITEMS[type].cost / 3);
+let lastBuy = null;
 function buyItem(type) {
   const I = ITEMS[type], i = kitSlotFor(type);
   if (myKit.includes(type) || i < 0 || raft.gold < I.cost || match.phase !== 'build') return;
+  const prev = myKit[i];
   myKit[i] = type; raft.gold -= I.cost;
   teamGold(-I.cost);                       // a team's gold is shared
   updateUI(); drawStore();
   flash(`${I.name} added to your kit`);
+  // changed your mind? five seconds to take it back for the full price
+  lastBuy = { type, i, prev, cost: I.cost, until: performance.now() + 5000 };
+  undoTick();
 }
+function undoBuy() {
+  const L = lastBuy; if (!L || performance.now() > L.until || match.phase !== 'build' || myKit[L.i] !== L.type) { lastBuy = null; undoTick(); return; }
+  myKit[L.i] = L.prev; raft.gold += L.cost; teamGold(L.cost);
+  lastBuy = null; updateUI(); drawStore(); undoTick();
+  flash(`${ITEMS[L.type].name} returned, +${L.cost}g`);
+}
+function sellItem(type) {
+  const i = myKit.indexOf(type); if (i < 0 || match.phase !== 'build') return;
+  const g = sellPrice(type), d = DEFAULT_KIT[i];
+  myKit[i] = d && kindOf(d) === kindOf(type) ? d : null;          // the old one it replaced comes back
+  raft.gold += g; teamGold(g);
+  if (lastBuy && lastBuy.type === type) lastBuy = null;
+  updateUI(); drawStore(); undoTick();
+  flash(`Sold ${ITEMS[type].name}, +${g}g`);
+}
+let _undoRaf = 0;
+function undoTick() {
+  const el = $('storeUndo'), L = lastBuy, left = L ? L.until - performance.now() : 0;
+  if (!L || left <= 0 || match.phase !== 'build') { el.hidden = true; lastBuy = null; clearTimeout(_undoRaf); return; }
+  el.hidden = false;
+  $('storeUndoTxt').textContent = `Bought ${ITEMS[L.type].name}`;
+  $('storeUndoN').textContent = String(Math.ceil(left / 1000));
+  $('storeUndoBar').style.transform = `scaleX(${(left / 5000).toFixed(3)})`;
+  clearTimeout(_undoRaf); _undoRaf = setTimeout(undoTick, 50);
+}
+$('storeUndoBtn').addEventListener('click', undoBuy);
 $('storeBtn').addEventListener('click', () => storeOpen($('store').hidden));
 $('storeClose').addEventListener('click', () => storeOpen(false));
 
@@ -6452,12 +7445,23 @@ var ITEMS_READY = true;
 // your raft when the round timer ends scores for you. Loot is a real body: it loads the
 // deck, slides off when the raft tilts, and gets knocked loose by hits and blasts.
 // =====================================================================================
+// in order of value, and the more it's worth the heavier it is (anything over 0.1 is too heavy to pick up: dragged)
 const LOOT = {
-  pouch:     { name: 'Coin pouch', pts: 1,  size: [0.42, 0.42, 0.42], density: 0.55, color: 0x8a5a2b, friction: 0.7 },
-  chest:     { name: 'Chest',      pts: 3,  size: [0.8, 0.56, 0.56],  density: 0.5,  color: 0xb0662f, friction: 0.55 },
-  strongbox: { name: 'Strongbox',  pts: 6,  size: [0.9, 0.7, 0.7],    density: 0.78, color: 0x4a5060, friction: 0.4 },
-  idol:      { name: 'Golden idol', pts: 10, size: [0.7, 1.1, 0.7],   density: 0.9,  color: 0xffc83d, friction: 0.6 },
+  pouch:     { name: 'Coin pouch',    pts: 1,  size: [0.42, 0.42, 0.42], density: 0.55, color: 0x8a5a2b, friction: 0.7 },    // 0.04
+  goblet:    { name: 'Silver goblet', pts: 2,  size: [0.32, 0.45, 0.32], density: 0.9,  color: 0xc9d0d8, friction: 0.6 },    // 0.05
+  pearl:     { name: 'Giant pearl',   pts: 3,  size: [0.55, 0.45, 0.55], density: 0.6,  color: 0xe8b4a8, friction: 0.5 },    // 0.08
+  spices:    { name: 'Spice crate',   pts: 4,  size: [0.7, 0.6, 0.6],    density: 0.5,  color: 0x9a6b3a, friction: 0.6 },    // 0.13
+  strongbox: { name: 'Strongbox',     pts: 6,  size: [0.8, 0.62, 0.62],  density: 0.78, color: 0x4a5060, friction: 0.4 },    // 0.24
+  chest:     { name: 'Chest',         pts: 8,  size: [0.95, 0.7, 0.65],  density: 0.7,  color: 0xb0662f, friction: 0.55 },   // 0.30
+  idol:      { name: 'Golden idol',   pts: 10, size: [0.7, 1.1, 0.7],    density: 0.9,  color: 0xffc83d, friction: 0.6 },    // 0.49
 };
+// the treasure pool grows over a match: [type, the round it first turns up in a 10-round match, how many, spawn ring (m)].
+// One more of each every other round after it first appears. A shorter match plays the last rounds of a 10-round
+// one (a 3-round match is rounds 8, 9, 10), so its pool starts rich; a longer one stays at the top.
+const LOOT_POOL = [['pouch', 1, 6, 4, 30], ['goblet', 1, 3, 6, 30], ['pearl', 2, 3, 8, 30], ['spices', 3, 2, 10, 32],
+  ['strongbox', 4, 2, 14, 34], ['chest', 6, 2, 18, 36], ['idol', 8, 1, 26, 38]];
+const lootStage = (r = match.round || 1, of = match.rounds || 10) => clamp(10 - (of - r), 1, 10);
+const lootPool = (r, of) => { const e10 = lootStage(r, of); return LOOT_POOL.filter(e => e10 >= e[1]).map(([t, from, n, r0, r1]) => [t, Math.min(n + Math.floor((e10 - from) / 2), n + 3), r0, r1]); };
 for (const k in LOOT) { const L = LOOT[k]; L.vol = L.size[0] * L.size[1] * L.size[2]; L.mass = L.vol * L.density; }
 const ARENA_C = new THREE.Vector3(0, 0, 80);
 const HAUL_REACH = 2.4, POUCH_REACH = 1.2, SWIM_GRAB = 1.1;    // reach for anything in the water from the deck: 1.2 m to its near side
@@ -6488,6 +7492,24 @@ function lootMesh(type) {
     add(new THREE.BoxGeometry(sx + 0.02, 0.08, sz + 0.02), 0x2b2f3a, 0, 0.1, 0);
     add(new THREE.BoxGeometry(0.18, 0.2, 0.05), 0xffc83d, 0, -0.05, sz / 2 + 0.02);
     add(new THREE.TorusGeometry(0.06, 0.02, 6, 12), 0xffc83d, 0, 0.1, sz / 2 + 0.03);
+  } else if (type === 'goblet') {
+    // a silver cup on a stem, a red stone set in the bowl
+    add(new THREE.CylinderGeometry(0.11, 0.12, 0.03, 14), L.color, 0, -0.19, 0);
+    add(new THREE.CylinderGeometry(0.025, 0.03, 0.18, 10), L.color, 0, -0.09, 0);
+    add(new THREE.CylinderGeometry(0.14, 0.05, 0.2, 14, 1, true), L.color, 0, 0.1, 0).material.side = THREE.DoubleSide;
+    add(new THREE.TorusGeometry(0.14, 0.012, 6, 16).rotateX(Math.PI / 2), 0xe8edf2, 0, 0.2, 0);
+    add(new THREE.SphereGeometry(0.03, 8, 6), 0xff3b5c, 0, 0.08, 0.1);
+  } else if (type === 'spices') {
+    // a slatted crate, a sack of saffron spilling over the top
+    add(new THREE.BoxGeometry(sx, sy * 0.8, sz), L.color, 0, -sy * 0.1, 0);
+    for (const y of [-0.3, -0.05, 0.2]) add(new THREE.BoxGeometry(sx + 0.02, 0.05, sz + 0.02), 0x6b4423, 0, y * sy, 0);
+    add(new THREE.SphereGeometry(0.22, 12, 9), 0xe0a040, -0.1, sy * 0.32, 0).scale.set(1.1, 0.55, 1);
+    add(new THREE.SphereGeometry(0.16, 12, 9), 0xc0392b, 0.17, sy * 0.3, 0.08).scale.set(1, 0.5, 1);
+  } else if (type === 'pearl') {
+    // a big clam, open, a pearl the size of a melon inside
+    const bot = add(new THREE.SphereGeometry(0.3, 18, 10, 0, Math.PI * 2, Math.PI / 2, Math.PI / 2), L.color, 0, -0.05, 0); bot.scale.set(1, 0.5, 1); bot.material.side = THREE.DoubleSide;
+    const top = add(new THREE.SphereGeometry(0.3, 18, 10, 0, Math.PI * 2, 0, Math.PI / 2), 0xd99a90, 0, -0.03, -0.12); top.scale.set(1, 0.45, 1); top.rotation.x = -0.9; top.material.side = THREE.DoubleSide;
+    add(new THREE.SphereGeometry(0.15, 16, 12), 0xfaf7f0, 0, 0.05, 0.03);
   } else if (type === 'idol') {
     // a golden statue lashed to a cork float, so it barely stays up
     add(new THREE.TorusGeometry(0.33, 0.12, 10, 20).rotateX(Math.PI / 2), 0xff8a3d, 0, -0.42, 0);
@@ -6692,7 +7714,7 @@ function freeSpot(minR, maxR, avoid) {
 }
 function spawnRoundLoot() {
   const avoid = [{ x: ARENA_A.x, z: ARENA_A.z, r: 7 }, { x: ARENA_B.x, z: ARENA_B.z, r: 7 }];
-  const plan = [['pouch', 6, 4, 30], ['chest', 3, 8, 30], ['strongbox', 2, 14, 34], ['idol', 1, 26, 38]];
+  const plan = lootPool();
   for (const [type, n, r0, r1] of plan) for (let i = 0; i < n; i++) {
     const p = freeSpot(r0, r1, avoid);
     avoid.push({ x: p.x, z: p.z, r: 2.5 });
@@ -6719,7 +7741,9 @@ function wreckStep(dt) {
   if (!w.spawned && w.t > 3) {
     w.spawned = true;
     // the wreck breaks up: loot pops up from below with a burst of planks
-    const items = ['strongbox', 'chest', 'chest', 'pouch', 'pouch', 'pouch'];
+    // the best piece in the wreck is the best that's turned up so far this match, short of the very top one
+    const pool = lootPool().map(e => e[0]).sort((a, b) => LOOT[b].pts - LOOT[a].pts), best = pool[Math.min(1, pool.length - 1)];
+    const has = t => pool.includes(t) ? t : 'goblet', items = [best, has('spices'), has('pearl'), 'goblet', 'pouch', 'pouch'];   // (nothing that hasn't turned up yet)
     items.forEach((type, i) => {
       const a = i / items.length * Math.PI * 2, r = 1 + Math.random() * 2.5;
       const p = new THREE.Vector3(w.p.x + Math.cos(a) * r, -1.4, w.p.z + Math.sin(a) * r);
@@ -7161,6 +8185,7 @@ const FG_LOG = [
   ['0.37', 'Bigger balance reactions; pull enemy harpoon bolts out with E; same reach for all treasure'],
   ['0.38', 'Harpoon reels heavy treasure in faster'],
   ['0.39', 'Seven material tiers, ramps, pontoons, railing, keel fin and climbing net; Rusty/Standard/Racing motors; treasure tows through gaps; fight music; fade into the arena with a 3-2-1-FLOAT countdown and back to the harbour with BUILD; harpoon sounds; footsteps that sound like the deck you\'re on; mouse wheel scrolls the parts tray; one build bar along the parts tray with a big gold counter and a ? for controls; match scoreboard; patch notes'],
+  ['0.40', 'Play vs bots lobby (bots on any team); flintlocks with real shots, aiming, reload animation and crosshair; hand harpoons (rusty, standard, hunting): aim and throw, the rope hauls in; rusty/normal/gold weapons; small, medium and large motors in rusty, standard and racing; floating damage numbers and parts that wear down in stages; collisions by weight and speed (styrofoam does no impact damage); new treasure (goblet, pearl, spice crate), heavier is worth more, and better treasure turns up as the match goes on; fishing: aim with a landing ring, hold to reel, snags pouches on the way in; store sign with selling and undo; Space lets go of heavy treasure; capsized rafts stay usable; bots build like players and give up on treasure too heavy for them; defaults 3 min build, 5 min battle, 10 rounds; fixed gold going negative'],
 ];
 
 // =====================================================================================
@@ -7174,7 +8199,7 @@ const TEAMS = [
 ];
 const MAX_PLAYERS = 8;
 const MENU_SWELL = TEST_SWELL * 1.6;           // the test swell slider all the way up
-const lobby = { dir: null, room: null, roomId: null, host: false, hostId: null, roster: [], settings: { build: 180, battle: 120, rounds: 3 }, joinedAt: 0, game: null };
+const lobby = { dir: null, room: null, roomId: null, host: false, hostId: null, roster: [], settings: { build: 180, battle: 300, rounds: 10 }, joinedAt: 0, game: null };
 const menuCam = { yaw: 0.6 };
 
 function playerName() {
@@ -7185,6 +8210,20 @@ try { $('pName').value = localStorage.getItem('floatgoat.name') || ''; } catch (
 $('pName').addEventListener('change', () => { try { localStorage.setItem('floatgoat.name', $('pName').value.trim()); } catch (_) {} });
 if (DEMO) $('verTag').textContent += ` · demo ${DEMO_BUILD}`;
 $('mVer').textContent = $('verTag').textContent;
+// number steppers (rounds, build and battle time): − and + change a hidden input that the rest of the code reads
+function stepperSync() {
+  for (const sp of document.querySelectorAll('.stepper')) {
+    const inp = sp.querySelector('input'), v = Number(inp.value), D = sp.dataset;
+    sp.querySelector('output').textContent = D.unit === 'time' ? (v % 60 ? `${Math.floor(v / 60)}:${String(v % 60).padStart(2, '0')}` : `${v / 60} min`) : String(v);
+    sp.querySelector('.sdn').disabled = inp.disabled || v <= +D.min; sp.querySelector('.sup').disabled = inp.disabled || v >= +D.max;
+  }
+}
+for (const sp of document.querySelectorAll('.stepper')) {
+  const inp = sp.querySelector('input'), D = sp.dataset;
+  const bump = d => { if (inp.disabled) return; inp.value = String(clamp(Number(inp.value) + d * +D.step, +D.min, +D.max)); stepperSync(); inp.dispatchEvent(new Event('change')); };
+  sp.querySelector('.sdn').addEventListener('click', () => bump(-1)); sp.querySelector('.sup').addEventListener('click', () => bump(1));
+}
+stepperSync();
 // patch notes, newest first
 $('logList').innerHTML = FG_LOG.slice().reverse().map(([v, n]) => `<li><b>v${v}</b><span>${n.replace(/&/g, '&amp;').replace(/</g, '&lt;')}</span></li>`).join('');
 $('mLogBtn').addEventListener('click', () => { $('mLog').hidden = false; $('mLogClose').focus(); });
@@ -7192,7 +8231,7 @@ $('mLogClose').addEventListener('click', () => { $('mLog').hidden = true; });
 addEventListener('keydown', e => { if (e.code === 'Escape' && !$('mLog').hidden) $('mLog').hidden = true; });
 
 function menuPanel(id) {
-  for (const p of ['mMain', 'mFindP', 'mRoom']) $(p).hidden = p !== id;
+  for (const p of ['mMain', 'mPlay', 'mOpt', 'mFindP', 'mRoom']) $(p).hidden = p !== id;
 }
 // back to the menu from anywhere: out of battle or the water test, raft put away
 function enterMenu(panel = 'mMain') {
@@ -7217,7 +8256,7 @@ function freshMatch(settings) {
   myKit = DEFAULT_KIT.slice();                 // a new match: back to the old paddle and rod
   for (const p of [...raft.parts]) removePart(p, false);
   raft.history = [];
-  if (settings) { $('buildTime').value = String(settings.build); $('battleTime').value = String(settings.battle); $('rounds').value = String(settings.rounds); }
+  if (settings) { $('buildTime').value = String(settings.build); $('battleTime').value = String(settings.battle); $('rounds').value = String(settings.rounds); stepperSync(); }
   leaveMenu();
   restartMatch();
   changed();
@@ -7363,6 +8402,7 @@ function pushRoster() {
   advertise(); drawRoom();
 }
 function leaveRoom() {
+  lobby.offline = false;
   if (lobby.room) { lobby.room.leave(); lobby.room = null; }
   if (lobby.inHost) { lobby.inHost.leave(); lobby.inHost = null; }
   lobby.inCh = null;
@@ -7384,7 +8424,7 @@ function removeBot(id) { if (!lobby.host) return; lobby.roster = lobby.roster.fi
 const teamsInUse = () => new Set(lobby.roster.map(r => r.team)).size;
 function drawRoom() {
   const me = lobby.roster.find(r => r.id === NET.id);
-  $('roomTitle').textContent = lobby.host ? 'Your game' : (lobby.roster.find(r => r.id === lobby.hostId)?.name || 'Host') + '’s game';
+  $('roomTitle').textContent = lobby.offline ? 'Play vs bots' : lobby.host ? 'Your game' : (lobby.roster.find(r => r.id === lobby.hostId)?.name || 'Host') + '’s game';
   const box = $('teams'); box.textContent = '';
   TEAMS.forEach((T, t) => {
     const col = document.createElement('div'); col.className = 'team'; col.style.setProperty('--tc', T.color);
@@ -7408,9 +8448,11 @@ function drawRoom() {
   // settings: the host's to change; everyone sees them
   $('roomSet').classList.toggle('locked', !lobby.host);
   for (const [id, k] of [['rBuild', 'build'], ['rBattle', 'battle'], ['rRounds', 'rounds']]) { $(id).value = String(lobby.settings[k]); $(id).disabled = !lobby.host; }
+  stepperSync();
   const ok = teamsInUse() >= 2;
   $('mStart').hidden = !lobby.host; $('mStart').disabled = !ok;
   $('roomNote').textContent = !me && !lobby.host ? (lobby.roster.length >= MAX_PLAYERS ? 'This game is full.' : 'Joining…')
+    : lobby.offline ? (ok ? 'Add bots to any team, yours too. Start when you\'re ready.' : 'Put a bot on another team to start.')
     : lobby.host ? (ok ? `${lobby.roster.length} of ${MAX_PLAYERS} aboard. Start when you're ready.` : 'Put someone (or a bot) on at least two teams to start.')
     : 'Waiting for the host to start.';
 }
@@ -7436,10 +8478,23 @@ function flashMenu(msg) { $('roomNote').textContent = msg; $('findNote').textCon
 
 $('mHost').addEventListener('click', hostGame);
 $('mFind').addEventListener('click', findGames);
-$('mBack').addEventListener('click', () => { if (lobby.dir && !lobby.host) { lobby.dir.leave(); lobby.dir = null; } menuPanel('mMain'); });
+$('mBack').addEventListener('click', () => { if (lobby.dir && !lobby.host) { lobby.dir.leave(); lobby.dir = null; } menuPanel('mPlay'); });
+// main menu: Play (host, find, practice) and Options (volumes, aim)
+$('mPlayBtn').addEventListener('click', () => menuPanel('mPlay'));
+$('mOptBtn').addEventListener('click', () => menuPanel('mOpt'));
+for (const id of ['mPlayBack', 'mOptBack']) $(id).addEventListener('click', () => menuPanel('mMain'));
 $('mLeave').addEventListener('click', () => { leaveRoom(); menuPanel('mMain'); });
 $('mStart').addEventListener('click', hostStart);
-$('mSolo').addEventListener('click', () => { lobby.game = null; ID_BASE = 0; freshMatch(null); bigFlash(`Round 1 of ${match.rounds}`, 'Build your raft'); });
+// play vs bots: the same lobby as online, just on this machine - put bots on whichever teams you like
+const OFFLINE_ROOM = { send() {}, leave() {} };
+function offlineLobby() {
+  leaveRoom();
+  lobby.offline = true; lobby.host = true; lobby.hostId = NET.id; lobby.roomId = null; lobby.game = null; lobby.room = OFFLINE_ROOM;
+  lobby.roster = [{ id: NET.id, name: playerName(), team: 0 }, { id: 'bot-' + Math.random().toString(36).slice(2, 7), name: 'Bot 1', team: 1, bot: true }];
+  lobby.settings = { build: Number($('rBuild').value), battle: Number($('rBattle').value), rounds: Number($('rRounds').value) };
+  menuPanel('mRoom'); drawRoom();
+}
+$('mSolo').addEventListener('click', offlineLobby);
 $('toMenu').addEventListener('click', () => { leaveRoom(); lobby.game = null; enterMenu(); });
 addEventListener('pagehide', () => { try { leaveRoom(); } catch (_) {} });
 
@@ -7660,6 +8715,7 @@ function netInputFrom(p) {
   const s = battle.net.sailors.get(p.r); if (!s || !s.remote) return;
   const R = s.remote;
   R.mx = p.mx || 0; R.mz = p.mz || 0; R.held = !!p.h; R.vy = p.vy || 0; R.drive = p.d || null; R.aim = p.a || null; R.t = performance.now();
+  R.ag = !!p.ag; R.ad = Array.isArray(p.ad) ? p.ad : null;                   // holding a flintlock up, and where
 }
 function netActFrom(p) { if (battle.net && battle.net.host && p) battle.net.acts.push(p); }
 function netRemoteInput(s) {
@@ -7679,6 +8735,14 @@ function netHostActs() {
     else if (a.k === 'jump') s.jumpReq = true;
     else if (a.k === 'slot') toggleSlot(s, a.i | 0);
     else if (a.k === 'forfeit') { s.dead = true; s.fade = 0; }
+    else if (a.k === 'shoot' && Array.isArray(a.o) && Array.isArray(a.d) && heldKind(s) === 'pistol' && s.gunCD <= 0 && s.state === 'aboard') {
+      const I = ITEMS[heldItem(s)], d = new THREE.Vector3().fromArray(a.d).normalize(), o = new THREE.Vector3().fromArray(a.o);
+      if (o.distanceTo(sailorWorld(s, new THREE.Vector3())) < 3) { s.gunCD = I.reload; s.gunShotT = 0; shootRay(s, o, d, I); }     // (the muzzle has to be where he is)
+    }
+    else if (a.k === 'throw' && Array.isArray(a.o) && Array.isArray(a.d) && heldKind(s) === 'spear' && s.gunCD <= 0 && !s.spOut && s.state === 'aboard') {
+      const d = new THREE.Vector3().fromArray(a.d).normalize(), o = new THREE.Vector3().fromArray(a.o);
+      if (o.distanceTo(sailorWorld(s, new THREE.Vector3())) < 3) { s.gunShotT = 0; throwSpear(s, o, d, ITEMS[heldItem(s)]); }
+    }
   }
 }
 // is this team out? (every raft sunk or capsized, or every sailor drowned)
@@ -7724,7 +8788,7 @@ function netEndRound(title) {
   netShowEnd(msg);
 }
 function netShowEnd(m) {
-  battle.over = true; unlockAim(); match.phase = 'results';
+  battle.over = true; unlockAim(); match.phase = 'results'; musicOut(3);
   match.tscore = m.totals; battle.matchDone = m.done;
   const mine = m.totals[battle.myTeam] || 0, best = Math.max(0, ...Object.entries(m.totals).filter(([k]) => +k !== battle.myTeam).map(([, v]) => v));
   match.score.you = mine; match.score.dummy = best;
@@ -7769,9 +8833,11 @@ function netSnapSend(force) {
   for (const sh of battle.ships) if (!sh.nid) { sh.nid = N.nextShip++; N.ships.set(sh.nid, sh); }
   for (const t of battle.loot) if (!t.nid) { t.nid = N.nextLoot++; N.loot.set(t.nid, t); }
   for (const pr of battle.projectiles) if (!pr.nid) pr.nid = N.nextProj++;
+  if (lobby.offline) { battle.fx.length = 0; return; }          // offline: nobody to send it to
   const ships = battle.ships.map(sh => {
     const t = sh.body.translation(), r = sh.body.rotation();
     const o = { n: sh.nid, tm: sh.team, a: sh.alive ? 1 : 0, p: r3(t), q: q4(r), st: +sh.steer.toFixed(3), th: +sh.thr.toFixed(3) };
+    if (sh.fr) o.fr = sh.fr;                                          // how many times it's been turned over
     o.dead = sh.parts.filter(p => !p.alive).map(p => p.id);
     o.hp = sh.parts.filter(p => p.alive && p.hp < (p.maxHp || PARTS[p.type].hp)).map(p => [p.id, Math.round(p.hp)]);
     o.stn = sh.stations.map(st => [st.part.id, +st.yaw.toFixed(3), +st.pitch.toFixed(3), +st.reload.toFixed(2), st.user ? st.user.rid : 0, st.range ? +st.range.toFixed(2) : 0]);
@@ -7788,12 +8854,16 @@ function netSnapSend(force) {
     if (s.haulT && s.haulT.haul) { const h = s.haulT.haul; o.ha = [s.haulT.nid, +h.t.toFixed(3), h.heavy ? 1 : 0, h.pulls]; }
     if (s.eq >= 0) o.eq = s.eq; if (s.eqCur >= 0) o.ec = s.eqCur; o.ek = +s.eqK.toFixed(3);
     if (s.fish && (s.fish.st !== 'idle' || s.fish.castT < 1)) o.fi = [s.fish.st, +s.fish.a.x.toFixed(2), +s.fish.a.y.toFixed(2), +s.fish.a.z.toFixed(2), +s.fish.castT.toFixed(3)];
-    if (s.pad && (s.pad.w > 0.001 || s.pad.active)) o.pd = [s.pad.active ? 1 : 0, +s.pad.u.toFixed(3), s.pad.side, +s.pad.w.toFixed(3), +s.pad.dir.toFixed(3)];
+    if (s.pad && (s.pad.w > 0.001 || s.pad.active || s.pad.aim)) { o.pd = [s.pad.active ? 1 : 0, +s.pad.u.toFixed(3), s.pad.side, +s.pad.w.toFixed(3), +s.pad.dir.toFixed(3)]; if (s.pad.aim) o.pd.push(+(s.pad.aimA || 0).toFixed(3)); }
     if (s.air) o.ai = 1;
     if (s.shoveT < 1) o.so = +s.shoveT.toFixed(3);
     if (s.stagger > 0) o.sg = +s.stagger.toFixed(2);
     if (s.dead) o.dd = 1; if (s.fade < 1) o.fd = +s.fade.toFixed(3);
     if (s.belt && s.belt.length) o.bl = s.belt.map(t => t.nid);
+    if (s.aiming && s.aimDir) { o.ag = 1; o.ad = s.aimDir.toArray().map(v => +v.toFixed(3)); }
+    if ((s.gunShotT ?? 9) < 0.12) o.gk = 1;
+    if (s.gunCD > 0) o.gr = +s.gunCD.toFixed(2);
+    if (s.spOut && s.spAt) o.ho = [+s.spAt.x.toFixed(2), +s.spAt.y.toFixed(2), +s.spAt.z.toFixed(2), s.spTied ? 1 : 0];
     if (s.helm !== undefined) { o.hm = +s.helm.toFixed(3); o.hv = +(s.helmV || 0).toFixed(3); }
     if (s.overT < OVERBOARD_TIME) o.ot = +s.overT.toFixed(2);
     if (s.pry) o.py = [battle.loads.indexOf(s.pry.ld), +s.pry.t.toFixed(3)];
@@ -7829,6 +8899,7 @@ function netSendInput(dt) {
   N.inT += dt * 1000; if (N.inT < NET_INPUT_MS) return; N.inT = 0;
   const pin = playerInput(), st = me.station;
   const msg = { r: NET.id, h: battle.reelHeld ? 1 : 0, vy: +view.yaw.toFixed(3) };
+  if (battle.aimHeld && battle.aimDir) { msg.ag = 1; msg.ad = battle.aimDir.toArray().map(v => +v.toFixed(3)); }
   if (pin && pin.mx !== undefined) { msg.mx = +pin.mx.toFixed(3); msg.mz = +pin.mz.toFixed(3); }
   if (pin && pin.drive) msg.d = [+pin.drive.thr.toFixed(3), +pin.drive.steer.toFixed(3)];
   if (st && st.gun) msg.a = [+st.tYaw.toFixed(4), +st.tPitch.toFixed(4), +(st.range || 0).toFixed(3)];
@@ -7845,6 +8916,8 @@ function netSnapIn(p) {
     else if (f[0] === 'p') puff(new THREE.Vector3(f[1], f[2], f[3]), f[4], f[5]);
     else if (f[0] === 's') spray(new THREE.Vector3(f[1], f[2], f[3]), f[4], f[5], f[6], f[7] ?? undefined);
     else if (f[0] === 'f') bigFlash(f[1], f[2]);
+    else if (f[0] === 't') tracer(new THREE.Vector3(f[1], f[2], f[3]), new THREE.Vector3(f[4], f[5], f[6]));
+    else if (f[0] === 'b') spawnBullet(new THREE.Vector3(f[1], f[2], f[3]), new THREE.Vector3(f[4], f[5], f[6]), null, { range: f[7] }, false);   // a ball in flight (just to see)
   }
   N.out = p.out || {}; N.pts = p.pts || {};
   if (p.sw !== undefined) SWELL.target = p.sw;
@@ -7862,7 +8935,7 @@ function netGuestFrame(dt) {
   acc += dt;
   while (acc >= DT) {
     const focus = me.state === 'swim' || me.state === 'air' || me.state === 'drowned' ? me.pos : me.ship.body.translation();
-    followSim(focus.x, focus.z); dNow.fill(0); simStep(); simTime += DT; acc -= DT;
+    followSim(focus.x, focus.z); dNow.fill(0); simStep(); bulletsStep(); simTime += DT; acc -= DT;
     me.shoveT += DT;
   }
   // the host's world, a little behind real time so there's always a snapshot either side to blend between
@@ -7876,7 +8949,7 @@ function netGuestFrame(dt) {
   // my aim at a gun: the mouse (or keys) turn my copy of the gun's target; the host follows it
   const st = me.station;
   if (st && st.gun && !battle.over) {
-    const pin = playerInput(), W = WEAPONS[st.weapon];
+    const pin = playerInput(), W = WST(st);
     if (pin && pin.aim) { st.tYaw += pin.aim.yaw * 1.1 * dt; if (W.rangeAim) st.range = clamp((st.range || 18) + pin.aim.pitch * 14 * dt, W.range[0], W.range[1]); else st.tPitch = clamp(st.tPitch + pin.aim.pitch * 0.6 * dt, W.pitch[0], W.pitch[1]); }
     st.tYaw = st.yaw + clamp(st.tYaw - st.yaw, -0.6, 0.6);
   }
@@ -7892,7 +8965,9 @@ function netApply(A, B, k, dt) {
     let sh = N.ships.get(so.n);
     if (!sh && so.ids) sh = netGuestFragment(so);
     if (!sh) continue;
-    const sa = A.sh.find(x => x.n === so.n) || so;
+    if ((so.fr || 0) !== (sh.fr || 0)) { while ((sh.fr || 0) < (so.fr || 0)) reframeShip(sh, true); }   // turned over on the host
+    let sa = A.sh.find(x => x.n === so.n) || so;
+    if ((sa.fr || 0) !== (so.fr || 0)) sa = so;                        // don't blend across the turn-over
     lerpArr(sa.p, so.p, k, _nga); _ngqa.fromArray(sa.q).slerp(_ngqb.fromArray(so.q), k);
     sh.body.setTranslation({ x: _nga.x, y: _nga.y, z: _nga.z }, false); sh.body.setRotation({ x: _ngqa.x, y: _ngqa.y, z: _ngqa.z, w: _ngqa.w }, false);
     sh.prev.p.copy(_nga); sh.prev.q.copy(_ngqa);
@@ -7900,7 +8975,7 @@ function netApply(A, B, k, dt) {
     const dead = new Set(so.dead), hp = new Map(so.hp);
     for (const p of sh.parts) {
       if (p.alive && dead.has(p.id)) netGuestBreak(sh, p);
-      else if (p.alive) { const h = hp.has(p.id) ? hp.get(p.id) : (p.maxHp || PARTS[p.type].hp); if (h < p.hp - 0.5) p.hitT = 1; p.hp = h; }
+      else if (p.alive) { const h = hp.has(p.id) ? hp.get(p.id) : (p.maxHp || PARTS[p.type].hp); if (h < p.hp - 0.5) { p.hitT = 1; const was = p.hp; p.hp = h; dmgNumber(toWorld(sh, p.box.center, new THREE.Vector3()), was - h, p); } p.hp = h; }
     }
     for (const sd of so.stn) {
       const part = sh.parts.find(p => p.id === sd[0]); if (!part || !part.station) continue;
@@ -7943,8 +9018,13 @@ function netApply(A, B, k, dt) {
     s.carry = so.ca ? N.loot.get(so.ca) || null : null; s.dragMode = so.dm || 0;
     if (so.ha) { const t = N.loot.get(so.ha[0]); if (t) { t.haul = { s, t: so.ha[1], heavy: !!so.ha[2], pulls: so.ha[3], ship: s.ship }; s.haulT = t; } } else s.haulT = null;
     s.eq = so.eq ?? -1; s.eqCur = so.ec ?? -1; s.eqK = so.ek ?? 0;
+    s.gunCD = so.gr || 0;
+    if (so.ho) { s.spOut = true; (s.spAt ||= new THREE.Vector3()).set(so.ho[0], so.ho[1], so.ho[2]); s.spTied = !!so.ho[3]; }
+    else if (s.spOut) { s.spOut = false; s.spTied = false; if (s.spAt) (s.spRet ||= new THREE.Vector3()).copy(s.spAt); }
+    s.aiming = !!so.ag; if (so.ad) (s.aimDir ||= new THREE.Vector3()).fromArray(so.ad);
+    s.aimW = itemApproach(s.aimW || 0, so.ag ? 1 : 0, dt / 0.16); if (so.gk && !((s.gunShotT ?? 9) < 0.15)) s.gunShotT = 0;
     if (so.fi) { s.fish.st = so.fi[0]; s.fish.a.set(so.fi[1], so.fi[2], so.fi[3]); s.fish.castT = so.fi[4]; } else { s.fish.st = 'idle'; s.fish.castT = 1; if (s.eqCur >= 0) rodTipWorld(s, s.fish.a).y -= 0.3; }
-    if (so.pd) { s.pad.active = !!so.pd[0]; s.pad.u = so.pd[1]; s.pad.side = so.pd[2]; s.pad.w = so.pd[3]; s.pad.dir = so.pd[4]; } else { s.pad.active = false; s.pad.w = 0; }
+    if (so.pd) { s.pad.active = !!so.pd[0]; s.pad.u = so.pd[1]; s.pad.side = so.pd[2]; s.pad.w = so.pd[3]; s.pad.dir = so.pd[4]; s.pad.aim = so.pd.length > 5; if (s.pad.aim) s.pad.aimA = so.pd[5]; } else { s.pad.active = false; s.pad.w = 0; s.pad.aim = false; }
     s.air = !!so.ai;
     if (so.so !== undefined && so.so < s.shoveT - 0.05) s.shoveT = so.so;            // a new shove starts
     if (so.so === undefined && s.shoveT < 1) s.shoveT += dt;
@@ -7963,6 +9043,7 @@ function netApply(A, B, k, dt) {
     if (!m) { m = projMeshFor(pp[1], pp[2]); scene.add(m); N.proj.set(pp[0], m); m.position.set(pp[3], pp[4], pp[5]); }
     const pa = A.pr.find(x => x[0] === pp[0]) || pp;
     m.position.set(pa[3] + (pp[3] - pa[3]) * k, pa[4] + (pp[4] - pa[4]) * k, pa[5] + (pp[5] - pa[5]) * k);
+    if (pp[1] === 'harpoon' && pa !== pp) { const dv = new THREE.Vector3(pp[3] - pa[3], pp[4] - pa[4], pp[5] - pa[5]); if (dv.lengthSq() > 1e-6) m.quaternion.setFromUnitVectors(new THREE.Vector3(1, 0, 0), dv.normalize()); }   // nose along its flight
   }
   for (const [n, m] of N.proj) if (!seen.has(n)) { scene.remove(m); N.proj.delete(n); }
   N.ropeData = B.te; N.wk = B.wk || null;
@@ -7978,7 +9059,7 @@ function netApply(A, B, k, dt) {
   });
 }
 function projMeshFor(kind, weapon) {
-  const m = kind === 'charge' ? chargeMesh() : kind === 'harpoon' ? boltMesh() : kind === 'ballast' ? lumpMesh() : new THREE.Mesh(new THREE.SphereGeometry(weapon === 'swivel' ? 0.07 : 0.14, 12, 10), toon(0x1b1f2a));
+  const m = weapon === 'spear' ? spearFlyMesh() : kind === 'charge' ? chargeMesh() : kind === 'harpoon' ? boltMesh() : kind === 'ballast' ? lumpMesh() : new THREE.Mesh(new THREE.SphereGeometry(weapon === 'swivel' ? 0.07 : 0.14, 12, 10), toon(0x1b1f2a));
   m.traverse(o => { o.castShadow = true; });
   return m;
 }
@@ -8003,7 +9084,9 @@ function netGuestFragment(so) {
 }
 // a part was destroyed (guest): it shrinks away and throws a few splinters
 function netGuestBreak(ship, part) {
+  const was = part.hp;
   part.alive = false; part.hp = 0;
+  dmgNumber(toWorld(ship, part.box.center, new THREE.Vector3()), was, part);
   part.mesh.userData.dying = 1;
   const wc = toWorld(ship, part.box.center, new THREE.Vector3()), P = PARTS[part.type];
   for (let i = 0; i < 3; i++) {
