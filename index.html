@@ -147,6 +147,7 @@
   .card { display: grid; grid-template-columns: auto auto; grid-template-rows: auto auto auto; column-gap: 8px; row-gap: 1px; align-items: center; width: 148px;
     border: 0; border-radius: 14px; padding: 6px 10px 8px; background: var(--panel); box-shadow: 0 3px 0 rgba(11,42,74,.2); cursor: pointer; text-align: left; }
   .card .thumb { grid-column: 1 / 3; width: 120px; height: 84px; justify-self: center; display: block; }
+  .card.dark-thumb .thumb { background: radial-gradient(ellipse at 50% 40%, #9aa4b0, #66707c); border-radius: 10px; }
   .card .nm { font-weight: 700; font-size: .88rem; line-height: 1.15; }
   .card .cost { font-weight: 700; font-size: .85rem; color: #b07a00; justify-self: end; }
   .card .st { grid-column: 1 / 3; font-size: .72rem; opacity: .8; line-height: 1.25; }
@@ -170,14 +171,15 @@
   @keyframes gspend { 0% { transform: translateY(0); } 40% { transform: translateY(3px) scale(.96); } 100% { transform: none; } }
   .btn.primary + .btn.battle-go { margin-left: 0; }
   /* the match score: its own board, top middle */
-  .scoreboard { position: fixed; z-index: 3; top: calc(var(--topH, 46px) + 8px); left: 50%; transform: translateX(-50%); display: flex; align-items: stretch; gap: 0; pointer-events: none;
-    background: var(--ink); color: #fff; border-radius: 14px; box-shadow: 0 4px 0 rgba(11,42,74,.35); overflow: hidden; font-variant-numeric: tabular-nums; }
-  .scoreboard .sb-side { display: flex; align-items: center; gap: 8px; padding: 6px 14px; }
-  .scoreboard .sb-side i { font-style: normal; font-size: .72rem; font-weight: 700; letter-spacing: .08em; text-transform: uppercase; opacity: .85; }
-  .scoreboard .sb-side b { font-size: 1.6rem; line-height: 1; }
-  .scoreboard .you { background: #1e6fd9; } .scoreboard .them { background: var(--coral); }
+  .scoreboard { position: fixed; z-index: 3; top: calc(var(--topH, 46px) + 8px); left: 50%; transform: translateX(-50%); display: flex; align-items: stretch; gap: 6px; pointer-events: none; font-variant-numeric: tabular-nums; }
+  .scoreboard .sb-board { display: flex; align-items: stretch; background: var(--ink); color: #fff; border-radius: 14px; box-shadow: 0 4px 0 rgba(11,42,74,.35); overflow: hidden; }
+  .scoreboard .sb-side { display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 1px; padding: 4px 14px 5px; min-width: 56px; background: var(--tc, #1e6fd9); color: #fff; }
+  .scoreboard > .sb-side { border-radius: 14px; box-shadow: 0 4px 0 rgba(11,42,74,.35); }        /* every enemy past the first: a bubble of its own */
+  .scoreboard .sb-side i { font-style: normal; font-size: .64rem; font-weight: 700; letter-spacing: .02em; opacity: .92; max-width: 140px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }      /* who's on that side */
+  .scoreboard .sb-side b { font-size: 1.6rem; line-height: 1; transition: transform .2s ease; }
+  .scoreboard .sb-side b.up { transform: scale(1.25); }
   .scoreboard .sb-round { display: flex; align-items: center; padding: 0 12px; font-size: .75rem; font-weight: 700; letter-spacing: .05em; text-transform: uppercase; white-space: nowrap; }
-  body.battle .scoreboard, body.in-menu .scoreboard { display: none; }
+  body.in-menu .scoreboard { display: none; }
   @media (max-width: 640px) { .scoreboard { position: static; transform: none; } .readout { top: calc(var(--topH, 46px) + 8px); } .scoreboard .sb-side { padding: 4px 10px; } .scoreboard .sb-side b { font-size: 1.25rem; } .scoreboard .sb-round { padding: 0 8px; font-size: .68rem; } }
   @media (prefers-reduced-motion: reduce) { .goldbig.bump, .goldbig.spend { animation: none; } }
   @media (max-width: 560px) { .card { width: 128px; } .card .thumb { width: 104px; height: 73px; } .tcards { grid-template-rows: auto; } }
@@ -201,7 +203,7 @@
   @media (hover: none) { body.has-engine .stick { display: block; } }
   .btn.battle-go { background: var(--coral); color: #fff; box-shadow: 0 4px 0 #b8263f; font-size: 1rem; padding: 10px 18px; }
   body.battle .bottom, body.battle .readout { display: none; }
-  .bhud { position: fixed; z-index: 3; top: calc(env(safe-area-inset-top, 0px) + 54px); left: 50%; transform: translateX(-50%); display: flex; gap: 14px; align-items: center; flex-wrap: wrap; justify-content: center;
+  .bhud { position: fixed; z-index: 3; top: calc(var(--topH, 46px) + 8px); left: max(16px, env(safe-area-inset-left, 0px)); transform: none; background: none !important; box-shadow: none !important; padding: 0 !important; width: auto !important; display: flex; gap: 14px; align-items: center; flex-wrap: wrap; justify-content: center;
     width: min(560px, calc(100vw - 32px)); background: var(--panel); border-radius: 14px; padding: 8px 12px; box-shadow: 0 4px 0 rgba(11,42,74,.15); }
   .bhud .side { display: grid; grid-template-columns: auto 1fr; column-gap: 8px; align-items: center; flex: 1 1 180px; min-width: 0; }
   .bhud .who { font-weight: 700; font-size: .85rem; } .bhud .you { color: #1e6fd9; } .bhud .them { color: var(--bad); }
@@ -212,6 +214,19 @@
   .bhud .quit { font-size: .8rem; padding: 5px 10px; cursor: pointer; }
   .overboard { position: fixed; z-index: 4; left: 50%; top: 30%; transform: translateX(-50%); display: grid; justify-items: center; color: #fff; text-shadow: 0 3px 0 rgba(11,42,74,.45); pointer-events: none; }
   .overboard b { font-size: 4rem; line-height: 1; font-variant-numeric: tabular-nums; } .overboard span { font-weight: 600; }
+  /* controls card for the harpoons: a little mouse with the button lit, and what it does */
+  .snd-hint { position: absolute; left: 50%; bottom: calc(env(safe-area-inset-bottom, 0px) + 18px); transform: translateX(-50%); padding: 6px 14px; border-radius: 999px; background: rgba(11,42,74,.6); color: #fff; font-size: .8rem; font-weight: 700; opacity: 0; transition: opacity .4s ease; pointer-events: none; }
+  .snd-hint.on { opacity: 1; animation: sndPulse 2.4s ease-in-out infinite; }
+  @keyframes sndPulse { 50% { opacity: .65; } }
+  .ctltip { position: fixed; z-index: 4; left: 50%; bottom: calc(env(safe-area-inset-bottom, 0px) + 80px); transform: translate(-50%, 8px); opacity: 0; pointer-events: none;
+    display: flex; gap: 6px; padding: 6px 8px; border-radius: 14px; background: rgba(11,42,74,.72); color: #fff; font-size: .78rem; font-weight: 700; transition: opacity .25s ease, transform .25s ease; white-space: nowrap; }
+  .ctltip.on { opacity: 1; transform: translate(-50%, 0); }
+  .ctltip .c { display: flex; align-items: center; gap: 5px; padding: 2px 8px 2px 4px; border-radius: 10px; background: rgba(255,255,255,.08); }
+  .ctltip svg { width: 22px; height: 28px; display: block; }
+  .ctltip kbd { display: inline-grid; place-items: center; width: 22px; height: 22px; border-radius: 6px; background: #fff; color: var(--ink); font: 700 .8rem var(--ui); box-shadow: 0 2px 0 rgba(0,0,0,.35); }
+  .ctltip .hold { font-size: .62rem; letter-spacing: .06em; text-transform: uppercase; color: var(--sun); margin-right: -2px; }
+  @media (pointer: coarse) { .ctltip { display: none; } }
+  @media (prefers-reduced-motion: reduce) { .ctltip { transition: none; } }
   .hotbar { position: fixed; z-index: 4; left: 50%; transform: translateX(-50%); bottom: calc(env(safe-area-inset-bottom, 0px) + 14px); display: flex; gap: 6px; pointer-events: auto; }
   .hotbar .slot { position: relative; width: 50px; height: 50px; border-radius: 12px; border: 2px solid transparent; background: var(--panel); box-shadow: 0 3px 0 rgba(11,42,74,.2); color: var(--ink); cursor: pointer; display: grid; place-items: center; padding: 0; }
   .hotbar .slot kbd { position: absolute; top: 2px; left: 5px; font: 700 .68rem var(--ui); opacity: .6; }
@@ -375,12 +390,8 @@
 <div class="xhair" id="xhair" hidden aria-hidden="true"></div>
 <div class="countdown" id="countdown" aria-live="assertive" hidden></div>
 <div class="top">
-  <div class="brand"><h1>FLOAT GOAT</h1><span id="verTag">v0.40</span></div>
-  <div class="scoreboard" id="scoreboard" aria-label="Match score">
-    <span class="sb-side you"><i>You</i><b id="scoreYou">0</b></span>
-    <span class="sb-round" id="round">Round 1/3</span>
-    <span class="sb-side them"><b id="scoreThem">0</b><i id="scoreThemName">Them</i></span>
-  </div>
+  <div class="brand"><h1>FLOAT GOAT</h1><span id="verTag">v0.41</span></div>
+  <div class="scoreboard" id="scoreboard" aria-label="Score"></div>
   <div class="pill phasep" title="Phase and time left"><span id="phase">Build</span><span id="timer">3:00</span></div>
 
   <div class="pill vol" title="Volume">
@@ -434,14 +445,13 @@
 </div>
 <div class="flash" id="flash"></div>
 <div class="bhud" id="battleHud" hidden>
-  <div class="side"><span class="who you">You</span><span class="hp"><i id="hpYou"></i></span><span class="pts">★ <b id="ptsYou">0</b> aboard</span><span class="leak" id="leakYou"></span></div>
-  <div class="side"><span class="who them">Dummy</span><span class="hp"><i id="hpThem" class="them"></i></span><span class="pts">★ <b id="ptsThem">0</b> aboard</span><span class="leak" id="leakThem"></span></div>
   <button class="pill quit" id="quit">Forfeit</button>
 </div>
 <canvas class="minimap" id="minimap" width="300" height="300" hidden aria-label="Minimap"></canvas>
 <div class="overboard" id="overboard" hidden><b id="overT">5.0</b><span id="overMsg">Swim back to your raft</span></div>
 <button class="act" id="interact" hidden><span id="interactLabel">Drive</span><kbd>E</kbd></button>
 <div class="hotbar" id="hotbar" hidden></div>
+<div class="ctltip" id="ctlTip" aria-hidden="true"></div>
 <button class="fire" id="fire" hidden aria-label="Fire"><span id="fireLabel">Fire</span><kbd>Click</kbd></button>
 <div class="aimhint" id="aimHint" hidden>Click to control the camera with your mouse · Esc frees it</div>
 <button class="fire shove" id="shove" hidden aria-label="Shove or throw"><span id="shoveLabel">Shove</span><kbd>Q</kbd></button>
@@ -487,6 +497,7 @@
 </div>
 
 <div class="menu" id="menu">
+  <div class="snd-hint" id="sndHint">♪ Click anywhere for music</div>
   <h1 class="logo" aria-label="Float Goat">
     <span class="lrow">
       <span style="--i:0">F</span><span style="--i:1">L</span><span style="--i:2">O</span><span style="--i:3">A</span><span style="--i:4">T</span>
@@ -547,7 +558,7 @@ const RAPIER_URL = 'https://cdn.jsdelivr.net/npm/@dimforge/rapier3d-compat@0.14.
 
 // the demo copy (shared privately) has testing controls; the live site (GitHub Pages) never shows them
 const DEMO = typeof location === 'undefined' || !/github\.io$/i.test(location.hostname);
-const DEMO_BUILD = 25;        // demo builds between ships: shown as "v0.39 · demo 3"; the version itself only moves when shipping
+const DEMO_BUILD = 8;        // demo builds between ships: shown as "v0.39 · demo 3"; the version itself only moves when shipping
 function fail(msg) {
   const d = document.createElement('div');
   d.className = 'err'; d.textContent = msg; document.body.appendChild(d);
@@ -1235,7 +1246,7 @@ const SFX = {
   step_steel: ['sfx/steps/step_steel_01.mp3', 'sfx/steps/step_steel_02.mp3', 'sfx/steps/step_steel_03.mp3', 'sfx/steps/step_steel_04.mp3'],
   drown: ['sfx/drown/drown_01.mp3', 'sfx/drown/drown_01_a.mp3', 'sfx/drown/drown_01_b.mp3', 'sfx/drown/drown_01_c.mp3', 'sfx/drown/drown_02.mp3', 'sfx/drown/drown_02_a.mp3', 'sfx/drown/drown_02_b.mp3', 'sfx/drown/drown_02_c.mp3', 'sfx/drown/drown_03.mp3', 'sfx/drown/drown_03_a.mp3', 'sfx/drown/drown_03_b.mp3', 'sfx/drown/drown_03_c.mp3'],   // a scream fading into bubbles
 };
-const MUSIC = { build: 'music/row_hard_mateys.mp3', fight: 'music/cutlass_clash.mp3' };   // menu and building / battles
+const MUSIC = { menu: 'music/island_string_song.mp3', build: 'music/row_hard_mateys.mp3', fight: 'music/cutlass_clash.mp3' };   // the main menu / building / battles
 // sliders run 0..1; halfway is the mix we picked (music 0.35, effects 0.9)
 const musicLevel = v => Math.min(1, 0.7 * v), sfxLevel = v => 1.8 * v;
 const audio = { want: 'build', players: {}, ctx: null, out: null, buffers: new Map(), deck: {}, last: {}, started: false, music: null, musicVol: 0.5, sfxVol: 0.5 };
@@ -1248,6 +1259,7 @@ function audioStart() {
   if (audio.ctx && audio.ctx.state === 'suspended') audio.ctx.resume().catch(() => {});
   if (audio.started) return;
   audio.started = true;
+  { const h = document.getElementById('sndHint'); if (h) h.classList.remove('on'); }
   try {
     const AC = window.AudioContext || window.webkitAudioContext;
     if (AC) {
@@ -1279,15 +1291,27 @@ function fadeEl(a, v, step = 0.02) {
   }, 40);
 }
 function musicFadeTo(v) { fadeEl(audio.music, v); }
+// the menu music tries to start straight away. Browsers only allow sound before the first click on a page
+// they trust (one the player has played before); otherwise it starts on the first click or key, and a small
+// note on the menu says so
+function musicAutoplay() {
+  if (audio.started || audio.musicOn || !(audio.musicVol > 0)) return;
+  let a; try { a = musicEl(audio.want); } catch (_) { return; }
+  a.volume = 0;
+  const p = a.play();
+  const ok = () => { if (audio.started) return; audio.musicOn = true; audio.music = a; fadeEl(a, musicLevel(audio.musicVol), 0.015); };
+  const no = () => { const h = document.getElementById('sndHint'); if (h && !audio.started) h.classList.add('on'); };
+  if (p && p.then) p.then(ok, no); else ok();
+}
 // switch songs: the old one fades out, the new one starts from the top and fades in
 function musicTrack(name) {
   audio.want = name;
-  if (!audio.started) return;
+  if (!audio.started && !audio.musicOn) return;
   let next; try { next = musicEl(name); } catch (_) { return; }
   if (audio.music === next && !next.paused) return;
-  if (audio.music && audio.music !== next) fadeEl(audio.music, 0, 0.035);
+  if (audio.music && audio.music !== next) fadeEl(audio.music, 0, 0.018);          // the old song fades out (about a second) as the new one fades in
   audio.music = next; next.currentTime = 0;
-  if (audio.musicVol > 0) fadeEl(next, musicLevel(audio.musicVol), 0.03);
+  if (audio.musicVol > 0) fadeEl(next, musicLevel(audio.musicVol), 0.015);
 }
 function musicOut(secs) { const a = audio.music; if (a) fadeEl(a, 0, secs ? Math.max(0.002, a.volume / (secs * 25)) : 0.035); }   // (secs: how long the fade takes)
 // volume sliders: music follows the slider directly (no fade while dragging); 0 pauses it
@@ -3015,6 +3039,13 @@ const timer = { total: 180, left: 180 };
 // ---------- match: rounds of build -> battle -> results ----------
 const match = { phase: 'build', round: 1, rounds: 10, score: { you: 0, dummy: 0 }, battleLeft: 300, battleTotal: 300 };
 const BATTLE_TIME = 300;
+// fights get longer as the match goes on (tuned for 10 rounds: 1:45, 2:30, 3:30, 4:30, then the full time). The battle
+// time setting is the longest a fight gets. A shorter match plays the last rounds of a 10-round one, like the treasure
+const BATTLE_RAMP = [0.35, 0.5, 0.7, 0.9, 1];
+function roundBattleTime() {
+  const full = Number($('battleTime').value) || BATTLE_TIME, stage = Math.min(10, Math.max(1, 10 - ((match.rounds || 10) - (match.round || 1))));
+  return Math.round(full * BATTLE_RAMP[Math.min(stage, BATTLE_RAMP.length) - 1] / 15) * 15;
+}
 const isWeapon = k => !!PARTS[k].weapon;
 const phaseAllows = k => !!(k && PARTS[k]) && match.phase === 'build';      // one build phase: hull, motors and weapons together
 const locked = () => raft.mode === 'battle' || match.phase !== 'build';
@@ -3037,7 +3068,7 @@ function nextPhase() {
     if (raft.mode === 'test') endTest();
     const dropped = dropLooseParts();
     if (dropped) setTimeout(() => flash(`${dropped.n} loose part${dropped.n > 1 ? 's' : ''} removed, +${dropped.g}g`), 1800);
-    match.phase = 'battle'; match.battleTotal = match.battleLeft = Number($('battleTime').value) || BATTLE_TIME;
+    match.phase = 'battle'; match.battleTotal = match.battleLeft = roundBattleTime();
     battleIntro(() => startBattle());
   }
 }
@@ -3098,7 +3129,7 @@ function buildTray() {
     const row = sec.querySelector('.tcards');
     for (const k of keys) {
       const P = PARTS[k], b = document.createElement('button');
-      b.className = 'card'; b.id = 'part-' + k; b.dataset.part = k;
+      b.className = 'card' + (P.tier === 'styro' || P.tier === 'glass' ? ' dark-thumb' : ''); b.id = 'part-' + k; b.dataset.part = k;     // white parts get a grey backdrop to show up on
       b.innerHTML = `<canvas class="thumb" width="1" height="1" aria-hidden="true"></canvas>
         <span class="nm">${P.short || P.name}</span><span class="cost">${P.cost}g</span>
         <span class="st" id="st-${k}"></span>`;
@@ -3178,8 +3209,7 @@ function updateUI() {
   if (match.phase !== 'build' || raft.mode === 'battle') $('store').hidden = true; else drawStore();   // the store is only open while building
   const labels = { build: 'Build', battle: 'Battle', results: 'Round over', collect: 'Battle', menu: '' };
   $('phase').textContent = labels[match.phase];
-  $('round').textContent = `Round ${match.round}/${match.rounds}`;
-  $('scoreYou').textContent = String(match.score.you); $('scoreThem').textContent = String(match.score.dummy);
+  drawScoreboard();
   $('ready').textContent = 'Ready: fight';
   $('ready').hidden = match.phase !== 'build';
   $('clear').textContent = 'Clear';
@@ -3582,9 +3612,9 @@ const WEAPONS = {
 // grades: how a rusty or gold gun (or a thrown hand harpoon) differs from the normal one
 const GRADE_STAT = { rusty: { dmg: 0.7, reload: 1.35, turn: 0.8, speed: 0.9 }, gold: { dmg: 1.35, reload: 0.8, turn: 1.2, speed: 1.08 },
   // thrown hand harpoons: speed 9 / 11 / 13.5 m/s, so about 8 / 12 / 18 m at best on a flat throw from the deck
-  thrown_rusty: { dmg: 0.45, reload: 1, turn: 1, speed: 0.32, reel: 0.35, hold: 0.5, autoReel: true },
-  thrown: { dmg: 0.6, reload: 1, turn: 1, speed: 0.39, reel: 0.45, hold: 0.6, autoReel: true },
-  thrown_hunt: { dmg: 0.8, reload: 1, turn: 1, speed: 0.48, reel: 0.6, hold: 0.75, autoReel: true } };
+  thrown_rusty: { dmg: 0.45, reload: 1, turn: 1, speed: 0.32, reel: 0.35, hold: 0.5 },
+  thrown: { dmg: 0.6, reload: 1, turn: 1, speed: 0.39, reel: 0.45, hold: 0.6 },
+  thrown_hunt: { dmg: 0.8, reload: 1, turn: 1, speed: 0.48, reel: 0.6, hold: 0.75 } };
 const _wst = {};
 function WST(st) {
   const g = st.grade; if (!g) return WEAPONS[st.weapon];
@@ -4541,17 +4571,44 @@ function mouseButtons(e) {
   const pistol = raft.mode === 'battle' && !battle.over && s && aimsHeld(s) && !onGun();
   battle.aimHeld = !!(pistol && (b & 2));
   if (pistol && (heldKind(s) === 'rod' || heldKind(s) === 'paddle')) { battle.reelHeld = !!(b & 1) && aimLocked(); return; }      // a rod: click casts, hold reels; a paddle: hold to paddle
-  if (pistol && (b & 1) && !(was & 1) && aimLocked()) { if (heldKind(s) === 'spear') spearThrow(); else pistolFire(); }
+  if (pistol && heldKind(s) === 'spear') {                     // a hand harpoon: click throws, hold reels its line in
+    battle.reelHeld = !!(b & 1) && aimLocked();
+    if ((b & 1) && !(was & 1) && aimLocked() && !s.spOut) spearThrow();
+    return;
+  }
+  if (pistol && (b & 1) && !(was & 1) && aimLocked()) pistolFire();
 }
 for (const t of ['pointerdown', 'pointermove', 'pointerup']) document.addEventListener(t, mouseButtons, true);
 addEventListener('blur', () => { battle.aimHeld = false; _mBtns = 0; });
-function battleRightClick() {
-  const s = battle.player;
-  if (s && s.station && s.station.weapon === 'harpoon') {
-    for (const tt of battle.tethers) if (tt.st === s.station && tt.life > 0) { tt.life = 0; puff(tetherEnd(tt, new THREE.Vector3()), 0xffffff, 0.35); }
-    battle.reelHeld = false;
+function battleRightClick() {}
+// the controls card for the harpoons (gun and hand): a little mouse drawing with the button lit
+const mouseSVG = btn => `<svg viewBox="0 0 22 28" aria-hidden="true"><rect x="1.5" y="1.5" width="19" height="25" rx="9.5" fill="#f4f7fb" stroke="#0b2a4a" stroke-width="1.6"/>
+  <path d="M11 1.5v10.5M1.5 12h19" stroke="#0b2a4a" stroke-width="1.4"/>${btn === 'L' ? '<path d="M11 2.3A8.7 8.7 0 0 0 2.3 11v.6H11z" fill="#ffcf3a"/>' : '<path d="M11 2.3A8.7 8.7 0 0 1 19.7 11v.6H11z" fill="#ffcf3a"/>'}
+  <rect x="9.6" y="5" width="2.8" height="5" rx="1.4" fill="#0b2a4a"/></svg>`;
+const CTL_TIPS = {
+  spear: [['R', 'Aim'], ['L', 'Throw'], ['L', 'Reel in', true], ['key:R', 'Release']],
+  gun: [['L', 'Fire'], ['L', 'Reel in', true], ['key:R', 'Release']],
+};
+function ctlTipDraw() {
+  const me = battle.player, el = $('ctlTip');
+  const mode = !me || battle.over || raft.mode !== 'battle' ? null : me.station && me.station.weapon === 'harpoon' ? 'gun' : heldKind(me) === 'spear' && me.state === 'aboard' ? 'spear' : null;
+  if (el.dataset.mode !== (mode || '')) {
+    el.dataset.mode = mode || '';
+    if (mode) el.innerHTML = CTL_TIPS[mode].map(([b, t, hold]) => `<span class="c">${b.startsWith('key:') ? `<kbd>${b.slice(4)}</kbd>` : mouseSVG(b)}${hold ? '<span class="hold">hold</span>' : ''}${t}</span>`).join('');
+    el.classList.toggle('on', !!mode);
   }
 }
+// R lets go of a harpoon's line: the gun you're on, or your hand harpoon
+function harpoonRelease(s) {
+  if (!s || battle.over) return;
+  if (s === battle.player && netGuest()) { netAct({ k: 'release' }); return; }
+  const sts = [s.station && s.station.weapon === 'harpoon' ? s.station : null, s.hst].filter(Boolean);
+  for (const tt of battle.tethers) if (sts.includes(tt.st) && tt.life > 0 && !tt.water) { tt.life = 0; puff(tetherEnd(tt, new THREE.Vector3()), 0xffffff, 0.35); playSfx('harpoonSnap', tetherEnd(tt, new THREE.Vector3()), 0.5); }
+}
+addEventListener('keydown', e => {
+  if (e.code !== 'KeyR' || e.repeat || raft.mode !== 'battle' || typeof typingInField === 'function' && typingInField(e)) return;
+  e.preventDefault(); harpoonRelease(battle.player);
+});
 // mouse wheel on the ballast bomb raises or lowers the arc
 function battleWheel(e) {
   if (!onGun()) return false;
@@ -5241,6 +5298,44 @@ function throwSpear(s, from, dir, I) {
   s.gunCD = I.reload; s.gunShotT = 0; s.spOut = true; s.spTied = false; (s.spAt ||= new THREE.Vector3()).copy(from); s.spRet = null;
   playSfx('grunt', from, 0.6);
 }
+// a bot with a flintlock: draws on an enemy sailor in range it can see, aims (taking the ball's drop into account,
+// not perfectly), fires, and keeps him covered while it reloads. True while it's busy with that
+function botPistol(s, bot, dt) {
+  bot.shotWait = Math.max(0, (bot.shotWait || 0) - dt);
+  const slot = s.inv ? s.inv.findIndex(t => kindOf(t) === 'pistol') : -1;
+  const holster = () => { if (s.aiming) s.aiming = false; if (slot >= 0 && s.eq === slot) s.eq = -1; bot.foe = null; return false; };
+  if (slot < 0 || s.state !== 'aboard' || s.station || s.carry || s.pry || battle.over || battleLocked()) return holster();
+  const I = ITEMS[s.inv[slot]], me = sailorWorld(s, new THREE.Vector3()).add(_bv.set(0, 1.4, 0));
+  // a target: keep the one we have while it's still good, else the nearest enemy we can see
+  const chest = o => sailorWorld(o, new THREE.Vector3()).add(_bv.set(0, o.state === 'swim' ? 0.15 : 1.0, 0));
+  const ok = o => o && !o.dead && enemyOf(s, o) && o.fade >= 0.5 && o.state !== 'swim' && o.state !== 'drowned' && chest(o).distanceTo(me) < I.range * 0.8;     // (not at swimmers: the water stops the ball)
+  bot.seekT = (bot.seekT || 0) - dt;
+  if (!ok(bot.foe) || bot.seekT <= 0) {
+    bot.seekT = 0.8; let best = null, bd = I.range * 0.8;
+    for (const o of battle.sailors) { if (!ok(o)) continue; const d = chest(o).distanceTo(me); if (d < bd) { bd = d; best = o; } }
+    if (best !== bot.foe) { bot.foe = best; bot.shotWait = Math.max(bot.shotWait, 0.6 + Math.random() * 0.6); }   // a moment to settle on a new target
+  }
+  const o = bot.foe; if (!o) return holster();
+  bot.usedPistol = true;
+  if (s.eq !== slot) { s.eq = slot; return true; }                              // draw
+  const T = s.tools[slot]; if (!T || s.eqCur !== slot) return true;
+  T.mesh.updateMatrixWorld(true);
+  const muzzle = T.mesh.localToWorld(MUZZLE.clone()), at = chest(o);
+  const D = at.distanceTo(muzzle), tf = D / (I.speed || 60); at.y += 0.5 * BULLET_G * tf * tf;
+  const dir = at.sub(muzzle).normalize();
+  s.aiming = true; (s.aimDir ||= new THREE.Vector3()).copy(dir);
+  if (s.eqK > 0.97 && (s.aimW || 0) > 0.8 && s.gunCD <= 0 && bot.shotWait <= 0) {
+    const sight = traceShot(muzzle, dir, D + 1, s, 0.3);
+    if (sight.kind === 'sailor' && sight.o === o) {
+      const sp = I.spread + 0.025, a = Math.random() * Math.PI * 2, r = Math.sqrt(Math.random()) * sp;     // a bot's hand isn't perfectly steady
+      const u = new THREE.Vector3(0, 1, 0).cross(dir).normalize(), v = dir.clone().cross(u);
+      dir.addScaledVector(u, Math.cos(a) * r).addScaledVector(v, Math.sin(a) * r).normalize();
+      s.gunCD = I.reload; s.gunShotT = 0; shootRay(s, muzzle, dir, I);
+      bot.shotWait = 0.3 + Math.random() * 0.8;
+    } else bot.shotWait = 0.4;                                                     // something's in the way: wait for a clear shot
+  }
+  return true;
+}
 // the deck edge nearest a piece of treasure, and how far it is from there to the treasure's near side (ship frame)
 function lootEdge(s, t) {
   const c = t.body.translation(), lt = toLocal(s.ship, _bv.set(c.x, c.y, c.z), new THREE.Vector3());
@@ -5494,7 +5589,7 @@ function projStep(pr, t) {
         puff(pr.p, 0xffffff, 0.8); restoreBolt(pr); return false;
       }
     }
-    if (pr.p.y < groundY(pr.p.x, pr.p.z)) { puff(pr.p, 0xd9c38f, 1); restoreBolt(pr); return false; }
+    if (pr.p.y < groundY(pr.p.x, pr.p.z)) { puff(pr.p, 0xd9c38f, 1); if (!(pr.kind === 'harpoon' && attachWaterTether(pr))) restoreBolt(pr); return false; }
     const h = surfaceH(pr.p.x, pr.p.z, t);
     if (pr.p.y < h) {
       const sp = pr.v.length();
@@ -5514,7 +5609,8 @@ function projStep(pr, t) {
     // under water it carries on along its path: water drag grows with the square of speed, and an iron
     // ball still sinks (gravity less its buoyancy). It slows within a few metres, then settles to the bottom.
     pr.waterT += DT;
-    if (pr.st && pr.st.thrown && pr.waterT > 0.6) return false;            // a thrown one that missed: he hauls it back in
+    // a harpoon that missed: once it's lost its way under the water it lies on its line, to be reeled back in
+    if (pr.kind === 'harpoon' && pr.st && (pr.waterT > 0.7 || pr.v.length() < 1.5)) { if (!attachWaterTether(pr)) restoreBolt(pr); return false; }
     // drag per kind: iron ball, streamlined bolt, blunt spiky lump (which is also less dense, so sinks slower)
     const drag = pr.kind === 'harpoon' ? 0.15 : pr.kind === 'ballast' ? 0.6 : 0.35, rel = pr.kind === 'ballast' ? 3.5 : 7.8;
     const v0 = pr.v.length();
@@ -5614,9 +5710,21 @@ function ropeFromLocal(pr) {
   if (!pr.st.thrown) return pr.st.part.box.center.clone();
   return pr.st.user.local.clone().add(_bv.set(0, 1.2, 0));
 }
-function tetherEnd(tt, out) { if (tt.loot) { const c = tt.loot.body.translation(); return out.set(c.x, c.y, c.z); } return toWorld(tt.b, tt.bLocal, out); }
+// a miss: the harpoon lies in the water (or on the beach) at the end of its line until it's reeled in
+function attachWaterTether(pr) {
+  if (!pr.st || !pr.owner.alive || !pr.st.part || !pr.st.part.alive || (pr.st.thrown && !thrownHolds(pr))) return false;
+  const from = pr.st.part, fromLocal = ropeFromLocal(pr), a = toWorld(pr.owner, fromLocal, new THREE.Vector3());
+  const p = pr.p.clone(); p.y = Math.max(surfaceH(p.x, p.z, simTime), groundY(p.x, p.z)) + 0.02;
+  const geo = new THREE.BufferGeometry(); geo.setAttribute('position', new THREE.Float32BufferAttribute(new Float32Array(16 * 3), 3));
+  const line = new THREE.Line(geo, ropeMat); line.frustumCulled = false; scene.add(line);
+  const bolt = pr.st.thrown ? spearFlyMesh(pr.st.type) : boltMesh(); bolt.traverse(o => { o.castShadow = true; }); bolt.position.copy(p); scene.add(bolt);
+  battle.tethers.push({ st: pr.st, a: pr.owner, aPart: from, aLocal: fromLocal, water: { p }, L: a.distanceTo(p), life: 1, line, bolt });
+  return true;
+}
+function tetherEnd(tt, out) { if (tt.water) return out.copy(tt.water.p); if (tt.loot) { const c = tt.loot.body.translation(); return out.set(c.x, c.y, c.z); } return toWorld(tt.b, tt.bLocal, out); }
 const ROPE_MIN = 1.6;            // a rope reels in no shorter than this (m)
 function tetherStep(tt) {
+  if (tt.water) { waterTetherStep(tt); return; }
   const lootOk = tt.loot ? !tt.loot.gone && !(tt.loot.holder && tt.loot.holder.team === tt.a.team) : true;   // done once it's on one of your rafts; off someone else's deck it keeps pulling
   if (tt.life <= 0 || !tt.aPart.alive || !tt.a.alive || !lootOk || (!tt.loot && (!tt.bPart.alive || !tt.b.alive))) { tt.life = 0; return; }
   // a rope holds until it snaps, the raft it's in pulls the bolt out, or (on treasure) it's in or nobody's on the harpoon
@@ -5643,13 +5751,57 @@ function tetherStep(tt) {
   if (stretch <= 0) return;
   const vA = pointVel(tt.a, A, new THREE.Vector3()), vB = tt.loot ? (() => { const v = tt.loot.body.linvel(); return new THREE.Vector3(v.x, v.y, v.z); })() : pointVel(tt.b, B, new THREE.Vector3());
   const vr = vB.sub(vA).dot(u);
+  if (tt.loot) {
+    // treasure on a line: only the treasure is pulled - the raft doesn't feel it (a cup doesn't drag a boat). If
+    // someone's carrying it, a hard pull tears it out of his hands; off a belt, the line gives
+    const t = tt.loot;
+    if (stretch > 1.2 && t.belt) { tt.life = 0; playSfx('harpoonSnap', B, 0.6); return; }
+    if (stretch > 1.2 && t.carried && !t.drag) { const v = t.body.linvel(); releaseLoot(t, new THREE.Vector3(v.x - u.x * 2, v.y + 1.5, v.z - u.z * 2)); return; }
+    const F = clamp(40 * stretch + 6 * vr, 0, (tt.st.thrown ? 8 : 14) * clamp(t.L.mass / 0.3, 0.15, 1));      // light pieces are pulled gently, not yanked
+    t.body.applyImpulseAtPoint({ x: -u.x * F * DT, y: -u.y * F * DT, z: -u.z * F * DT }, { x: B.x, y: B.y, z: B.z }, true);
+    return;
+  }
   const F = clamp(40 * stretch + 6 * vr, 0, tt.st.thrown ? 8 : 14);       // a man hauling on a hand line pulls less than a winch
   tt.a.body.applyImpulseAtPoint({ x: u.x * F * DT, y: u.y * F * DT, z: u.z * F * DT }, { x: A.x, y: A.y, z: A.z }, true);
-  (tt.loot ? tt.loot.body : tt.b.body).applyImpulseAtPoint({ x: -u.x * F * DT, y: -u.y * F * DT, z: -u.z * F * DT }, { x: B.x, y: B.y, z: B.z }, true);
+  tt.b.body.applyImpulseAtPoint({ x: -u.x * F * DT, y: -u.y * F * DT, z: -u.z * F * DT }, { x: B.x, y: B.y, z: B.z }, true);
+}
+// reeling a miss back in: it skips back across the water toward the gun (or his hands), nose out along the line
+function waterTetherStep(tt) {
+  if (tt.life <= 0 || !tt.aPart.alive || !tt.a.alive) { tt.life = 0; return; }
+  const user = tt.st.user, W = WST(tt.st);
+  if (tt.st.thrown) {
+    if (!thrownHolds({ st: tt.st, owner: tt.a })) { tt.life = 0; return; }
+    const T = user.tools && user.tools[user.eq];
+    if (T && user.eqCur === user.eq && user.model && user.model.root.visible) toLocal(tt.a, T.mesh.position, tt.aLocal);
+    else tt.aLocal.copy(user.local).y += 1.2;
+  }
+  const A = toWorld(tt.a, tt.aLocal, new THREE.Vector3()), P = tt.water.p;
+  // a miss comes straight back: a moment for it to settle, then it's yanked in fast, skipping across the water
+  // (whatever the distance, it's back in about a second)
+  tt.wT = (tt.wT || 0) + DT;
+  tt.reeling = tt.wT > 0.25;
+  const dx = A.x - P.x, dz = A.z - P.z, d = Math.hypot(dx, dz);
+  if (d < 1.3) { tt.life = 0; return; }                                                   // in
+  if (tt.reeling) {
+    tt.d0 ||= d;
+    const step = Math.min(d, Math.max(9, tt.d0 / 0.9) * DT); P.x += dx / d * step; P.z += dz / d * step;
+    if (Math.random() < 0.6) addFoam(P.x, P.z, 0.08);
+    if (Math.random() < 0.12) spray(_bv.set(P.x, surfaceH(P.x, P.z, simTime), P.z), 3, 1.2, 0.25);
+    tt.reelT = (tt.reelT || 0) - DT;
+    if (tt.reelT <= 0) { if (tt.st.thrown) { tt.reelT = 0.3; playSfx('ropePull', A, 0.6); } else { tt.reelT = 0.25; playSfx('harpoonReel', A, 0.5); } }
+  }
+  const base = Math.max(surfaceH(P.x, P.z, simTime), groundY(P.x, P.z)) + 0.02;
+  P.y = base + (tt.reeling ? 0.18 * Math.abs(Math.sin(tt.wT * 11)) * Math.min(1, d / 3) : 0);      // skipping over the waves
+  tt.L = A.distanceTo(P);
 }
 function drawTether(tt) {
   tt.a.group.updateMatrixWorld(); if (tt.b) tt.b.group.updateMatrixWorld();
-  const A = tt.aLocal.clone().applyMatrix4(tt.a.group.matrixWorld), B = tt.loot ? tt.loot.mesh.position.clone() : tt.bLocal.clone().applyMatrix4(tt.b.group.matrixWorld);
+  const A = tt.aLocal.clone().applyMatrix4(tt.a.group.matrixWorld), B = tt.water ? tt.water.p.clone() : tt.loot ? tt.loot.mesh.position.clone() : tt.bLocal.clone().applyMatrix4(tt.b.group.matrixWorld);
+  if (tt.water && tt.bolt) {          // the harpoon itself, lying nose-out at the end of the line, bobbing
+    const o = _bv.copy(B).sub(A); o.y = 0;
+    tt.bolt.position.lerp(B, tt.bolt.userData.placed ? 0.35 : 1); tt.bolt.userData.placed = true;
+    if (o.lengthSq() > 1e-4) tt.bolt.quaternion.slerp(_bq.setFromUnitVectors(_bv2.set(1, 0, 0), o.normalize().setY(-0.15).normalize()), 0.25);
+  }
   const d = A.distanceTo(B), sag = Math.max(0, tt.L - d) * 0.45 + 0.15;
   const arr = tt.line.geometry.attributes.position.array;
   for (let i = 0; i < 16; i++) {
@@ -5659,7 +5811,7 @@ function drawTether(tt) {
   tt.line.geometry.attributes.position.needsUpdate = true;
 }
 function removeTether(tt) {
-  scene.remove(tt.line); if (tt.bolt) tt.b.group.remove(tt.bolt);
+  scene.remove(tt.line); if (tt.bolt) { if (tt.water) scene.remove(tt.bolt); else tt.b.group.remove(tt.bolt); }
   if (tt.st.gun && tt.st.gun.bolt) tt.st.gun.bolt.visible = true;
 }
 // ---- ballast bomb: sticks where it lands and weighs that spot down ----
@@ -5898,6 +6050,12 @@ function walkTo(s, local) {
 // is o on the other side from s?
 const enemyOf = (s, o) => battle.net ? o.teamId !== s.teamId : o !== s;
 function botThink(s, dt) {
+  s.aiming = false; if (s.brain) s.brain.usedPistol = false;
+  const r = botThink1(s, dt), bot = s.brain;
+  if (bot && !bot.usedPistol && s.inv && kindOf(s.inv[s.eq] || null) === 'pistol') { s.eq = -1; bot.foe = null; }    // done shooting: away it goes
+  return r;
+}
+function botThink1(s, dt) {
   const bot = s.brain || (s.brain = { err: { yaw: 0, pitch: 0 }, wait: 2.5, retarget: 0, target: null });   // each bot keeps its own mind
   if (s.dead || (!s.ship.alive && s.state !== 'swim')) return null;
   // a haul that threw him in the water (the raft tipped under the weight): that piece is too much for this raft
@@ -5976,12 +6134,16 @@ function botThink(s, dt) {
     const lt = toLocal(s.ship, _bv.set(tp.x, tp.y, tp.z), new THREE.Vector3());
     return walkTo(s, lt);
   }
-  if (!battle.dummyFires) { if (s.state === 'station') leaveStation(s); return null; }
+  // not driving: shoot at enemies in range with the flintlock
+  if (s.state === 'aboard' && battle.dummyFires && botPistol(s, bot, dt)) return null;
+  // nothing to shoot: a teammate is at the motor, so wait at the edge nearest the treasure, ready to grab it
+  const helper = () => { if (!bot.target || s.state !== 'aboard') return null; const e = lootEdge(s, bot.target); return e ? walkTo(s, { x: e.x, z: e.z }) : null; };
+  if (!battle.dummyFires) { if (s.state === 'station') leaveStation(s); return helper(); }
   const gun = s.ship.stations.find(st => st.kind === 'gun' && st.part.alive && (!st.user || st.user === s));
-  if (!gun) return null;
+  if (!gun) return helper();
   if (s.state === 'station' && s.station !== gun) leaveStation(s);
   if (s.state === 'aboard') {
-    if (!gun.stand) return null;
+    if (!gun.stand) return helper();
     const d = Math.hypot(s.local.x - gun.stand.x, s.local.z - gun.stand.z);
     if (d < 0.6) { useStation(s, gun); return null; }
     return walkTo(s, gun.stand);
@@ -6105,6 +6267,7 @@ function teardownBattle() {
   if (crewRing.parent) crewRing.parent.remove(crewRing); crewRing.visible = false; crewRing.material.opacity = 0;
 }
 function exitBattle() {
+  { const el = $('ctlTip'); el.classList.remove('on'); el.dataset.mode = ''; }
   view.free = false;                 // back to building: the camera returns to the raft
   teardownBattle(); battle.on = false;
   raft.mode = 'build'; raftGroup.visible = true; SWELL.target = 0;
@@ -6224,7 +6387,30 @@ $('quit').addEventListener('click', () => { if (battle.net) { netForfeit(); retu
 $('dummyFires').addEventListener('change', e => { battle.dummyFires = e.target.checked; });
 
 // ---------- HUD ----------
-function hudNames(a, b) { const y = document.querySelector('.bhud .who.you'), t = document.querySelector('.bhud .who.them'); if (y) y.textContent = a; if (t) t.textContent = b; }
+function hudNames() {}
+// the scoreboard, top middle: your side always on the left, the round, then each enemy team in its own colour.
+// Building: the match totals. In battle: what each side has aboard right now.
+function drawScoreboard() {
+  const el = $('scoreboard'); if (!el) return;
+  const live = raft.mode === 'battle';
+  let sides;
+  let game = null; try { game = lobby.game; } catch (_) {}          // (not before the menu code has loaded)
+  if (game) {
+    const mine = lobby.game.team, all = [...new Set(lobby.game.roster.map(r => r.team))].sort((a, b) => a - b);
+    const val = t => live ? battle.ships.filter(s => s.team === t && s.alive).reduce((p, s) => p + shipLootPts(s), 0) : (match.tscore && match.tscore[t]) || 0;
+    sides = [mine, ...all.filter(t => t !== mine)].map(t => ({ name: lobby.game.roster.filter(r => r.team === t).map(r => r.name).join(', '), color: TEAMS[t].color, v: val(t) }));
+  } else {
+    sides = [{ name: typeof playerName === 'function' ? playerName() : 'You', color: '#1e6fd9', v: live ? sidePts('you') : match.score.you }, { name: 'Bot', color: '#ff6b5b', v: live ? sidePts('dummy') : match.score.dummy }];
+  }
+  const round = `Round ${match.round}/${match.rounds}`, sig = round + '|' + sides.map(s => s.name + s.color + s.v).join('|');
+  if (el.dataset.sig === sig) return;
+  const prev = el.dataset.vals ? el.dataset.vals.split(',').map(Number) : [];
+  el.dataset.sig = sig; el.dataset.vals = sides.map(s => s.v).join(',');
+  const esc = t => String(t).replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' })[c]);
+  const side = (s, i) => `<span class="sb-side" style="--tc:${s.color}" title="${esc(s.name)}"><b${prev[i] !== undefined && s.v > prev[i] ? ' class="up"' : ''}>${s.v}</b><i>${esc(s.name)}</i></span>`;
+  el.innerHTML = `<span class="sb-board">${side(sides[0], 0)}<span class="sb-round">${round}</span>${sides.slice(1).map((s, i) => side(s, i + 1)).join('')}</span>`;      // one piece: you, the round, then every enemy
+  for (const b of el.querySelectorAll('b.up')) setTimeout(() => b.classList.remove('up'), 220);      // a point gained: the number pops
+}
 const hudCache = {};
 function setText(id, v) { if (hudCache[id] !== v) { hudCache[id] = v; $(id).textContent = v; } }
 function shipHp(ship) { let h = 0; for (const p of ship.parts) if (p.alive) h += Math.max(0, p.hp); return h / ship.maxHp; }
@@ -6232,18 +6418,7 @@ function updateBattleHud(force) {
   const on = raft.mode === 'battle';
   $('battleHud').hidden = !on; $('minimap').hidden = !on;
   if (!on) { drawHotbar(); unlockAim(); $('aimHint').hidden = true; for (const c of ['mode-drive', 'mode-gun', 'mode-walk']) document.body.classList.remove(c); stickL.axis = 'y'; $('interact').hidden = $('fire').hidden = $('shove').hidden = $('overboard').hidden = true; return; }
-  $('hpYou').style.width = `${Math.round(sideHp('you') * 100)}%`;
-  $('hpThem').style.width = `${Math.round(sideHp('dummy') * 100)}%`;
-  setText('ptsYou', String(sidePts('you'))); setText('ptsThem', String(sidePts('dummy')));
-  const status = team => {
-    const out = sideOut(team, team === 'you' ? battle.player : battle.dummy);
-    if (out === 'capsized') return 'Capsized'; if (out === 'sank') return 'Sunk';
-    const ships = teamShips(team).filter(s => s.alive), bits = [];
-    if (ships.length > 1) bits.push(`Broken into ${ships.length} pieces`);
-    if (ships.some(s => s.leaking)) bits.push('Taking on water');
-    return bits.join(' · ');
-  };
-  setText('leakYou', status('you')); setText('leakThem', status('dummy'));
+  drawScoreboard();
   const s = battle.player;
   const swim = s.state === 'swim' && !battle.over;
   $('overboard').hidden = !swim;
@@ -6512,7 +6687,7 @@ function battleDraw(dt, a) {
     $('xhair').style.setProperty('--p', (cd > 0 ? 1 - cd / I.reload : 1).toFixed(3));
     drawHotbar();
   }
-  tracersStep(dt); dmgNumbersStep(dt); wispsStep(dt); fishRingDraw(dt);
+  tracersStep(dt); dmgNumbersStep(dt); wispsStep(dt); fishRingDraw(dt); ctlTipDraw();
   // sailors
   for (const s of battle.sailors) drawSailor(s, dt, camera.position);
   // projectiles, debris, puffs, spray
@@ -7115,7 +7290,7 @@ function spearTrack(s) {
   const H = s.hst; if (!H) return;
   const pr = battle.projectiles.find(p => p.st === H), tt = pr ? null : battle.tethers.find(t => t.st === H && t.life > 0);
   const out = !!(pr || tt);
-  if (out) { (s.spAt ||= new THREE.Vector3()).copy(pr ? pr.p : tetherEnd(tt, _iv)); s.spTied = !!tt; s.gunCD = H.I.reload; }
+  if (out) { (s.spAt ||= new THREE.Vector3()).copy(pr ? pr.p : tetherEnd(tt, _iv)); s.spTied = !!tt; s.spReeling = !!(tt && tt.reeling); s.gunCD = H.I.reload; }
   else if (s.spOut) { (s.spRet ||= new THREE.Vector3()).copy(s.spAt); s.gunCD = H.I.reload; s.spTied = false; }
   s.spOut = out;
 }
@@ -7248,8 +7423,19 @@ function itemsDraw(s, dt) {
       rod.position.set(0.02 + rodOut * (MUZZLE.x + 0.06 + 0.14 * rodDepth - 0.02), 0.012 + rodOut * (MUZZLE.y - 0.012), 0);
     }
   } else if (kind === 'spear') {
-    if (reach > 0.001) armTo(M, 1, _pw.p, reach);
-    const lw = itemSmooth(s.aimW || 0) * g * 0.85 * (1 - spearThrowK(s));      // the free arm points where it's going
+    // hauling the line in: both hands on the rope out in front, pulling hand over hand toward him
+    s.pullW = itemApproach(s.pullW || 0, s.spOut && s.spTied && s.spReeling ? 1 : 0, dt / 0.2);
+    const pw = itemSmooth(s.pullW) * g;
+    if (pw > 0.001 && s.spAt) {
+      const d = M.root.worldToLocal(_iv.copy(s.spAt)).sub(_iv2.set(0, 1.1, 0)); d.y = clamp(d.y, -2, 0.5); d.normalize();
+      const ph = simTime * 6.5, c = new THREE.Vector3(0.12, 1.1, 0.04).addScaledVector(d, 0.32);
+      const rH = c.clone().addScaledVector(d, 0.16 * Math.sin(ph)).add(_iv3.set(0, 0.04 * Math.cos(ph), 0.08));
+      const lH = c.clone().addScaledVector(d, -0.16 * Math.sin(ph)).add(_iv3.set(0, -0.04 * Math.cos(ph), -0.08));
+      M.spine.rotation.z += 0.12 * pw; M.root.updateMatrixWorld(true);                      // leaning back into it
+      if (reach > 0.001) armTo(M, 1, _pw.p.clone().lerp(M.root.localToWorld(rH), pw), reach);
+      armTo(M, 0, M.root.localToWorld(lH), pw);
+    } else if (reach > 0.001) armTo(M, 1, _pw.p, reach);
+    const lw = itemSmooth(s.aimW || 0) * g * 0.85 * (1 - spearThrowK(s)) * (1 - pw);      // the free arm points where it's going
     if (lw > 0.001) { M.root.updateMatrixWorld(true); armTo(M, 0, M.root.localToWorld(_iv.set(0.5, 1.4, -0.12)), lw); }
   } else {
     const dR = ITEMS[type].len * 0.55 + (ROD_HOLD - ITEMS[type].len * 0.55) * g;   // grabs it near the middle off his back, slides to the handle
@@ -7458,8 +7644,9 @@ const LOOT = {
 // the treasure pool grows over a match: [type, the round it first turns up in a 10-round match, how many, spawn ring (m)].
 // One more of each every other round after it first appears. A shorter match plays the last rounds of a 10-round
 // one (a 3-round match is rounds 8, 9, 10), so its pool starts rich; a longer one stays at the top.
-const LOOT_POOL = [['pouch', 1, 6, 4, 30], ['goblet', 1, 3, 6, 30], ['pearl', 2, 3, 8, 30], ['spices', 3, 2, 10, 32],
-  ['strongbox', 4, 2, 14, 34], ['chest', 6, 2, 18, 36], ['idol', 8, 1, 26, 38]];
+// The rafts start round the outside (TEAM_SPAWN_R); the pouches are scattered all over, the best pieces near the middle
+const LOOT_POOL = [['pouch', 1, 11, 3, 25], ['goblet', 1, 6, 3, 24], ['pearl', 2, 4, 3, 22], ['spices', 3, 3, 2, 20],
+  ['strongbox', 4, 3, 2, 18], ['chest', 6, 2, 0, 14], ['idol', 8, 1, 0, 9]];
 const lootStage = (r = match.round || 1, of = match.rounds || 10) => clamp(10 - (of - r), 1, 10);
 const lootPool = (r, of) => { const e10 = lootStage(r, of); return LOOT_POOL.filter(e => e10 >= e[1]).map(([t, from, n, r0, r1]) => [t, Math.min(n + Math.floor((e10 - from) / 2), n + 3), r0, r1]); };
 for (const k in LOOT) { const L = LOOT[k]; L.vol = L.size[0] * L.size[1] * L.size[2]; L.mass = L.vol * L.density; }
@@ -7713,7 +7900,7 @@ function freeSpot(minR, maxR, avoid) {
   return new THREE.Vector3(ARENA_C.x, 0.3, ARENA_C.z);
 }
 function spawnRoundLoot() {
-  const avoid = [{ x: ARENA_A.x, z: ARENA_A.z, r: 7 }, { x: ARENA_B.x, z: ARENA_B.z, r: 7 }];
+  const avoid = battle.ships.length ? battle.ships.map(sh => { const t = sh.body.translation(); return { x: t.x, z: t.z, r: 6 }; }) : [{ x: ARENA_A.x, z: ARENA_A.z, r: 6 }, { x: ARENA_B.x, z: ARENA_B.z, r: 6 }];
   const plan = lootPool();
   for (const [type, n, r0, r1] of plan) for (let i = 0; i < n; i++) {
     const p = freeSpot(r0, r1, avoid);
@@ -7725,8 +7912,8 @@ function spawnRoundLoot() {
 // halfway through, a wreck surfaces somewhere away from everyone and spills more loot
 const flareGeo = new THREE.CylinderGeometry(0.5, 1.2, 14, 16, 1, true);
 function wreckWarning() {
-  const away = battle.ships.map(s => { const t = s.body.translation(); return { x: t.x, z: t.z, r: 18 }; });
-  const p = freeSpot(18, 40, away);
+  const away = battle.ships.map(s => { const t = s.body.translation(); return { x: t.x, z: t.z, r: 12 }; });
+  const p = freeSpot(8, 26, away);
   battle.wreck = { p, t: 0, spawned: false };
   const flare = new THREE.Mesh(flareGeo, new THREE.MeshBasicMaterial({ color: 0xff5a3c, transparent: true, opacity: 0, depthWrite: false, side: THREE.DoubleSide }));
   flare.position.set(p.x, 7, p.z); flare.renderOrder = 4; scene.add(flare);
@@ -8186,6 +8373,7 @@ const FG_LOG = [
   ['0.38', 'Harpoon reels heavy treasure in faster'],
   ['0.39', 'Seven material tiers, ramps, pontoons, railing, keel fin and climbing net; Rusty/Standard/Racing motors; treasure tows through gaps; fight music; fade into the arena with a 3-2-1-FLOAT countdown and back to the harbour with BUILD; harpoon sounds; footsteps that sound like the deck you\'re on; mouse wheel scrolls the parts tray; one build bar along the parts tray with a big gold counter and a ? for controls; match scoreboard; patch notes'],
   ['0.40', 'Play vs bots lobby (bots on any team); flintlocks with real shots, aiming, reload animation and crosshair; hand harpoons (rusty, standard, hunting): aim and throw, the rope hauls in; rusty/normal/gold weapons; small, medium and large motors in rusty, standard and racing; floating damage numbers and parts that wear down in stages; collisions by weight and speed (styrofoam does no impact damage); new treasure (goblet, pearl, spice crate), heavier is worth more, and better treasure turns up as the match goes on; fishing: aim with a landing ring, hold to reel, snags pouches on the way in; store sign with selling and undo; Space lets go of heavy treasure; capsized rafts stay usable; bots build like players and give up on treasure too heavy for them; defaults 3 min build, 5 min battle, 10 rounds; fixed gold going negative'],
+  ['0.41', 'Bots shoot their flintlocks and keep busy; smaller treasure field with rafts starting further apart and more treasure each round; fights get longer through the match (1:45 up to 5:00); hold left click to reel harpoons in, R lets go, with a controls card; a missed harpoon is pulled straight back; treasure on a line is pulled on its own and can be torn out of hands; new scoreboard with every team and its players; main menu music, with songs fading into each other; grey backdrop for white parts in the tray'],
 ];
 
 // =====================================================================================
@@ -8242,7 +8430,7 @@ function enterMenu(panel = 'mMain') {
   raft.mode = 'menu'; match.phase = 'menu';
   raftGroup.visible = false; if (ghost) ghost.visible = false;
   document.body.classList.add('in-menu');
-  if (typeof musicTrack === 'function') musicTrack('build');
+  if (typeof musicTrack === 'function') { musicTrack('menu'); musicAutoplay(); }
   menuPanel(panel);
 }
 function leaveMenu() {
@@ -8571,7 +8759,7 @@ function teamApply(p) {
 // ('bend') -> the host moves everyone on ('next').
 // =====================================================================================
 const NET_SNAP_MS = 100, NET_INPUT_MS = 100, NET_DELAY_MS = 140;
-const TEAM_SPAWN_R = 17;
+const TEAM_SPAWN_R = 27;          // rafts start round the edge of the treasure field
 const teamColorsFor = t => {
   const c = new THREE.Color(TEAMS[t].color).getHex();
   return { shirt: c, pants: [0x3a2a2a, 0x22325a, 0x1f3d2a, 0x4a3a12][t], band: [0xffcf3a, 0xffcf3a, 0xffcf3a, 0x1b1f2a][t] };
@@ -8651,7 +8839,7 @@ function netSetup(p, host) {
   raft.mode = 'battle'; battle.on = true; battle.over = false; battle.overT = 0; battle.result = null;
   match.phase = 'battle';
   if (p.total) { match.battleTotal = p.total; match.battleLeft = p.tl; }
-  else { match.battleTotal = match.battleLeft = Number($('battleTime').value) || BATTLE_TIME; }
+  else { match.battleTotal = match.battleLeft = roundBattleTime(); }
   raftGroup.visible = false; comMark.visible = cobMark.visible = false; if (ghost) ghost.visible = false;
   SWELL.target = waveLevel();
   battle.lockT = typeof __FG_TEST !== 'undefined' && __FG_TEST && !battle.introTest ? 0 : INTRO_LOCK;
@@ -8733,6 +8921,7 @@ function netHostActs() {
     else if (a.k === 'fire') playerFire(s);
     else if (a.k === 'shove') playerShove(s, a.y || 0);
     else if (a.k === 'jump') s.jumpReq = true;
+    else if (a.k === 'release') harpoonRelease(s);
     else if (a.k === 'slot') toggleSlot(s, a.i | 0);
     else if (a.k === 'forfeit') { s.dead = true; s.fade = 0; }
     else if (a.k === 'shoot' && Array.isArray(a.o) && Array.isArray(a.d) && heldKind(s) === 'pistol' && s.gunCD <= 0 && s.state === 'aboard') {
@@ -8863,7 +9052,7 @@ function netSnapSend(force) {
     if (s.aiming && s.aimDir) { o.ag = 1; o.ad = s.aimDir.toArray().map(v => +v.toFixed(3)); }
     if ((s.gunShotT ?? 9) < 0.12) o.gk = 1;
     if (s.gunCD > 0) o.gr = +s.gunCD.toFixed(2);
-    if (s.spOut && s.spAt) o.ho = [+s.spAt.x.toFixed(2), +s.spAt.y.toFixed(2), +s.spAt.z.toFixed(2), s.spTied ? 1 : 0];
+    if (s.spOut && s.spAt) o.ho = [+s.spAt.x.toFixed(2), +s.spAt.y.toFixed(2), +s.spAt.z.toFixed(2), s.spTied ? 1 : 0, s.spReeling ? 1 : 0];
     if (s.helm !== undefined) { o.hm = +s.helm.toFixed(3); o.hv = +(s.helmV || 0).toFixed(3); }
     if (s.overT < OVERBOARD_TIME) o.ot = +s.overT.toFixed(2);
     if (s.pry) o.py = [battle.loads.indexOf(s.pry.ld), +s.pry.t.toFixed(3)];
@@ -9019,7 +9208,7 @@ function netApply(A, B, k, dt) {
     if (so.ha) { const t = N.loot.get(so.ha[0]); if (t) { t.haul = { s, t: so.ha[1], heavy: !!so.ha[2], pulls: so.ha[3], ship: s.ship }; s.haulT = t; } } else s.haulT = null;
     s.eq = so.eq ?? -1; s.eqCur = so.ec ?? -1; s.eqK = so.ek ?? 0;
     s.gunCD = so.gr || 0;
-    if (so.ho) { s.spOut = true; (s.spAt ||= new THREE.Vector3()).set(so.ho[0], so.ho[1], so.ho[2]); s.spTied = !!so.ho[3]; }
+    if (so.ho) { s.spOut = true; (s.spAt ||= new THREE.Vector3()).set(so.ho[0], so.ho[1], so.ho[2]); s.spTied = !!so.ho[3]; s.spReeling = !!so.ho[4]; }
     else if (s.spOut) { s.spOut = false; s.spTied = false; if (s.spAt) (s.spRet ||= new THREE.Vector3()).copy(s.spAt); }
     s.aiming = !!so.ag; if (so.ad) (s.aimDir ||= new THREE.Vector3()).fromArray(so.ad);
     s.aimW = itemApproach(s.aimW || 0, so.ag ? 1 : 0, dt / 0.16); if (so.gk && !((s.gunShotT ?? 9) < 0.15)) s.gunShotT = 0;
