@@ -390,7 +390,7 @@
 <div class="xhair" id="xhair" hidden aria-hidden="true"></div>
 <div class="countdown" id="countdown" aria-live="assertive" hidden></div>
 <div class="top">
-  <div class="brand"><h1>FLOAT GOAT</h1><span id="verTag">v0.42</span></div>
+  <div class="brand"><h1>FLOAT GOAT</h1><span id="verTag">v0.43</span></div>
   <div class="scoreboard" id="scoreboard" aria-label="Score"></div>
   <div class="pill phasep" title="Phase and time left"><span id="phase">Build</span><span id="timer">3:00</span></div>
 
@@ -4237,36 +4237,141 @@ function kickWater(x, z, amp, sigma) {
 }
 
 // ---------- sailors ----------
+// Same rig as before (joint groups and pivots unchanged, so every pose, IK and item hold still lines up); the body
+// is built from smooth lathed and shaped pieces instead of plain capsules. Shared geometry, built once.
+let SAILOR_GEO = null;
+function sailorGeo() {
+  if (SAILOR_GEO) return SAILOR_GEO;
+  const V2 = THREE.Vector2;
+  // profiles run bottom to top so the faces point outward (top-down ones are flipped first)
+  const lathe = (pts, segs = 22) => { if (pts[0][1] > pts[pts.length - 1][1]) pts = pts.slice().reverse(); const g = new THREE.LatheGeometry(pts.map(([r, y]) => new V2(r, y)), segs); g.computeVertexNormals(); return g; };
+  // the boot: a side profile, extruded with a rounded bevel
+  const bootShape = new THREE.Shape();
+  bootShape.moveTo(-0.065, -0.03); bootShape.lineTo(0.12, -0.03);
+  bootShape.quadraticCurveTo(0.165, -0.03, 0.16, 0.005);
+  bootShape.quadraticCurveTo(0.15, 0.035, 0.088, 0.042);
+  bootShape.quadraticCurveTo(0.06, 0.048, 0.05, 0.055);        // the foot part stays low; the shaft rides on the shin (below)
+  bootShape.lineTo(-0.058, 0.055);
+  bootShape.quadraticCurveTo(-0.076, 0.03, -0.065, -0.03);
+  const boot = new THREE.ExtrudeGeometry(bootShape, { depth: 0.08, bevelEnabled: true, bevelThickness: 0.018, bevelSize: 0.016, bevelSegments: 3, curveSegments: 8 });
+  boot.translate(0, 0, -0.04); boot.computeVertexNormals();   // sole of the bevel at -0.046, as the old box boot
+  const soleShape = new THREE.Shape();
+  soleShape.moveTo(-0.07, 0); soleShape.lineTo(0.13, 0); soleShape.quadraticCurveTo(0.185, 0, 0.18, 0.012); soleShape.lineTo(-0.075, 0.012); soleShape.lineTo(-0.07, 0);
+  const sole = new THREE.ExtrudeGeometry(soleShape, { depth: 0.11, bevelEnabled: true, bevelThickness: 0.008, bevelSize: 0.006, bevelSegments: 2, curveSegments: 6 });
+  sole.translate(0, -0.038, -0.055);
+  // the bandana's tails: a flat tapered strip
+  const tail = new THREE.CylinderGeometry(0.026, 0.016, 0.12, 10, 1); tail.scale(0.3, 1, 1); tail.translate(0, -0.06, 0);   // flat across the back of the head
+  SAILOR_GEO = {
+    // shirt: waist to chest to sloping shoulders; overlaps the belt at the bottom
+    torso: lathe([[0, -0.045], [0.163, -0.045], [0.17, 0.04], [0.182, 0.17], [0.204, 0.3], [0.212, 0.36], [0.206, 0.41], [0.182, 0.455], [0.132, 0.497], [0.07, 0.523], [0, 0.532]], 32),
+    collar: new THREE.TorusGeometry(0.07, 0.018, 8, 22).rotateX(Math.PI / 2),
+    hem: new THREE.TorusGeometry(0.168, 0.014, 6, 28).rotateX(Math.PI / 2),
+    // the belt: a band wider than both the shirt and the trousers where it sits, so it shows all the way round
+    belt: lathe([[0.176, -0.03], [0.183, -0.026], [0.185, 0], [0.183, 0.026], [0.176, 0.03], [0.166, 0.03], [0.166, -0.03], [0.176, -0.03]], 32),   // a closed band: it has an inside
+    buckle: new THREE.BoxGeometry(0.018, 0.05, 0.062),
+    pelvis: lathe([[0, -0.13], [0.09, -0.13], [0.145, -0.08], [0.165, -0.02], [0.17, 0.05], [0.168, 0.1], [0, 0.1]], 24),
+    // pants to just below the knee, rolled cuff, bare shins
+    // the thigh ends in a round cap on the knee, and the bit of trouser below the knee rides on the shin with a
+    // round cap of its own: bent or straight, the knee is all trouser, no gap
+    thigh: lathe([[0, 0.04], [0.07, 0.05], [0.09, 0.0], [0.092, -0.1], [0.082, -0.24], [0.072, -0.36], [0.069, -0.41], [0.061, -0.445], [0.038, -0.471], [0, -0.479]], 18),
+    knee: lathe([[0, 0.069], [0.038, 0.058], [0.06, 0.034], [0.069, 0], [0.068, -0.06], [0.066, -0.075], [0, -0.075]], 18),
+    cuff: new THREE.TorusGeometry(0.067, 0.019, 8, 18).rotateX(Math.PI / 2),
+    shin: lathe([[0, -0.05], [0.056, -0.05], [0.062, -0.1], [0.058, -0.18], [0.046, -0.3], [0.039, -0.38], [0.036, -0.43], [0, -0.43]], 16),
+    // the boot's shaft, on the shin, so it leans with the leg instead of the leg leaning through it
+    shaft: lathe([[0, -0.472], [0.034, -0.468], [0.05, -0.452], [0.054, -0.42], [0.055, -0.36], [0.058, -0.345], [0.051, -0.338], [0, -0.338]], 16),
+    boot, sole,
+    // short sleeve over the shoulder, bare arms
+    shoulder: new THREE.SphereGeometry(0.074, 16, 12),
+    // sleeve: a low rounded cap (sits down into the shirt's shoulder), to just above the elbow
+    sleeve: lathe([[0, 0.035], [0.04, 0.03], [0.064, 0.008], [0.075, -0.025], [0.073, -0.1], [0.067, -0.18], [0.065, -0.212], [0.06, -0.222], [0, -0.222]], 20),
+    sleeveCuff: new THREE.TorusGeometry(0.071, 0.014, 6, 16).rotateX(Math.PI / 2),
+    // upper arm and forearm both end in round caps of the same width, centred on the elbow: bent or straight they
+    // meet as one smooth limb
+    upperArm: lathe([[0, -0.16], [0.051, -0.16], [0.051, -0.21], [0.048, -0.26], [0.047, -0.28], [0.041, -0.303], [0.024, -0.321], [0, -0.327]], 16),
+    forearm: lathe([[0, 0.047], [0.024, 0.041], [0.041, 0.024], [0.047, 0], [0.05, -0.06], [0.046, -0.14], [0.038, -0.205], [0.035, -0.225], [0.03, -0.25], [0, -0.26]], 16),
+    // the hand: one mitten (palm and fingers together) growing out of the wrist, flattened side to side
+    hand: (() => { const g = lathe([[0, -0.215], [0.03, -0.218], [0.044, -0.24], [0.054, -0.27], [0.054, -0.3], [0.047, -0.33], [0.033, -0.35], [0, -0.358]], 18); g.scale(0.95, 1, 0.62); g.computeVertexNormals(); return g; })(),
+    thumb: new THREE.CapsuleGeometry(0.017, 0.03, 4, 8),
+    neck: new THREE.CylinderGeometry(0.052, 0.058, 0.13, 14, 1),
+    skull: (() => {
+      const g = new THREE.SphereGeometry(0.14, 32, 24), p = g.attributes.position;
+      for (let i = 0; i < p.count; i++) {
+        let x = p.getX(i), y = p.getY(i), z = p.getZ(i);
+        const low = Math.max(0, -y / 0.14), front = Math.max(0, x / 0.14);
+        y *= 1 + 0.12 * low;                                   // a longer lower face
+        x += 0.018 * low * front;                              // chin and jaw come forward a touch
+        z *= 1 - 0.12 * low * low;                             // and narrow toward the chin
+        p.setXYZ(i, x, y, z);
+      }
+      g.computeVertexNormals(); return g;
+    })(),
+    hair: new THREE.SphereGeometry(0.14, 24, 16),
+    ear: new THREE.SphereGeometry(0.032, 10, 8).scale(0.55, 1, 0.45),
+    eye: new THREE.SphereGeometry(0.021, 10, 8).scale(0.5, 1.3, 1),
+    glint: new THREE.SphereGeometry(0.0065, 6, 4),
+    brow: new THREE.CapsuleGeometry(0.009, 0.04, 3, 6).rotateX(Math.PI / 2),
+    nose: new THREE.SphereGeometry(0.026, 10, 8).scale(1, 0.9, 0.8),
+    mouth: new THREE.CapsuleGeometry(0.006, 0.035, 3, 6).rotateX(Math.PI / 2),
+    bandana: new THREE.SphereGeometry(0.152, 28, 10, 0, Math.PI * 2, 0, Math.PI * 0.47),
+    bandEdge: new THREE.TorusGeometry(0.146, 0.012, 6, 30).rotateX(Math.PI / 2),
+    knot: new THREE.SphereGeometry(0.036, 10, 8).scale(1, 0.8, 1.15),
+    tail,
+  };
+  return SAILOR_GEO;
+}
 function makeSailor(c) {
-  const mats = { skin: toon(0xe9a77f), shirt: toon(c.shirt), pants: toon(c.pants), band: toon(c.band), boot: toon(0x2d3142), dark: toon(0x1b1f2a) };
-  const mk = (geo, mat, parent, x = 0, y = 0, z = 0) => { const m = new THREE.Mesh(geo, mat); m.position.set(x, y, z); m.castShadow = true; parent.add(m); return m; };
+  const G = sailorGeo();
+  const mats = { skin: toon(0xe9a77f), shirt: toon(c.shirt), pants: toon(c.pants), band: toon(c.band), boot: toon(0x2d3142), dark: toon(0x1b1f2a),
+    hair: toon(0x4a2f1f), white: toon(0xffffff), belt: toon(0x5a3a22), lip: toon(0xb8664e) };
+  const mk = (geo, mat, parent, x = 0, y = 0, z = 0, shadow = true) => { const m = new THREE.Mesh(geo, mat); m.position.set(x, y, z); m.castShadow = shadow; parent.add(m); return m; };
   const root = new THREE.Group(); scene.add(root);
   const body = new THREE.Group(); root.add(body);
   const hips = new THREE.Group(); hips.position.y = 0.9; body.add(hips);
-  mk(new THREE.CapsuleGeometry(0.16, 0.1, 6, 12), mats.pants, hips, 0, 0.02, 0).scale.set(1, 1, 1.25);
+  mk(G.pelvis, mats.pants, hips).scale.set(0.92, 1, 1.12);
+  mk(G.belt, mats.belt, hips, 0, 0.07, 0).scale.set(0.93, 1, 1.15);
+  mk(G.buckle, mats.band, hips, 0.174, 0.07, 0);
   const spine = new THREE.Group(); spine.position.y = 0.1; hips.add(spine);
-  mk(new THREE.CapsuleGeometry(0.19, 0.3, 6, 14), mats.shirt, spine, 0, 0.24, 0).scale.set(0.95, 1, 1.25);
+  mk(G.torso, mats.shirt, spine).scale.set(0.92, 1, 1.18);
+  mk(G.collar, mats.shirt, spine, 0.005, 0.515, 0, false).scale.set(1, 1, 1.15);
   const neck = new THREE.Group(); neck.position.y = 0.55; spine.add(neck);
+  mk(G.neck, mats.skin, neck, 0, 0.0, 0);
   const head = new THREE.Group(); head.position.y = 0.13; neck.add(head);
-  mk(new THREE.SphereGeometry(0.14, 16, 12), mats.skin, head);
-  const band = mk(new THREE.SphereGeometry(0.148, 16, 8, 0, Math.PI * 2, 0, Math.PI * 0.45), mats.band, head, 0, 0.01, 0); band.rotation.z = 0.25;
-  mk(new THREE.SphereGeometry(0.04, 8, 6), mats.band, head, -0.15, 0.02, 0.05);
-  for (const s of [1, -1]) mk(new THREE.SphereGeometry(0.02, 6, 6), mats.dark, head, 0.125, 0.02, s * 0.05);
-  mk(new THREE.SphereGeometry(0.025, 6, 6), mats.skin, head, 0.14, -0.02, 0);
+  mk(G.skull, mats.skin, head);
+  for (const s of [1, -1]) {
+    mk(G.ear, mats.skin, head, -0.005, -0.005, s * 0.137, false);
+    mk(G.eye, mats.dark, head, 0.127, 0.008, s * 0.048, false);
+    mk(G.glint, mats.white, head, 0.137, 0.016, s * 0.048 - 0.006, false);
+    const b = mk(G.brow, mats.hair, head, 0.133, 0.037, s * 0.05, false);   // under the bandana's rim b.rotation.x = s * 0.15;
+  }
+  mk(G.nose, mats.skin, head, 0.142, -0.012, 0, false);
+  mk(G.mouth, mats.lip, head, 0.134, -0.066, 0, false);
+  // bandana tied round the crown, knotted at the back with two tails
+  const bandana = new THREE.Group(); bandana.rotation.z = 0.25; head.add(bandana);
+  mk(G.bandana, mats.band, bandana, 0, 0.01, 0);
+  mk(G.bandEdge, mats.band, bandana, 0, 0.022, 0, false).scale.set(1.03, 1, 1.03);
+  mk(G.knot, mats.band, head, -0.148, 0.03, 0.02);
+  // the two tails hang down the back of the head, splayed a little
+  for (const [z, rx] of [[0.0, -0.3], [0.04, 0.35]]) { const t = mk(G.tail, mats.band, head, -0.162, 0.02, z, false); t.rotation.set(rx, 0, -0.22); }
   const sh = [], el = [], hp = [], kn = [], an = [];
   for (const s of [-1, 1]) {
     const shoulder = new THREE.Group(); shoulder.position.set(0, 0.44, s * 0.25); spine.add(shoulder);
-    mk(new THREE.CapsuleGeometry(0.06, 0.18, 4, 10), mats.shirt, shoulder, 0, -0.13, 0);
+    mk(G.sleeve, mats.shirt, shoulder, 0, -0.01, -s * 0.008).scale.set(1, 1, 0.92);
+    mk(G.upperArm, mats.skin, shoulder);
     const elbow = new THREE.Group(); elbow.position.y = -0.28; shoulder.add(elbow);
-    mk(new THREE.CapsuleGeometry(0.05, 0.18, 4, 10), mats.skin, elbow, 0, -0.12, 0);
-    mk(new THREE.SphereGeometry(0.055, 8, 6), mats.skin, elbow, 0, -0.27, 0);
+    mk(G.forearm, mats.skin, elbow);
+    mk(G.hand, mats.skin, elbow, 0.003, 0, 0);
+    const th = mk(G.thumb, mats.skin, elbow, 0.034, -0.265, -s * 0.006, false); th.rotation.z = 0.6;
     sh.push(shoulder); el.push(elbow);
     const hip = new THREE.Group(); hip.position.set(0, -0.02, s * 0.1); hips.add(hip);
-    mk(new THREE.CapsuleGeometry(0.08, 0.24, 4, 10), mats.pants, hip, 0, -0.19, 0);
+    mk(G.thigh, mats.pants, hip).scale.set(1, 1, 1.02);
     const knee = new THREE.Group(); knee.position.y = -0.41; hip.add(knee);
-    mk(new THREE.CapsuleGeometry(0.062, 0.24, 4, 10), mats.skin, knee, 0, -0.19, 0);
+    mk(G.knee, mats.pants, knee);
+    mk(G.cuff, mats.pants, knee, 0, -0.072, 0, false);
+    mk(G.shin, mats.skin, knee);
+    mk(G.shaft, mats.boot, knee);
     const ankle = new THREE.Group(); ankle.position.y = -0.43; knee.add(ankle);
-    mk(new THREE.BoxGeometry(0.22, 0.09, 0.12), mats.boot, ankle, 0.05, 0, 0);
+    mk(G.boot, mats.boot, ankle);
+    mk(G.sole, mats.dark, ankle, 0, 0, 0, false);
     hp.push(hip); kn.push(knee); an.push(ankle);
   }
   return { root, body, hips, spine, neck, sh, el, hp, kn, an, mats };
@@ -4364,8 +4469,20 @@ function driverLegs(s, M, dt) {
   M.root.updateMatrixWorld(true);
 }
 // soles flat to the deck: the ankle undoes the tilt the hip, knee and body put on the foot
-function flattenAnkles(s, M, w) {
-  for (let i = 0; i < 2; i++) M.an[i].rotation.set(-M.hp[i].rotation.x * w, 0, -(M.hp[i].rotation.z + M.kn[i].rotation.z + M.body.rotation.z) * w);
+// (just back aboard from the water, the pointed toes ease down flat over a moment instead of snapping)
+function flattenAnkles(s, M, w, dt = 0) {
+  s.flatW = Math.min(1, (s.flatW ?? 1) + dt * 4);
+  const k = s.flatW >= 1 ? 1 : 1 - Math.exp(-12 * dt);
+  for (let i = 0; i < 2; i++) {
+    const a = M.an[i].rotation, tx = -M.hp[i].rotation.x * w, tz = -(M.hp[i].rotation.z + M.kn[i].rotation.z + M.body.rotation.z) * w;
+    a.set(a.x + (tx - a.x) * k, 0, a.z + (tz - a.z) * k);
+  }
+}
+// off the deck: swimming (or drowned) the feet point, in line with the shins; in the air they hang half pointed
+function pointAnkles(s, M, dt) {
+  s.flatW = 0;
+  const tz = s.state === 'swim' || s.state === 'drowned' ? -1.15 : s.state === 'air' ? -0.55 : 0, k = 1 - Math.exp(-8 * dt);
+  for (let i = 0; i < 2; i++) { const a = M.an[i].rotation; a.set(a.x - a.x * k, 0, a.z + (tz - a.z) * k); }
 }
 // his back works too: shoulders turned toward the tiller on his right, leaning the way he's pushing it
 function driverUpper(s, M) {
@@ -5130,7 +5247,7 @@ function drawSailor(s, dt, camPosW) {
     M.root.quaternion.multiply(s.tumble);
     s.worldYaw = worldYawOf(s);
     driverLegs(s, M, dt);
-    flattenAnkles(s, M, 1);
+    flattenAnkles(s, M, 1, dt);
     plantFeet(s);
     driverUpper(s, M);
     tillerGrip(s, dt);
@@ -5141,6 +5258,7 @@ function drawSailor(s, dt, camPosW) {
       if (ang > 0) s.tumble.premultiply(_bq2.setFromAxisAngle(_bv.copy(s.spin).normalize(), ang));
     } else s.tumble.slerp(new THREE.Quaternion(), 1 - Math.exp(-5 * dt));
     M.root.quaternion.setFromAxisAngle(UPV, s.worldYaw).premultiply(s.tumble);
+    pointAnkles(s, M, dt);
   }
   if (s.fade < 1) for (const k in M.mats) { M.mats[k].transparent = true; M.mats[k].opacity = s.fade; }
   M.root.visible = s.fade > 0.01;
@@ -8375,6 +8493,7 @@ const FG_LOG = [
   ['0.40', 'Play vs bots lobby (bots on any team); flintlocks with real shots, aiming, reload animation and crosshair; hand harpoons (rusty, standard, hunting): aim and throw, the rope hauls in; rusty/normal/gold weapons; small, medium and large motors in rusty, standard and racing; floating damage numbers and parts that wear down in stages; collisions by weight and speed (styrofoam does no impact damage); new treasure (goblet, pearl, spice crate), heavier is worth more, and better treasure turns up as the match goes on; fishing: aim with a landing ring, hold to reel, snags pouches on the way in; store sign with selling and undo; Space lets go of heavy treasure; capsized rafts stay usable; bots build like players and give up on treasure too heavy for them; defaults 3 min build, 5 min battle, 10 rounds; fixed gold going negative'],
   ['0.41', 'Bots shoot their flintlocks and keep busy; smaller treasure field with rafts starting further apart and more treasure each round; fights get longer through the match (1:45 up to 5:00); hold left click to reel harpoons in, R lets go, with a controls card; a missed harpoon is pulled straight back; treasure on a line is pulled on its own and can be torn out of hands; new scoreboard with every team and its players; main menu music, with songs fading into each other; grey backdrop for white parts in the tray'],
   ['0.42', 'Scoreboard numbers get a drop shadow so they read at a glance'],
+  ['0.43', 'New sailor models: smoother bodies, belts, rolled cuffs, boots, faces and knotted bandanas; feet point when swimming'],
 ];
 
 // =====================================================================================
