@@ -390,7 +390,7 @@
 <div class="xhair" id="xhair" hidden aria-hidden="true"></div>
 <div class="countdown" id="countdown" aria-live="assertive" hidden></div>
 <div class="top">
-  <div class="brand"><h1>FLOAT GOAT</h1><span id="verTag">v0.43</span></div>
+  <div class="brand"><h1>FLOAT GOAT</h1><span id="verTag">v0.44</span></div>
   <div class="scoreboard" id="scoreboard" aria-label="Score"></div>
   <div class="pill phasep" title="Phase and time left"><span id="phase">Build</span><span id="timer">3:00</span></div>
 
@@ -558,7 +558,7 @@ const RAPIER_URL = 'https://cdn.jsdelivr.net/npm/@dimforge/rapier3d-compat@0.14.
 
 // the demo copy (shared privately) has testing controls; the live site (GitHub Pages) never shows them
 const DEMO = typeof location === 'undefined' || !/github\.io$/i.test(location.hostname);
-const DEMO_BUILD = 1;        // demo builds between ships: shown as "v0.39 · demo 3"; the version itself only moves when shipping
+const DEMO_BUILD = 2;        // demo builds between ships: shown as "v0.39 · demo 3"; the version itself only moves when shipping
 function fail(msg) {
   const d = document.createElement('div');
   d.className = 'err'; d.textContent = msg; document.body.appendChild(d);
@@ -1415,7 +1415,7 @@ const PARTS = {
 const TIERS = [
   { id: 'styro',   name: 'Styrofoam',  dens: 0.05, hollow: 0.04, hp: 0.4,  cost: 0.45, col: [0xf4f1e6, 0xe4dfcf, 0xc9c2ad] },
   { id: 'scrap',   name: 'Scrap',      dens: 0.95, hollow: 0.25, hp: 0.9,  cost: 0.5,  col: [0x8a6a50, 0x6b7378, 0x8c3b2a] },
-  { id: 'plastic', name: 'Plastic',    dens: 0.35, hollow: 0.07, hp: 0.6,  cost: 0.7,  col: [0x2f7fd8, 0x2a6fbd, 0xf2f2f2] },
+  { id: 'plastic', name: 'Plastic',    dens: 0.35, hollow: 0.07, hp: 0.6,  cost: 0.7,  col: [0xff6a1a, 0xe85a10, 0xf2f2f2] },
   { id: 'bamboo',  name: 'Bamboo',     dens: 0.4,  hollow: 0.12, hp: 0.85, cost: 0.85, col: [0xd2bd62, 0xbca853, 0x8f7b32] },
   { id: 'wood',    name: 'Wood',       dens: 0.6,  hollow: 0.18, hp: 1,    cost: 1,    col: [0xd99a5b, 0xc4864a, 0x8a5a2b] },
   { id: 'glass',   name: 'Fiberglass', dens: 0.45, hollow: 0.1,  hp: 1.8,  cost: 1.8,  col: [0xdcefe9, 0xc6e2da, 0x1f7a8c] },
@@ -3046,6 +3046,15 @@ function roundBattleTime() {
   const full = Number($('battleTime').value) || BATTLE_TIME, stage = Math.min(10, Math.max(1, 10 - ((match.rounds || 10) - (match.round || 1))));
   return Math.round(full * BATTLE_RAMP[Math.min(stage, BATTLE_RAMP.length) - 1] / 15) * 15;
 }
+// battle seas: each round rolls its wave height between two bounds, rougher as the match goes on. Same stages as the
+// battle time (a short match plays the last, roughest rounds). 1.6 is the cap: ~1.1 m crests, ~19 degree slopes
+const WAVE_ROUNDS = [[0.35, 0.55], [0.45, 0.7], [0.55, 0.85], [0.65, 1.0], [0.75, 1.1], [0.85, 1.2], [0.95, 1.3], [1.05, 1.4], [1.15, 1.5], [1.25, 1.6]];
+function roundWave() {
+  const stage = Math.min(10, Math.max(1, 10 - ((match.rounds || 10) - (match.round || 1)))), [a, b] = WAVE_ROUNDS[stage - 1];
+  const w = a + Math.random() * (b - a);
+  if (DEMO && $('waveLvl')) { $('waveLvl').value = w.toFixed(2); $('waveVal').textContent = w.toFixed(2); }   // the demo slider shows the roll (and can still override it)
+  return w;
+}
 const isWeapon = k => !!PARTS[k].weapon;
 const phaseAllows = k => !!(k && PARTS[k]) && match.phase === 'build';      // one build phase: hull, motors and weapons together
 const locked = () => raft.mode === 'battle' || match.phase !== 'build';
@@ -3735,16 +3744,19 @@ function buildShip(layout, origin, yaw, team) {
   for (const st of ship.stations) st.stand = standPoint(ship, st);
   return ship;
 }
+// Raft against raft is nearly frictionless, so one that rides up onto another slides back off instead of parking
+// there. Loot uses the Max combine rule with its own grip, so it holds on a deck just as before.
+const RAFT_FRICTION = 0.05;
 function partCollider(part, body) {
   const { center, size, q } = part.box, P = PARTS[part.type];
   if (P.ramp && RAPIER.ColliderDesc.convexHull) {
     const [L, R, W] = size, pts = new Float32Array([-L / 2, -R / 2, -W / 2, L / 2, -R / 2, -W / 2, L / 2, R / 2, -W / 2, -L / 2, -R / 2 + 0.03, -W / 2,
       -L / 2, -R / 2, W / 2, L / 2, -R / 2, W / 2, L / 2, R / 2, W / 2, -L / 2, -R / 2 + 0.03, W / 2]);
     const d = RAPIER.ColliderDesc.convexHull(pts);
-    if (d) return world.createCollider(d.setTranslation(center.x, center.y, center.z).setRotation({ x: q.x, y: q.y, z: q.z, w: q.w }).setDensity(P.mass / (L * R * W * 0.5)).setFriction(0.8), body);
+    if (d) return world.createCollider(d.setTranslation(center.x, center.y, center.z).setRotation({ x: q.x, y: q.y, z: q.z, w: q.w }).setDensity(P.mass / (L * R * W * 0.5)).setFriction(RAFT_FRICTION), body);
   }
   return world.createCollider(RAPIER.ColliderDesc.cuboid(size[0] / 2, size[1] / 2, size[2] / 2).setTranslation(center.x, center.y, center.z)
-    .setRotation({ x: q.x, y: q.y, z: q.z, w: q.w }).setDensity(P.mass / (size[0] * size[1] * size[2])).setFriction(0.8), body);
+    .setRotation({ x: q.x, y: q.y, z: q.z, w: q.w }).setDensity(P.mass / (size[0] * size[1] * size[2])).setFriction(RAFT_FRICTION), body);
 }
 function recolumn(ship) {
   const c = columnsOf(ship.parts.filter(p => p.alive));
@@ -6023,10 +6035,42 @@ function shipBumps() {
         const key = sh.nid !== undefined && q.ship.nid !== undefined ? `${Math.min(sh.nid, q.ship.nid)}:${Math.max(sh.nid, q.ship.nid)}` : null;
         const k = key || (battle.ships.indexOf(sh) < battle.ships.indexOf(q.ship) ? sh : q.ship);
         if (!pairs.has(k)) pairs.set(k, battle.ships.indexOf(sh) < battle.ships.indexOf(q.ship) ? [p, q] : [q, p]);
+        stackCheck(sh, p, q);
       });
     }
   }
   for (const [pA, pB] of pairs.values()) shipBump(pA.ship, pB.ship, pA, pB);
+  unstackStep();
+}
+// One raft riding up on another: a part resting on top of the other raft's part. The raft on top gets pushed off
+// sideways (away from the other raft's middle), harder the longer it stays up there; the one underneath takes a
+// little of it back. Nothing jumps: it's a push, and the near-frictionless contact lets it slide.
+const UNSTACK = { acc: 5, grow: 6, max: 14, react: 0.3, decay: 3 };
+const _us1 = new THREE.Vector3(), _us2 = new THREE.Vector3();
+function stackCheck(sh, p, q) {
+  const a = toWorld(sh, p.box.center, _us1), b = toWorld(q.ship, q.box.center, _us2);
+  const ha = p.box.size[1] / 2, hb = q.box.size[1] / 2;
+  // p is up on q: its middle is above q's top, and they overlap more across than up and down
+  if (a.y - b.y < hb + ha * 0.4 || a.y - ha * 0.6 < b.y) return;      // (side by side at the waterline doesn't count)
+  const across = Math.hypot(a.x - b.x, a.z - b.z);
+  if (across > Math.max(...q.box.size) * 0.75) return;
+  (battle.stacks ||= new Map()).set(sh, { under: q.ship, seen: simTime });
+}
+function unstackStep() {
+  if (!battle.stacks) return;
+  for (const [top, st] of battle.stacks) {
+    const on = simTime - st.seen < 0.15;
+    st.t = on ? Math.min(UNSTACK.max / UNSTACK.grow, (st.t || 0) + DT) : (st.t || 0) - DT * UNSTACK.decay;
+    if (st.t <= 0 || !top.alive || !st.under.alive) { battle.stacks.delete(top); continue; }
+    if (!on) continue;
+    const A = top.body.translation(), B = st.under.body.translation();
+    let nx = A.x - B.x, nz = A.z - B.z, l = Math.hypot(nx, nz);
+    if (l < 0.05) { const v = top.body.linvel(); nx = v.x; nz = v.z; l = Math.hypot(nx, nz) || 1; if (l < 1e-3) { nx = 1; nz = 0; l = 1; } }
+    nx /= l; nz /= l;
+    const acc = Math.min(UNSTACK.max, UNSTACK.acc + UNSTACK.grow * st.t), J = top.body.mass() * acc * DT;
+    top.body.applyImpulse({ x: nx * J, y: 0, z: nz * J }, true);
+    st.under.body.applyImpulse({ x: -nx * J * UNSTACK.react, y: 0, z: -nz * J * UNSTACK.react }, true);
+  }
 }
 function shipBump(A, B, pA, pB) {
   A.bumpCool ||= new Map();
@@ -6346,7 +6390,7 @@ function setupBattle() {
   battle.lockT = typeof __FG_TEST !== 'undefined' && __FG_TEST && !battle.introTest ? 0 : INTRO_LOCK;
   raft.mode = 'battle'; battle.on = true; battle.over = false; battle.overT = 0; battle.result = null; battle.net = null; battle.myTeam = 'you';
   raftGroup.visible = false; comMark.visible = cobMark.visible = false; if (ghost) ghost.visible = false;
-  SWELL.target = waveLevel();
+  SWELL.target = roundWave();
   const mine = buildShip(battle.layout, ARENA_A, 0, 'you');
   const theirs = buildShip(dummyLayout(), ARENA_B, Math.PI, 'dummy');
   battle.ships = [mine, theirs];
@@ -6367,6 +6411,7 @@ function setupBattle() {
   lockAim();
 }
 function teardownBattle() {
+  battle.stacks = null;
   if (battle.net) netCleanup();
   for (const sh of battle.ships) { world.removeRigidBody(sh.body); scene.remove(sh.group); }
   for (const s of battle.sailors) { scene.remove(s.model.root); itemsTeardown(s); }
@@ -7847,7 +7892,8 @@ function spawnLoot(type, pos, vel) {
     .setRotation(new THREE.Quaternion().setFromAxisAngle(UPV, Math.random() * Math.PI * 2)).setLinearDamping(0.05).setAngularDamping(type === 'pouch' ? 0.5 : 0.3).setCcdEnabled(true));
   if (vel) body.setLinvel(vel, true);
   const shape = type === 'pouch' ? RAPIER.ColliderDesc.ball(sx / 2) : RAPIER.ColliderDesc.cuboid(sx / 2, sy / 2, sz / 2);
-  const collider = world.createCollider(shape.setDensity(L.density).setFriction(L.friction).setRestitution(type === 'pouch' ? 0.2 : 0.05), body);
+  // Max combine rule: against a (slippery) raft deck it keeps the grip it always had (its own and the old deck's, averaged)
+  const collider = world.createCollider(shape.setDensity(L.density).setFriction((L.friction + 0.8) / 2).setFrictionCombineRule(RAPIER.CoefficientCombineRule.Max).setRestitution(type === 'pouch' ? 0.2 : 0.05), body);
   const mesh = lootMesh(type); scene.add(mesh);
   const badge = new THREE.Sprite(new THREE.SpriteMaterial({ map: badgeFor(L.pts), depthTest: false, transparent: true }));
   badge.renderOrder = 20; badge.visible = false;      // no number badges: treasure reads by its look alone
@@ -8494,6 +8540,7 @@ const FG_LOG = [
   ['0.41', 'Bots shoot their flintlocks and keep busy; smaller treasure field with rafts starting further apart and more treasure each round; fights get longer through the match (1:45 up to 5:00); hold left click to reel harpoons in, R lets go, with a controls card; a missed harpoon is pulled straight back; treasure on a line is pulled on its own and can be torn out of hands; new scoreboard with every team and its players; main menu music, with songs fading into each other; grey backdrop for white parts in the tray'],
   ['0.42', 'Scoreboard numbers get a drop shadow so they read at a glance'],
   ['0.43', 'New sailor models: smoother bodies, belts, rolled cuffs, boots, faces and knotted bandanas; feet point when swimming'],
+  ['0.44', 'Rafts slide off each other instead of stacking; battle waves roll a random height each round, rougher as the match goes on; plastic parts are orange'],
 ];
 
 // =====================================================================================
@@ -8961,7 +9008,7 @@ function netSetup(p, host) {
   if (p.total) { match.battleTotal = p.total; match.battleLeft = p.tl; }
   else { match.battleTotal = match.battleLeft = roundBattleTime(); }
   raftGroup.visible = false; comMark.visible = cobMark.visible = false; if (ghost) ghost.visible = false;
-  SWELL.target = waveLevel();
+  SWELL.target = host ? roundWave() : SWELL.target;      // the host rolls the sea; guests get it in every snapshot
   battle.lockT = typeof __FG_TEST !== 'undefined' && __FG_TEST && !battle.introTest ? 0 : INTRO_LOCK;
   battle.myTeam = lobby.game.team;
   battle.net = { host, ships: new Map(), sailors: new Map(), loot: new Map(), proj: new Map(), acts: [], snaps: [], sendT: 0, inT: 0, nextShip: 100, nextLoot: 1, nextProj: 1, crewDesc: p.crew, offset: null, out: {}, ropes: [], last: null };
