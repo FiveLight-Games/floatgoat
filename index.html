@@ -216,6 +216,14 @@
   .overboard b { font-size: 4rem; line-height: 1; font-variant-numeric: tabular-nums; } .overboard span { font-weight: 600; }
   /* controls card for the harpoons: a little mouse with the button lit, and what it does */
   .snd-hint { position: absolute; left: 50%; bottom: calc(env(safe-area-inset-bottom, 0px) + 18px); transform: translateX(-50%); padding: 6px 14px; border-radius: 999px; background: rgba(11,42,74,.6); color: #fff; font-size: .8rem; font-weight: 700; opacity: 0; transition: opacity .4s ease; pointer-events: none; }
+  /* start gate: browsers won't play sound until the page gets a click or key, so when they block the menu music the
+     first screen asks for one; it fades away on the first click or key and the music fades in with it */
+  .start-gate { position: fixed; inset: 0; z-index: 90; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 14px;
+    background: radial-gradient(ellipse at 50% 45%, rgba(11,42,74,.55), rgba(6,22,40,.82)); backdrop-filter: blur(3px); -webkit-backdrop-filter: blur(3px);
+    color: #fff; cursor: pointer; opacity: 0; pointer-events: none; transition: opacity .35s ease; }
+  .start-gate.on { opacity: 1; pointer-events: auto; }
+  .start-gate .t { font-size: clamp(2.4rem, 9vw, 5rem); font-weight: 800; letter-spacing: .04em; text-shadow: 0 4px 0 rgba(0,0,0,.25); }
+  .start-gate .s { font-size: 1.05rem; font-weight: 700; padding: 8px 18px; border-radius: 999px; background: rgba(255,255,255,.14); animation: sndPulse 2.4s ease-in-out infinite; }
   .snd-hint.on { opacity: 1; animation: sndPulse 2.4s ease-in-out infinite; }
   @keyframes sndPulse { 50% { opacity: .65; } }
   .ctltip { position: fixed; z-index: 4; left: 50%; bottom: calc(env(safe-area-inset-bottom, 0px) + 80px); transform: translate(-50%, 8px); opacity: 0; pointer-events: none;
@@ -390,7 +398,7 @@
 <div class="xhair" id="xhair" hidden aria-hidden="true"></div>
 <div class="countdown" id="countdown" aria-live="assertive" hidden></div>
 <div class="top">
-  <div class="brand"><h1>FLOAT GOAT</h1><span id="verTag">v0.44</span></div>
+  <div class="brand"><h1>FLOAT GOAT</h1><span id="verTag">v0.45</span></div>
   <div class="scoreboard" id="scoreboard" aria-label="Score"></div>
   <div class="pill phasep" title="Phase and time left"><span id="phase">Build</span><span id="timer">3:00</span></div>
 
@@ -498,6 +506,7 @@
 
 <div class="menu" id="menu">
   <div class="snd-hint" id="sndHint">♪ Click anywhere for music</div>
+  <div class="start-gate" id="startGate" role="button" aria-label="Start"><div class="t">FLOAT GOAT</div><div class="s">♪ Click anywhere to start</div></div>
   <h1 class="logo" aria-label="Float Goat">
     <span class="lrow">
       <span style="--i:0">F</span><span style="--i:1">L</span><span style="--i:2">O</span><span style="--i:3">A</span><span style="--i:4">T</span>
@@ -1260,6 +1269,7 @@ function audioStart() {
   if (audio.started) return;
   audio.started = true;
   { const h = document.getElementById('sndHint'); if (h) h.classList.remove('on'); }
+  { const g = document.getElementById('startGate'); if (g) g.classList.remove('on'); }
   try {
     const AC = window.AudioContext || window.webkitAudioContext;
     if (AC) {
@@ -1300,7 +1310,8 @@ function musicAutoplay() {
   a.volume = 0;
   const p = a.play();
   const ok = () => { if (audio.started) return; audio.musicOn = true; audio.music = a; fadeEl(a, musicLevel(audio.musicVol), 0.015); };
-  const no = () => { const h = document.getElementById('sndHint'); if (h && !audio.started) h.classList.add('on'); };
+  // blocked: the start gate covers the menu until the first click or key (which starts the sound and lifts it)
+  const no = () => { const g = document.getElementById('startGate'); if (g && !audio.started) g.classList.add('on'); };
   if (p && p.then) p.then(ok, no); else ok();
 }
 // switch songs: the old one fades out, the new one starts from the top and fades in
@@ -1370,6 +1381,8 @@ function playSfx(name, worldPos, vol = 1, local = false) {
   } catch (_) {}
 }
 addEventListener('pointerdown', audioStart, true);
+// the click that lifts the start gate only lifts it (it doesn't also press whatever menu button is under it)
+{ const g = document.getElementById('startGate'); if (g) for (const ev of ['pointerdown', 'pointerup', 'click']) g.addEventListener(ev, e => { e.stopPropagation(); e.preventDefault(); }); }
 addEventListener('keydown', audioStart, true);
 
 // =====================================================================================
@@ -8541,6 +8554,7 @@ const FG_LOG = [
   ['0.42', 'Scoreboard numbers get a drop shadow so they read at a glance'],
   ['0.43', 'New sailor models: smoother bodies, belts, rolled cuffs, boots, faces and knotted bandanas; feet point when swimming'],
   ['0.44', 'Rafts slide off each other instead of stacking; battle waves roll a random height each round, rougher as the match goes on; plastic parts are orange'],
+  ['0.45', 'If the browser holds back the menu music, a start screen asks for one click and the music starts with it'],
 ];
 
 // =====================================================================================
