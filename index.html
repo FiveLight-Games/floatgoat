@@ -406,7 +406,7 @@
   <div class="pill phasep" title="Phase and time left"><span id="phase">Build</span><span id="timer">3:00</span></div>
 
   <div class="pill vol" title="Volume">
-    <label for="musicVol" title="Music volume">♪</label><input type="range" id="musicVol" min="0" max="1" step="0.01" value="0.5" aria-label="Music volume">
+    <label for="musicVol" title="Music volume">♪</label><input type="range" id="musicVol" min="0" max="1" step="0.01" value="0.15" aria-label="Music volume">
     <label for="sfxVol" title="Sound volume">🔊</label><input type="range" id="sfxVol" min="0" max="1" step="0.01" value="0.5" aria-label="Sound volume">
   </div>
   <div class="pill vol demo" title="Wave height (demo)"><label for="waveLvl">🌊</label><input type="range" id="waveLvl" min="0" max="4" step="0.05" value="0.55" aria-label="Wave height"><span id="waveVal">0.55</span></div>
@@ -535,7 +535,7 @@
   <section class="mpanel" id="mOpt" hidden>
     <h2>Options</h2>
     <div class="mvol">
-      <label for="mMusicVol"><span>♪ Music</span><input type="range" id="mMusicVol" min="0" max="1" step="0.01" value="0.5"></label>
+      <label for="mMusicVol"><span>♪ Music</span><input type="range" id="mMusicVol" min="0" max="1" step="0.01" value="0.15"></label>
       <label for="mSfxVol"><span>🔊 Sound</span><input type="range" id="mSfxVol" min="0" max="1" step="0.01" value="0.5"></label>
       <label for="mAimSens"><span>🎯 Aim</span><span class="sens"><input type="range" id="mAimSens" min="0.2" max="3" step="0.1" value="1"><output id="mAimSensV">1.0×</output></span></label>
     </div>
@@ -1263,7 +1263,7 @@ const SFX = {
 const MUSIC = { menu: 'music/island_string_song.mp3', build: 'music/row_hard_mateys.mp3', fight: 'music/cutlass_clash.mp3' };   // the main menu / building / battles
 // sliders run 0..1; halfway is the mix we picked (music 0.35, effects 0.9)
 const musicLevel = v => Math.min(1, 0.7 * v), sfxLevel = v => 1.8 * v;
-const audio = { want: 'build', players: {}, ctx: null, out: null, buffers: new Map(), deck: {}, last: {}, started: false, music: null, musicVol: 0.5, sfxVol: 0.5 };
+const audio = { want: 'build', players: {}, ctx: null, out: null, buffers: new Map(), deck: {}, last: {}, started: false, music: null, musicVol: 0.15, sfxVol: 0.5 };
 try {
   const m = parseFloat(localStorage.getItem('floatgoat.musicVol')), f = parseFloat(localStorage.getItem('floatgoat.sfxVol'));
   if (m >= 0 && m <= 1) audio.musicVol = m; if (f >= 0 && f <= 1) audio.sfxVol = f;
@@ -8677,7 +8677,7 @@ const FG_LOG = [
   ['0.43', 'New sailor models: smoother bodies, belts, rolled cuffs, boots, faces and knotted bandanas; feet point when swimming'],
   ['0.44', 'Rafts slide off each other instead of stacking; battle waves roll a random height each round, rougher as the match goes on; plastic parts are orange'],
   ['0.45', 'If the browser holds back the menu music, a start screen asks for one click and the music starts with it'],
-  ['0.46', 'Damage carries over between rounds: only your raft\'s most valuable piece comes back, with the damage it took; repair parts (or Repair all) in the build; +550g a round, 25% salvage for lost parts, +100g catch-up per place behind; a raft that breaks keeps its most valuable piece'],
+  ['0.46', 'Damage carries over between rounds: only your raft\'s most valuable piece comes back, with the damage it took; repair parts (or Repair all) in the build; +550g a round, 25% salvage for lost parts, +100g catch-up per place behind; a raft that breaks keeps its most valuable piece; music starts at 15% volume'],
 ];
 
 // =====================================================================================
