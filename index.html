@@ -88,6 +88,9 @@
   .partmenu .pm-row span { margin-right: auto; }
   .partmenu .pm-row .btn { padding: 6px 10px; font-size: .85rem; }
   .partmenu .pm-remove { background: var(--bad); color: #fff; box-shadow: 0 3px 0 #a3203a; }
+  .partmenu .pm-repair, .repair-all { background: #2fb36b; color: #fff; box-shadow: 0 3px 0 #1d7a47; }
+  .partmenu .pm-repair { width: 100%; margin-bottom: 6px; }
+  .partmenu .pm-repair:disabled, .repair-all:disabled { opacity: .5; }
 
   .readout { position: fixed; z-index: 2; top: calc(var(--topH, 46px) + 8px); left: max(16px, env(safe-area-inset-left, 0px));
     width: min(300px, calc(100vw - 32px)); background: var(--panel); border-radius: 14px; padding: 10px 12px; box-shadow: 0 4px 0 rgba(11,42,74,.15); font-size: .86rem; }
@@ -398,7 +401,7 @@
 <div class="xhair" id="xhair" hidden aria-hidden="true"></div>
 <div class="countdown" id="countdown" aria-live="assertive" hidden></div>
 <div class="top">
-  <div class="brand"><h1>FLOAT GOAT</h1><span id="verTag">v0.45</span></div>
+  <div class="brand"><h1>FLOAT GOAT</h1><span id="verTag">v0.46</span></div>
   <div class="scoreboard" id="scoreboard" aria-label="Score"></div>
   <div class="pill phasep" title="Phase and time left"><span id="phase">Build</span><span id="timer">3:00</span></div>
 
@@ -426,6 +429,7 @@
   <div class="pm-row" id="pmRotRow"><span id="pmRotLabel">Facing</span><button class="btn" id="pmRotL" aria-label="Turn left">⟲ Q</button><button class="btn" id="pmRotR" aria-label="Turn right">E ⟳</button></div>
   <div class="pm-row"><button class="btn" id="pmFlip">Flip · R</button><button class="btn" id="pmGizmo" aria-pressed="false">Rotate…</button></div>
   <p class="pm-note" id="pmNote"></p>
+  <button class="btn pm-repair" id="pmRepair" hidden>Repair</button>
   <button class="btn pm-remove" id="pmRemove">Remove</button>
 </div>
 <div class="settings" id="settings" hidden>
@@ -495,6 +499,7 @@
     <button class="btn" id="remove" aria-pressed="false">Remove</button>
     <button class="btn" id="undo">Undo</button>
     <button class="btn" id="clear">Clear</button>
+    <button class="btn repair-all" id="repairAll" hidden>Repair all</button>
     <span class="snapctl"><button class="btn" id="snapOn" aria-pressed="true" title="Grid snapping (G)">Snap</button><span class="sz" id="snapSize" role="group" aria-label="Grid size in blocks"><button data-s="0.125" title="⅛ block">⅛</button><button data-s="0.25" title="¼ block">¼</button><button data-s="0.5" title="½ block">½</button><button data-s="1" title="1 block">1</button></span></span>
     <div class="testbar"><input type="range" id="swell" min="0" max="1.6" step="0.05" value="1" hidden><button class="btn" id="rock">Rock it</button><span class="hintk">WASD drives the motor</span></div>
     <div class="goldbig" title="Gold"><span class="coin"></span><span id="gold">1000</span></div>
@@ -1392,7 +1397,24 @@ addEventListener('keydown', audioStart, true);
 const GW = 9, GD = 9, GH = 4;                       // grid: length (x), width (z), layers (y)
 const HARBOR = new THREE.Vector3(0, 0, 52);         // open water just off the main island
 const CREW_MASS = 0.08;                             // one sailor, 80 kg (water = 1000 kg/m^3 = 1 unit)
-const BUDGET = 1400, ROUND_GOLD = 300;
+const BUDGET = 1400, ROUND_GOLD = 550;
+// Damage carries over between rounds: each part comes back with the health it ended the fight on (p.hpf, 0..1),
+// and only the raft's most valuable piece comes back at all. Repairs cost REPAIR_RATE of a part's price for a full
+// fix; parts lost in the fight pay back SALVAGE of their price; every place you're behind the leader adds CATCHUP.
+const REPAIR_RATE = 0.6, SALVAGE = 0.25, CATCHUP = 100;
+// what a part is worth as it is (what removing it gives back, and what putting it back costs)
+const partVal = s => Math.round(PARTS[s.type].cost * (s.hpf ?? 1));
+const repairCost = p => Math.ceil(PARTS[p.type].cost * REPAIR_RATE * (1 - (p.hpf ?? 1)));
+// a damaged part looks it: darker and dirtier the less health it has
+const WEAR_C = new THREE.Color(0x2a2218);
+function wearLook(mesh, f) {
+  const k = (1 - Math.max(0, Math.min(1, f ?? 1))) * 0.6;
+  mesh.traverse(o => {
+    let m = o.material; if (!m || Array.isArray(m) || !m.color || m === PROXY_MAT || !m.visible) return;
+    if (!o.userData.baseColor) { o.material = m = m.clone(); o.userData.baseColor = m.color.clone(); }   // its own copy: materials can be shared
+    m.color.copy(o.userData.baseColor).lerp(WEAR_C, k);
+  });
+}
 // display units: imperial by default, remembered per viewer
 let units = 'imperial';
 try { const u = localStorage.getItem('floatgoat.units'); if (u === 'metric' || u === 'imperial') units = u; } catch (_) {}
@@ -1976,7 +1998,7 @@ const partsGroup = new THREE.Group(); raftGroup.add(partsGroup);
 let nextId = 1, ID_BASE = 0;                    // ID_BASE: in a team game, my block of part ids
 const byId = id => raft.parts.find(p => p.id === id);
 // a part as data (for undo, moving, and handing the layout to the battle)
-const snap = p => ({ id: p.id, type: p.type, center: p.box.center.toArray(), q: p.box.q.toArray(), rot: p.rot || 0, n: p.n ? [...p.n] : null, mount: p.mount ?? null, mountTop: p.mountTop, anchor: p.anchor ? p.anchor.toArray() : null });
+const snap = p => ({ id: p.id, type: p.type, center: p.box.center.toArray(), q: p.box.q.toArray(), rot: p.rot || 0, n: p.n ? [...p.n] : null, mount: p.mount ?? null, mountTop: p.mountTop, anchor: p.anchor ? p.anchor.toArray() : null, hpf: (p.hpf ?? 1) < 1 ? +p.hpf.toFixed(3) : undefined });
 const PROXY_MAT = new THREE.MeshBasicMaterial({ visible: false });
 function placeMesh(part) {
   const m = part.mesh;
@@ -1986,6 +2008,7 @@ function addPartFrom(s, animate = true) {
   const box = makeBox(s.type, new THREE.Vector3().fromArray(s.center), new THREE.Quaternion().fromArray(s.q));
   const mesh = partMesh(s.type, false);
   const part = { id: s.id || nextId++, type: s.type, box, rot: s.rot || 0, n: s.n || null, mount: s.mount ?? null, mountTop: s.mountTop, anchor: s.anchor ? new THREE.Vector3().fromArray(s.anchor) : null, mesh, hp: PARTS[s.type].hp, joins: [] };
+  part.hpf = s.hpf ?? 1; if (part.hpf < 1) wearLook(mesh, part.hpf);
   if (!ID_BASE || (part.id >= ID_BASE && part.id < ID_BASE + 100000)) nextId = Math.max(nextId, part.id + 1);   // only my own block of ids
   part.aabb = boxAabb(box);
   placeMesh(part); applyRot(mesh, s.type, part.rot);
@@ -2522,7 +2545,7 @@ function dependentsOf(part) {
 }
 function removeWithDependents(part) {
   const items = [part, ...dependentsOf(part)];
-  for (const p of [...items].reverse()) { raft.gold += PARTS[p.type].cost; removePart(p); }
+  for (const p of [...items].reverse()) { raft.gold += partVal(p); removePart(p); }
   raft.history.push({ op: 'remove', items: items.map(snap) });
 }
 
@@ -2536,7 +2559,7 @@ function pickUp(part) {
   const detached = dependentsOf(part).map(d => ({ id: d.id, mount: d.mount }));
   for (const d of detached) { const p = byId(d.id); p.mount = null; unjoin(p, raft.joins); }
   carry = { main: snap(part), deps: [], detached, from: [snap(part)], prevSel: selected, prevTool: tool, last: null, ignore: [] };
-  raft.gold += PARTS[part.type].cost; removePart(part, false);
+  raft.gold += partVal(part); removePart(part, false);
   selected = part.type; tool = 'place';
   changed();
   return true;
@@ -2557,12 +2580,12 @@ function dropCarry(cancel = false) {
       return { ...s, center: pos.toArray(), q: q.toArray(), n, mount: main.id, anchor: null };
     });
     const ok = deps.every(d => !placeProblem(d.type, { box: makeBox(d.type, new THREE.Vector3().fromArray(d.center), new THREE.Quaternion().fromArray(d.q)) }));
-    const cost = [c.main, ...deps].reduce((g, q) => g + PARTS[q.type].cost, 0);
+    const cost = [c.main, ...deps].reduce((g, q) => g + partVal(q), 0);
     if (ok && raft.gold >= cost) plan = [main, ...deps];
   }
   const moved = !!plan;
   if (!plan) { plan = c.from; if (!cancel && pl) flash("Can't put it there"); }
-  for (const q of plan) { addPartFrom(q, true); raft.gold -= PARTS[q.type].cost; }
+  for (const q of plan) { addPartFrom(q, true); raft.gold -= partVal(q); }
   if (!moved) remount(c.detached);
   if (moved) raft.history.push({ op: 'move', from: c.from, to: plan, detached: c.detached });
   selected = c.prevSel; tool = c.prevTool;
@@ -2574,8 +2597,8 @@ function remount(list) {
 }
 function undo() {
   const h = raft.history.pop(); if (!h || locked()) return;
-  const drop = s => { const p = byId(s.id); if (p) { raft.gold += PARTS[p.type].cost; removePart(p, false); } };
-  const put = s => { addPartFrom(s, true); raft.gold -= PARTS[s.type].cost; };
+  const drop = s => { const p = byId(s.id); if (p) { raft.gold += partVal(p); removePart(p, false); } };
+  const put = s => { addPartFrom(s, true); raft.gold -= partVal(s); };
   if (h.op === 'add') drop({ id: h.id });
   else if (h.op === 'adds') [...h.ids].reverse().forEach(id => drop({ id }));
   else if (h.op === 'remove') h.items.forEach(put);
@@ -2626,7 +2649,7 @@ function markLoose() {
 function dropLooseParts() {
   const loose = looseParts(); if (!loose.length) return 0;
   let g = 0;
-  for (const p of loose) { g += PARTS[p.type].cost; raft.gold += PARTS[p.type].cost; removePart(p, false); }
+  for (const p of loose) { g += partVal(p); raft.gold += partVal(p); removePart(p, false); }
   raft.history = [];
   changed();
   return { n: loose.length, g };
@@ -2691,7 +2714,8 @@ function renderMenu() {
   if (seams && looseParts().includes(p)) rows.push(['', '<span style="color:var(--bad)">not joined to the raft</span>']);
   if (P.weapon && P.desc) rows.push(['Fires', fmtDesc(P.desc)]);
   if (P.thrust) rows.push(['Push', fmtPower(P.thrust)]);
-  rows.push(['Value', `${P.cost}g`]);
+  rows.push(['Value', (p.hpf ?? 1) < 1 ? `${partVal(p)}g <span style="opacity:.7">(new ${P.cost}g)</span>` : `${P.cost}g`]);
+  if ((p.hpf ?? 1) < 1) rows.unshift(['Condition', `<span style="color:${p.hpf < 0.4 ? 'var(--bad)' : '#e0a23a'}">${Math.round(p.hpf * 100)}%</span>`]);
   $('pmStats').innerHTML = rows.map(([k, v]) => `<span class="k">${k}</span><span class="v">${v}</span>`).join('');
   $('pmRotLabel').textContent = P.station === 'gun' ? `Rests facing ${dirWordOf(p.rot)}` : P.thrust ? `Pushes ${dirWordOf(p.rot)}` : 'Turn';
   $('pmFlip').hidden = UPRIGHT(p.type);
@@ -2701,7 +2725,8 @@ function renderMenu() {
   else if (P.thrust) note = sel.area && !sel.area.any ? 'No crew space: no open deck for a driver at the tiller.' : 'Crew space is the ring: the driver walks it as he swings the tiller; red is where he has no room, so the tiller can\'t swing that far.';
   if (gizmo.on) note = 'Drag a ring to turn it about that axis (15° steps; hold Shift for 5°).';
   $('pmNote').textContent = note; $('pmNote').hidden = !note;
-  const refund = P.cost + deps.reduce((g, q) => g + PARTS[q.type].cost, 0);
+  { const rc = repairCost(p), b = $('pmRepair'); b.hidden = !((p.hpf ?? 1) < 1); b.textContent = `Repair (${rc}g)`; b.disabled = raft.gold < rc || locked(); }
+  const refund = partVal(p) + deps.reduce((g, q) => g + partVal(q), 0);
   $('pmRemove').textContent = deps.length ? `Remove with ${deps.length} attached (+${refund}g)` : `Remove (+${refund}g)`;
 }
 
@@ -3071,7 +3096,7 @@ function roundWave() {
 const isWeapon = k => !!PARTS[k].weapon;
 const phaseAllows = k => !!(k && PARTS[k]) && match.phase === 'build';      // one build phase: hull, motors and weapons together
 const locked = () => raft.mode === 'battle' || match.phase !== 'build';
-const layoutCost = () => raft.parts.reduce((g, p) => g + PARTS[p.type].cost, 0);
+const layoutCost = () => raft.parts.reduce((g, p) => g + partVal(p), 0);
 function setPhase(ph) {
   if (sel) closeMenu();
   if (carry) dropCarry(true);     // whatever was in hand goes back where it was
@@ -3097,15 +3122,73 @@ function nextPhase() {
 function newRound() {
   // the raft carries over. The first round starts with the full budget; each round after that adds ROUND_GOLD
   // to whatever you have left
+  let gain = 0, lost = null;
   if (match.round <= 1) raft.gold = Math.max(0, START_GOLD - layoutCost());
-  else raft.gold += ROUND_GOLD;
+  else {
+    lost = applyCarry();
+    const behind = placesBehind();
+    gain = ROUND_GOLD + lost.salvage + behind * CATCHUP;
+    raft.gold += gain;
+    lost.behind = behind;
+  }
   setPhase('build');
-  const sub = `Round ${match.round} of ${match.rounds}` + (match.round > 1 ? ` · +${ROUND_GOLD}g` : '');
-  if (typeof showWord === 'function' && !(typeof __FG_TEST !== 'undefined' && __FG_TEST)) showWord('BUILD', sub); else bigFlash(`Round ${match.round} of ${match.rounds}`, match.round > 1 ? `+${ROUND_GOLD}g · Build your raft` : 'Build your raft');
+  const sub = `Round ${match.round} of ${match.rounds}` + (match.round > 1 ? ` · +${gain}g` : '');
+  if (typeof showWord === 'function' && !(typeof __FG_TEST !== 'undefined' && __FG_TEST)) showWord('BUILD', sub); else bigFlash(`Round ${match.round} of ${match.rounds}`, match.round > 1 ? `+${gain}g · Build your raft` : 'Build your raft');
+  if (lost) {
+    const bits = [`+${ROUND_GOLD}g round`];
+    if (lost.salvage) bits.push(`+${lost.salvage}g salvage`);
+    if (lost.behind) bits.push(`+${lost.behind * CATCHUP}g catch-up`);
+    const dmg = raft.parts.filter(p => (p.hpf ?? 1) < 1).length;
+    setTimeout(() => flash((lost.n ? `${lost.n} part${lost.n > 1 ? 's' : ''} lost · ` : '') + (dmg ? `${dmg} damaged · ` : '') + bits.join(' · ')), 1900);
+  }
+}
+// After a fight: battle.carry says which of my raft's parts came back (the most valuable piece) and with how much
+// health. Everything else is gone, paying back SALVAGE of its price.
+function applyCarry() {
+  const c = battle.carry; battle.carry = null;
+  const out = { n: 0, salvage: 0 };
+  if (!c) return out;
+  const keep = new Map(c.keep);
+  const was = typeof TEAMSYNC !== 'undefined' && TEAMSYNC ? TEAMSYNC.applying : false;
+  if (typeof TEAMSYNC !== 'undefined' && TEAMSYNC) TEAMSYNC.applying = true;          // every teammate applies the same list
+  for (const p of [...raft.parts]) {
+    if (keep.has(p.id)) { p.hpf = Math.max(0.05, Math.min(1, keep.get(p.id))); wearLook(p.mesh, p.hpf); continue; }
+    out.n++; out.salvage += Math.round(PARTS[p.type].cost * SALVAGE);
+    removePart(p, false);
+  }
+  for (const p of raft.parts) if (p.mount != null && !byId(p.mount)) p.mount = null;    // what it was mounted on is gone
+  raft.history = [];
+  if (typeof TEAMSYNC !== 'undefined' && TEAMSYNC) { TEAMSYNC.applying = was; TEAMSYNC.synced = new Map(raft.parts.map(p => [p.id, snap(p)])); }
+  changed();
+  return out;
+}
+// how many sides finished the last round with more points in the match than mine
+function placesBehind() {
+  if (match.tscore && typeof lobby !== 'undefined' && lobby.game) {
+    const me = typeof lobby !== 'undefined' && lobby.game ? lobby.game.team : null, mine = match.tscore[me] || 0;
+    return Object.entries(match.tscore).filter(([t, v]) => +t !== me && v > mine).length;
+  }
+  return match.score.dummy > match.score.you ? 1 : 0;
+}
+// repairs: one part from its menu, or everything from the build bar
+function repairPart(p) {
+  const c = repairCost(p); if (!c || raft.gold < c || locked()) return false;
+  raft.gold -= c; if (typeof teamGold === 'function') teamGold(-c);
+  p.hpf = 1; wearLook(p.mesh, 1);
+  return true;
+}
+function repairAllCost() { return raft.parts.reduce((g, p) => g + repairCost(p), 0); }
+function repairAll() {
+  if (locked()) return;
+  const list = raft.parts.filter(p => (p.hpf ?? 1) < 1).sort((a, b) => repairCost(a) - repairCost(b));
+  let n = 0; for (const p of list) if (repairPart(p)) n++;
+  if (n < list.length) flash(n ? `Repaired ${n}; not enough gold for the rest` : 'Not enough gold');
+  if (n) { changed(); if (sel) renderMenu(); }
 }
 function restartMatch() {
   if (raft.mode === 'battle') exitBattle(); else if (raft.mode === 'test') endTest();
   match.round = 1; match.score.you = match.score.dummy = 0; match.rounds = Number($('rounds').value);
+  match.botBank = {}; match.botLast = {}; if (typeof battle !== 'undefined') battle.carry = null;
   // a new match starts everyone level: an empty raft, the old kit, the starting gold (keeping last match's raft
   // and taking its cost off the new budget is what sent gold negative)
   if (typeof myKit !== 'undefined') myKit = DEFAULT_KIT.slice();
@@ -3228,6 +3311,7 @@ function updateUI() {
   { const g = $('gold'), was = Number(g.textContent); g.textContent = raft.gold;
     if (was !== raft.gold && g.parentElement && g.parentElement.classList) { const b = g.parentElement; b.classList.remove('bump', 'spend'); void b.offsetWidth; b.classList.add(raft.gold > was ? 'bump' : 'spend'); } }
   for (const k in PARTS) { const b = $('part-' + k); b.setAttribute('aria-pressed', String(tool === 'place' && selected === k)); b.hidden = !phaseAllows(k); b.disabled = raft.gold < PARTS[k].cost; }
+  { const rc = repairAllCost(), b = $('repairAll'); b.hidden = !rc || match.phase !== 'build'; b.textContent = `Repair all (${rc}g)`; b.disabled = raft.gold < Math.min(...raft.parts.filter(p => (p.hpf ?? 1) < 1).map(repairCost), Infinity); }
   if (match.phase !== 'build' || raft.mode === 'battle') $('store').hidden = true; else drawStore();   // the store is only open while building
   const labels = { build: 'Build', battle: 'Battle', results: 'Round over', collect: 'Battle', menu: '' };
   $('phase').textContent = labels[match.phase];
@@ -3260,7 +3344,7 @@ $('clear').addEventListener('click', () => {
   if (locked() || !raft.parts.length) return;
   if ($('clear').dataset.armed !== '1') { $('clear').dataset.armed = '1'; $('clear').textContent = 'Tap again to clear'; setTimeout(() => { $('clear').dataset.armed = ''; $('clear').textContent = 'Clear'; }, 2200); return; }
   $('clear').dataset.armed = ''; $('clear').textContent = 'Clear';
-  for (const p of [...raft.parts].reverse()) { raft.gold += PARTS[p.type].cost; removePart(p); }
+  for (const p of [...raft.parts].reverse()) { raft.gold += partVal(p); removePart(p); }
   raft.history = []; changed();
 });
 $('test').addEventListener('click', () => raft.mode === 'test' ? endTest() : startTest());
@@ -3318,6 +3402,8 @@ for (const b of document.querySelectorAll('#snapSize button')) b.addEventListene
 setSnap(snapCfg.on, snapCfg.size);
 $('pmGizmo').addEventListener('click', gizmoToggle);
 $('pmRemove').addEventListener('click', () => { if (!sel || locked()) return; const p = sel; closeMenu(); removeWithDependents(p); changed(); });
+$('pmRepair').addEventListener('click', () => { if (!sel) return; if (repairPart(sel)) { changed(); renderMenu(); } });
+$('repairAll').addEventListener('click', repairAll);
 
 // there's no starter raft any more: you start from nothing, with what's left of the budget after what the old
 // starter cost, plus 30% of its value in gold
@@ -3668,6 +3754,37 @@ const DUMMY_LAYOUT = (() => {
 // way a player might: the biggest deck it can float, a motor, then guns. Every combination that fits the budget and
 // floats the crew is scored, with a little randomness so bots differ. ----
 const botBudget = () => START_GOLD + Math.max(0, (match.round || 1) - 1) * ROUND_GOLD;
+// A bot builds a fresh raft each round, but with damage carrying over its budget is what it would have after the
+// last fight: the worth of the piece it kept (less repairs), salvage for the rest, whatever it didn't spend, the
+// round's gold and any catch-up. (Round 1, or no record: the plain budget.)
+function botBudgetFor(team) { const b = match.botBank && match.botBank[team]; return b !== undefined ? b : botBudget(); }
+function botLayoutFor(team) {
+  const budget = botBudgetFor(team), L = dummyLayout(budget);
+  (match.botLast ||= {})[team] = { budget, spent: L.reduce((g, s) => g + PARTS[s.type].cost, 0) };
+  return L;
+}
+// a piece of raft is worth its parts' prices, each by how much health it has left
+const pieceValue = ship => ship.parts.reduce((g, p) => p.alive ? g + PARTS[p.type].cost * Math.max(0, p.hp) / (p.maxHp || PARTS[p.type].hp) : g, 0);
+// what comes back from a side's raft: its most valuable piece, each part with the health it has
+function carryOf(team) {
+  const ships = battle.ships.filter(s => s.team === team);
+  let best = null, bv = 0;
+  for (const s of ships) { const v = pieceValue(s); if (v > bv) { bv = v; best = s; } }
+  const keep = best ? best.parts.filter(p => p.alive && p.hp > 0).map(p => [p.id, +Math.min(1, p.hp / (p.maxHp || PARTS[p.type].hp)).toFixed(3)]) : [];
+  return { keep };
+}
+// after a fight: each bot side's budget for the next round
+function botBankAfter(team, behind) {
+  const last = match.botLast && match.botLast[team]; if (!last) return;
+  // (bot rafts don't have unique part ids, so the kept piece is counted straight from the ships)
+  let all = 0, kept = 0, repair = 0;
+  for (const s of battle.ships) if (s.team === team) for (const p of s.parts) all += PARTS[p.type].cost;
+  const best = battle.ships.filter(s => s.team === team).sort((a, b) => pieceValue(b) - pieceValue(a))[0];
+  if (best && pieceValue(best) > 0) for (const p of best.parts) if (p.alive && p.hp > 0) { const c = PARTS[p.type].cost; kept += c; repair += c * REPAIR_RATE * (1 - Math.min(1, p.hp / (p.maxHp || PARTS[p.type].hp))); }
+  const salvage = Math.max(0, all - kept) * SALVAGE;
+  const next = last.budget - last.spent + kept - repair + salvage + ROUND_GOLD + behind * CATCHUP;
+  (match.botBank ||= {})[team] = Math.round(Math.max(START_GOLD * 0.5, next));
+}
 function botPlan(budget, rnd = Math.random) {
   const lift = k => PARTS[k].vol * (1 - PARTS[k].density) * 1000;             // kg it floats (negative: kg it sinks)
   const decks = ['plank_styro', 'plank_plastic', 'plank_bamboo', 'plank'];
@@ -3727,7 +3844,8 @@ function buildShip(layout, origin, yaw, team) {
     const mesh = partMesh(L.type, false);
     mesh.position.copy(box.center); mesh.quaternion.copy(box.q);
     ship.group.add(mesh);
-    const part = { id: L.id || 0, type: L.type, n: L.n, rot: L.rot || 0, mount: L.mount ?? null, mountTop: L.mountTop, box, aabb: boxAabb(box), mesh, hp: P.hp, maxHp: P.hp, flood: 0, hitT: 0, alive: true, joins: [] };
+    const part = { id: L.id || 0, type: L.type, n: L.n, rot: L.rot || 0, mount: L.mount ?? null, mountTop: L.mountTop, box, aabb: boxAabb(box), mesh, hp: P.hp * (L.hpf ?? 1), maxHp: P.hp, flood: 0, hitT: 0, alive: true, joins: [] };
+    if ((L.hpf ?? 1) < 1) wearLook(mesh, L.hpf);          // still carrying last round's damage
     applyRot(mesh, L.type, part.rot);
     part.samples = samplesOf(part);
     if (L.type === 'ram') part.cool = 0;
@@ -3963,6 +4081,7 @@ function killShip(ship, why) {
 function damagePart(ship, part, dmg, push, at) {
   if (!part.alive || dmg <= 0) return;
   part.hp -= dmg; part.hitT = 1;
+  if (part.hp > 0) wearLook(part.mesh, part.hp / (part.maxHp || PARTS[part.type].hp));
   dmgNumber(at || toWorld(ship, part.box.center, new THREE.Vector3()), dmg, part);
   // the seams near the blow take some of it too; one that gives out lets the raft come apart there
   let broke = false;
@@ -4160,8 +4279,9 @@ function splitCheck(ship, push, quiet) {
     groups.push(g);
   }
   if (groups.length < 2) return;
-  // the biggest piece stays this raft; the rest float off
-  groups.sort((a, b) => b.length - a.length);
+  // the most valuable piece stays this raft (parts' prices by their health); the rest float off
+  const gv = g => g.reduce((s, p) => s + PARTS[p.type].cost * Math.max(0, p.hp) / (p.maxHp || PARTS[p.type].hp), 0);
+  groups.sort((a, b) => gv(b) - gv(a) || b.length - a.length);
   const centreOf = parts => { const c = new THREE.Vector3(); for (const p of parts) c.add(toWorld(ship, p.box.center, new THREE.Vector3())); return c.divideScalar(parts.length); };
   const mainC = centreOf(groups[0]);
   for (const g of groups.slice(1)) makeFragment(ship, g, push, mainC, centreOf(g));
@@ -6405,7 +6525,7 @@ function setupBattle() {
   raftGroup.visible = false; comMark.visible = cobMark.visible = false; if (ghost) ghost.visible = false;
   SWELL.target = roundWave();
   const mine = buildShip(battle.layout, ARENA_A, 0, 'you');
-  const theirs = buildShip(dummyLayout(), ARENA_B, Math.PI, 'dummy');
+  const theirs = buildShip(botLayoutFor('dummy'), ARENA_B, Math.PI, 'dummy');
   battle.ships = [mine, theirs];
   battle.sideMax = { you: mine.maxHp, dummy: theirs.maxHp };
   splitCheck(mine, null, true); splitCheck(theirs, null, true);
@@ -6478,6 +6598,8 @@ function endRound(title) {
   battle.over = true; unlockAim();
   musicOut(3);                     // the fight music dies away under the results
   match.score.you += ptsA; match.score.dummy += ptsB;
+  battle.carry = carryOf('you');                                                       // what comes back to the builder
+  botBankAfter('dummy', match.score.you > match.score.dummy ? 1 : 0);
   const done = match.round >= match.rounds;
   battle.matchDone = done;
   match.phase = 'results';
@@ -8555,6 +8677,7 @@ const FG_LOG = [
   ['0.43', 'New sailor models: smoother bodies, belts, rolled cuffs, boots, faces and knotted bandanas; feet point when swimming'],
   ['0.44', 'Rafts slide off each other instead of stacking; battle waves roll a random height each round, rougher as the match goes on; plastic parts are orange'],
   ['0.45', 'If the browser holds back the menu music, a start screen asks for one click and the music starts with it'],
+  ['0.46', 'Damage carries over between rounds: only your raft\'s most valuable piece comes back, with the damage it took; repair parts (or Repair all) in the build; +550g a round, 25% salvage for lost parts, +100g catch-up per place behind; a raft that breaks keeps its most valuable piece'],
 ];
 
 // =====================================================================================
@@ -8880,7 +9003,7 @@ else enterMenu();
 // =====================================================================================
 var TEAMSYNC = { synced: new Map(), applying: false };
 const ID_BLOCK = 100000;
-const specKey = s => JSON.stringify([s.type, s.center.map(v => +v.toFixed(4)), s.q.map(v => +v.toFixed(4)), +(s.rot || 0).toFixed(4), s.mount ?? null, s.n ? s.n.map(v => +v.toFixed(3)) : null]);
+const specKey = s => JSON.stringify([s.type, s.center.map(v => +v.toFixed(4)), s.q.map(v => +v.toFixed(4)), +(s.rot || 0).toFixed(4), s.mount ?? null, s.n ? s.n.map(v => +v.toFixed(3)) : null, s.hpf ?? 1]);
 function teamOn() { return !!(lobby.game && lobby.room && lobby.game.roster.some(r => !r.bot && r.id !== NET.id && r.team === lobby.game.team)); }
 // a new match: everyone starts from the same empty raft; my ids come from my own block
 function teamBegin() {
@@ -8911,16 +9034,17 @@ function teamApply(p) {
     for (const op of p.ops) {
       if (op.a || op.u) {
         const s = op.a || op.u, have = byId(s.id);
-        if (!have) { addPartFrom(s, true); raft.gold -= PARTS[s.type].cost; }
+        if (!have) { addPartFrom(s, true); raft.gold -= partVal(s); }
         else {
           have.mount = s.mount ?? null; have.n = s.n || null; have.mountTop = s.mountTop; have.anchor = s.anchor ? new THREE.Vector3().fromArray(s.anchor) : null;
+          if ((s.hpf ?? 1) !== (have.hpf ?? 1)) { have.hpf = s.hpf ?? 1; wearLook(have.mesh, have.hpf); }        // a teammate repaired it
           setPartBox(have, new THREE.Vector3().fromArray(s.center), new THREE.Quaternion().fromArray(s.q), s.rot || 0);
         }
         TEAMSYNC.synced.set(s.id, s);
       } else if (op.g !== undefined) { raft.gold += op.g; }          // a teammate bought something
       else if (op.r !== undefined) {
         const have = byId(op.r);
-        if (have) { if (sel === have) closeMenu(); raft.gold += PARTS[have.type].cost; removePart(have, true); }
+        if (have) { if (sel === have) closeMenu(); raft.gold += partVal(have); removePart(have, true); }
         TEAMSYNC.synced.delete(op.r);
       }
     }
@@ -8987,7 +9111,7 @@ function netCollectTick() {
   if (!need.every(t => pend.layouts.has(t)) && performance.now() < pend.until) return;
   battle.pend = null;
   const teams = gameTeams().map((t, i, all) => {
-    let layout = humansOn(t) ? pend.layouts.get(t) : dummyLayout();
+    let layout = humansOn(t) ? pend.layouts.get(t) : botLayoutFor(t);
     if (!layout || !layout.length) layout = [{ id: 1, type: 'plank', center: [0, 0.07, 0], q: [0, 0, 0, 1] }];
     const a = Math.PI + (i / all.length) * Math.PI * 2;                     // spread round the arena
     const ox = ARENA_C.x + Math.cos(a) * TEAM_SPAWN_R, oz = ARENA_C.z + Math.sin(a) * TEAM_SPAWN_R;
@@ -9152,7 +9276,13 @@ function netEndRound(title) {
     lines.push(out ? `${n} ${out}.` : p ? `${n} scored ${p}: ${haulList(t)}.` : `${n} ended with nothing aboard.`);
   }
   const done = match.round >= match.rounds;
-  const msg = { title: title || `Round ${match.round} over`, lines, totals: match.tscore, pts, done };
+  // damage carries over: each side gets back its raft's most valuable piece (sent to everyone, so teammates agree)
+  const carry = {};
+  for (const t of gameTeams()) {
+    carry[t] = carryOf(t);
+    if (!humansOn(t)) botBankAfter(t, Object.entries(match.tscore).filter(([k, v]) => +k !== +t && v > (match.tscore[t] || 0)).length);
+  }
+  const msg = { title: title || `Round ${match.round} over`, lines, totals: match.tscore, pts, done, carry };
   netSnapSend(true);
   lobby.room.send('bend', msg);
   netShowEnd(msg);
@@ -9160,6 +9290,7 @@ function netEndRound(title) {
 function netShowEnd(m) {
   battle.over = true; unlockAim(); match.phase = 'results'; musicOut(3);
   match.tscore = m.totals; battle.matchDone = m.done;
+  battle.carry = m.carry ? m.carry[battle.myTeam] || { keep: [] } : null;
   const mine = m.totals[battle.myTeam] || 0, best = Math.max(0, ...Object.entries(m.totals).filter(([k]) => +k !== battle.myTeam).map(([, v]) => v));
   match.score.you = mine; match.score.dummy = best;
   setTimeout(() => {
